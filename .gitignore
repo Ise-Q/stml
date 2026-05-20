@@ -12,6 +12,8 @@ __pycache__/
 
 # Notebooks
 .ipynb_checkpoints/
+# Headless-execution verification artifacts (e.g. eda.executed.ipynb)
+*.executed.ipynb
 
 # Tooling caches
 .ruff_cache/
@@ -21,6 +23,8 @@ __pycache__/
 # WSL zone-identifier sidecars
 *:Zone.Identifier
 
-# Editor
+# OS / editor junk
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/

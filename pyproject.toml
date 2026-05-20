@@ -26,5 +26,6 @@ torch = { index = "pytorch-cpu" }
 [dependency-groups]
 dev = [
     "jupyterlab>=4.5.7",
+    "nbstripout>=0.9.1",
     "ruff>=0.15.13",
 ]
