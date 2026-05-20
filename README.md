@@ -1,6 +1,6 @@
 # stml
 
-Short-lived course project: data analysis, classical ML, and light deep learning on a panel of futures price data + primary-signal labels (11 instruments, 2020–2022 signal window inside 1990–2022 price history).
+Course project: fitting a meta-model on a label indicating whether the signal is worth trading, where underlying signal generation process is unknown. Meta-model can be found by exploring various ML models. Research on a panel of futures price data + primary-signal labels (11 instruments, 2020–2022 signal window inside 1990–2022 price history).
 
 This README is the single source of truth for getting set up and for our collaboration workflow. Read sections **2** (setup), **4** (why we set things up this way), and **5** (workflow) at least once.
 
