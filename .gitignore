@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Virtual environment
+.venv/
+
+# uv
+# (uv.lock is committed)
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# WSL zone-identifier sidecars
+*:Zone.Identifier
+
+# Editor
+.vscode/
+.idea/
