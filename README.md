@@ -167,13 +167,15 @@ git push                               # pushes to your dev/<initials> branch
 # --- at a group checkpoint, open a PR on GitHub: dev/<initials> → main ---
 ```
 
+"Open a PR" means using GitHub itself — click the **Compare & pull request** banner that appears after `git push`, or run `gh pr create` from the CLI. Plain `git` has no PR command, and local-merging your branch into `main` then pushing bypasses review (and will be rejected if `main` has branch protection turned on).
+
 ### 5.3 Where to put things
 
 | Path | Who owns it | Notes |
 | --- | --- | --- |
 | `data/*` | shared, read-only | Never overwrite. |
 | `refs/*` | shared, read-only | Course materials (project brief, session solutions). Don't modify. |
-| `notebooks/agent_eda.ipynb` (and other notebooks at root) | shared | Edits go through PR review. |
+| `notebooks/agent_eda.ipynb` (and other notebooks at root) | shared | Coordinate first — only one person editing at a time. Changes land on `main` via PR (see §5.6). |
 | `notebooks/<initials>/*.ipynb` | **you** | Your personal notebooks. Committed, but only on your branch until checkpoint. |
 | `src/stml/*.py` | shared helpers | Adding a function here affects everyone — do it on a PR. |
 | `results/<initials>/...` | **you** | Your figures, tables, intermediate CSVs. Per-person subfolder = no name collisions. |
@@ -221,6 +223,40 @@ git checkout --theirs notebooks/agent_eda.ipynb     # take their version
 ```
 
 The better approach is to **not get into this situation**: keep personal work in `notebooks/<initials>/`, and only touch shared notebooks (`notebooks/agent_eda.ipynb`, etc.) through coordinated PRs.
+
+### 5.6 Editing a shared notebook
+
+Shared notebooks (anything at the root of `notebooks/`) need the same care as `src/stml/` — the edit only "counts" once it's merged to `main`, and parallel edits hurt. The flow:
+
+```bash
+git checkout main && git pull
+git checkout -b shared/eda-<short-desc>    # e.g. shared/eda-fix-axis-labels
+# edit notebooks/agent_eda.ipynb
+git add notebooks/agent_eda.ipynb
+git commit -m "<what you changed>"
+git push -u origin shared/eda-<short-desc>
+# open a PR: shared/eda-<short-desc> → main
+```
+
+A short-lived `shared/<desc>` branch beats carrying the change on your `dev/<initials>` branch: the PR diff is *just* the shared edit, not the rest of your personal work-in-progress, so it's easier for the group to review.
+
+**Never** `git checkout main`, edit, and `git push origin main`. Even though `git merge` works mechanically, pushing straight to `main` skips review and may be blocked by branch protection.
+
+**If you edited a shared notebook on the wrong branch by mistake** — not a disaster, just clean it up before it lands on `main`:
+
+```bash
+# if you haven't committed yet
+git restore --source=main notebooks/agent_eda.ipynb
+
+# if you already committed (but haven't PR'd)
+git checkout main -- notebooks/agent_eda.ipynb
+git commit -m "revert accidental shared notebook edit"
+git push
+```
+
+If you want to keep the edits but route them through the proper channel, branch off `main` fresh, copy the modified file over, and open a focused PR.
+
+The real risk only materialises if a teammate also edited that notebook in parallel — then both PRs will conflict on `main` and you're stuck doing the §5.5 `--ours / --theirs` dance. A quick "I'm about to touch `agent_eda.ipynb`" message to the group avoids it entirely.
 
 ---
 
