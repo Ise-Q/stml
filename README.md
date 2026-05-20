@@ -14,12 +14,16 @@ stml/
 │   ├── ohlcv_data.csv
 │   └── primary_signals.csv
 ├── notebooks/               shared notebooks (edits via PR review)
-│   ├── eda.ipynb            project-wide EDA
-│   ├── exploration.ipynb    minimal smoke test for the venv/kernel
-│   └── <initials>/          your personal notebooks (e.g. notebooks/jj/)
+│   ├── agent_eda.ipynb      project-wide EDA
+│   └── <initials>/          your personal notebooks (e.g. notebooks/jay/)
 ├── results/<initials>/      your figures / tables / intermediate outputs
 ├── reports/                 shared deliverables (markdown / PDF write-ups)
+├── refs/                    reference materials (read-only)
+│   ├── project-instructions.md
+│   └── programming-session-sol/   solution notebooks from course sessions 1–8
 ├── src/stml/                shared Python helpers (importable from any notebook)
+│   ├── __init__.py
+│   └── io.py                load_data() + INSTRUMENTS list
 ├── pyproject.toml           project metadata + dependencies
 ├── uv.lock                  pinned dependency versions (committed)
 ├── .gitattributes           rule that strips notebook outputs at commit time
@@ -61,7 +65,7 @@ After `uv sync`, a `.venv/` folder appears in the repo. That's your project-loca
 
 1. Install the **Python** and **Jupyter** extensions in VS Code (if not already).
 2. Open the `stml` folder (File → Open Folder).
-3. Open `notebooks/eda.ipynb`. Top-right of the notebook there's a kernel picker — pick **`.venv (Python 3.12)`**. VS Code remembers it for next time.
+3. Open `notebooks/agent_eda.ipynb`. Top-right of the notebook there's a kernel picker — pick **`.venv (Python 3.12)`**. VS Code remembers it for next time.
 4. Click **Run All**. If every cell runs and you see plots, you're set up correctly.
 
 ### 2.4 Optional: JupyterLab in the browser
@@ -168,7 +172,8 @@ git push                               # pushes to your dev/<initials> branch
 | Path | Who owns it | Notes |
 | --- | --- | --- |
 | `data/*` | shared, read-only | Never overwrite. |
-| `notebooks/eda.ipynb` (and other notebooks at root) | shared | Edits go through PR review. |
+| `refs/*` | shared, read-only | Course materials (project brief, session solutions). Don't modify. |
+| `notebooks/agent_eda.ipynb` (and other notebooks at root) | shared | Edits go through PR review. |
 | `notebooks/<initials>/*.ipynb` | **you** | Your personal notebooks. Committed, but only on your branch until checkpoint. |
 | `src/stml/*.py` | shared helpers | Adding a function here affects everyone — do it on a PR. |
 | `results/<initials>/...` | **you** | Your figures, tables, intermediate CSVs. Per-person subfolder = no name collisions. |
@@ -209,13 +214,13 @@ The robust recipe:
 
 ```bash
 # pick one side wholesale, then redo the other side manually
-git checkout --ours notebooks/eda.ipynb       # keep your version
+git checkout --ours notebooks/agent_eda.ipynb       # keep your version
 # or
-git checkout --theirs notebooks/eda.ipynb     # take their version
+git checkout --theirs notebooks/agent_eda.ipynb     # take their version
 # then open the notebook, re-apply the discarded changes by hand, save, commit.
 ```
 
-The better approach is to **not get into this situation**: keep personal work in `notebooks/<initials>/`, and only touch shared notebooks (`notebooks/eda.ipynb`, etc.) through coordinated PRs.
+The better approach is to **not get into this situation**: keep personal work in `notebooks/<initials>/`, and only touch shared notebooks (`notebooks/agent_eda.ipynb`, etc.) through coordinated PRs.
 
 ---
 
