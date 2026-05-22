@@ -6,6 +6,7 @@ dependencies = [
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.9",
     "numpy>=2.4.6",
+    "optuna>=4.8.0",
     "pandas>=3.0.3",
     "pyarrow>=24.0.0",
     "scikit-learn>=1.8.0",
@@ -34,6 +35,7 @@ torch = { index = "pytorch-cpu" }
 dev = [
     "jupyterlab>=4.5.7",
     "nbstripout>=0.9.1",
+    "pytest>=9.0.3",
     "ruff>=0.15.13",
 ]
 # Optional: external exchange calendars used only as a cross-check in

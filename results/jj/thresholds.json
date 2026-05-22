@@ -1,0 +1,628 @@
+{
+  "provenance": {
+    "calibration_window": "train",
+    "train_date_range": [
+      "2020-01-03",
+      "2021-07-01"
+    ],
+    "floor": 10,
+    "convention": "next_day",
+    "cutoff_margin": 0.05,
+    "cutoff_rule": "max over chance baselines {always_flat, majority_class, stratified_random(seed=0)} + cutoff_margin; persistence reported separately as an upper reference, NOT the pass bar",
+    "persistence_is_pass_bar": false,
+    "metrics": [
+      "kappa",
+      "mcc",
+      "macro_f1",
+      "ordinal_skill"
+    ],
+    "ordinal_skill_component": "vs_flat",
+    "note": "calibrated on train split only; no val/test data used"
+  },
+  "per_instrument": {
+    "es1s": {
+      "class": "equity",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.06526806526806526,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.2733739837398374,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.012647187091146872,
+          "mcc": -0.012706010706294785,
+          "macro_f1": 0.3202495718716693,
+          "ordinal_skill": -0.015260124150162424
+        },
+        "persistence": {
+          "kappa": 0.48653969612668513,
+          "mcc": 0.4865491663972821,
+          "macro_f1": 0.578486239149193,
+          "ordinal_skill": 0.5847602044956586
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.3702495718716693,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.48653969612668513,
+        "mcc": 0.4865491663972821,
+        "macro_f1": 0.578486239149193,
+        "ordinal_skill": 0.5847602044956586
+      },
+      "n_train": 387
+    },
+    "nq1s": {
+      "class": "equity",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.047961630695443645,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.24022038567493112,
+          "ordinal_skill": -1.1102230246251565e-16
+        },
+        "stratified_random": {
+          "kappa": -0.012255473825107721,
+          "mcc": -0.012291885007101527,
+          "macro_f1": 0.3311359392377555,
+          "ordinal_skill": -0.01625540538611958
+        },
+        "persistence": {
+          "kappa": 0.5057290906437018,
+          "mcc": 0.5057365505754129,
+          "macro_f1": 0.5904444561931009,
+          "ordinal_skill": 0.5524506402573645
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.3811359392377555,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.5057290906437018,
+        "mcc": 0.5057365505754129,
+        "macro_f1": 0.5904444561931009,
+        "ordinal_skill": 0.5524506402573645
+      },
+      "n_train": 387
+    },
+    "fesx1s": {
+      "class": "equity",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.010178117048346055,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.23522853957636566,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": 0.013448482168405218,
+          "mcc": 0.013508808235364501,
+          "macro_f1": 0.33276335990144973,
+          "ordinal_skill": 0.014226976433227567
+        },
+        "persistence": {
+          "kappa": 0.529381766828809,
+          "mcc": 0.5293898916065983,
+          "macro_f1": 0.5636663056870246,
+          "ordinal_skill": 0.542414107631499
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.06344848216840522,
+        "mcc": 0.0635088082353645,
+        "macro_f1": 0.3827633599014497,
+        "ordinal_skill": 0.06422697643322757
+      },
+      "persistence_reference": {
+        "kappa": 0.529381766828809,
+        "mcc": 0.5293898916065983,
+        "macro_f1": 0.5636663056870246,
+        "ordinal_skill": 0.542414107631499
+      },
+      "n_train": 387
+    },
+    "cl1s": {
+      "class": "energy",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.19327217125382265,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.22937853107344633,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": 0.016998827667057514,
+          "mcc": 0.017080854641373867,
+          "macro_f1": 0.36557697010610574,
+          "ordinal_skill": 0.019577193001369064
+        },
+        "persistence": {
+          "kappa": 0.6967998553606943,
+          "mcc": 0.6968083521787672,
+          "macro_f1": 0.8222808399815059,
+          "ordinal_skill": 0.7309481790470078
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.06699882766705752,
+        "mcc": 0.06708085464137387,
+        "macro_f1": 0.4155769701061057,
+        "ordinal_skill": 0.06957719300136907
+      },
+      "persistence_reference": {
+        "kappa": 0.6967998553606943,
+        "mcc": 0.6968083521787672,
+        "macro_f1": 0.8222808399815059,
+        "ordinal_skill": 0.7309481790470078
+      },
+      "n_train": 387
+    },
+    "ho1s": {
+      "class": "energy",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.31801801801801804,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.31801801801801804,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.015635395874916913,
+          "mcc": -0.015740281799521628,
+          "macro_f1": 0.3121590338821168,
+          "ordinal_skill": -0.039416376306620315
+        },
+        "persistence": {
+          "kappa": 0.39778869778869774,
+          "mcc": 0.3977886977886978,
+          "macro_f1": 0.5653918791312559,
+          "ordinal_skill": 0.40787566435818967
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.36801801801801803,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.39778869778869774,
+        "mcc": 0.3977886977886978,
+        "macro_f1": 0.5653918791312559,
+        "ordinal_skill": 0.40787566435818967
+      },
+      "n_train": 387
+    },
+    "rb1s": {
+      "class": "energy",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.016792611251049538,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.22488584474885845,
+          "ordinal_skill": -1.1102230246251565e-16
+        },
+        "stratified_random": {
+          "kappa": 0.09618673268843003,
+          "mcc": 0.09652413289007955,
+          "macro_f1": 0.38882489116436353,
+          "ordinal_skill": 0.09757474346309691
+        },
+        "persistence": {
+          "kappa": 0.7539107210988173,
+          "mcc": 0.7539220507259654,
+          "macro_f1": 0.59661401995579,
+          "ordinal_skill": 0.7952970479334194
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.14618673268843002,
+        "mcc": 0.14652413289007954,
+        "macro_f1": 0.4388248911643635,
+        "ordinal_skill": 0.1475747434630969
+      },
+      "persistence_reference": {
+        "kappa": 0.7539107210988173,
+        "mcc": 0.7539220507259654,
+        "macro_f1": 0.59661401995579,
+        "ordinal_skill": 0.7952970479334194
+      },
+      "n_train": 387
+    },
+    "ng1s": {
+      "class": "energy",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.4812332439678284,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.4812332439678284,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.03732362312243964,
+          "mcc": -0.03733077393497083,
+          "macro_f1": 0.4813250727019851,
+          "ordinal_skill": -0.037323623122439864
+        },
+        "persistence": {
+          "kappa": 0.6150019896538002,
+          "mcc": 0.6150019896538003,
+          "macro_f1": 0.8075009948269001,
+          "ordinal_skill": 0.6150019896538002
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.5313250727019851,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.6150019896538002,
+        "mcc": 0.6150019896538003,
+        "macro_f1": 0.8075009948269001,
+        "ordinal_skill": 0.6150019896538002
+      },
+      "n_train": 387
+    },
+    "gc1s": {
+      "class": "metals",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.2733739837398374,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.2733739837398374,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.07647278615020547,
+          "mcc": -0.07691150712845767,
+          "macro_f1": 0.28729972497953654,
+          "ordinal_skill": -0.07432613951822331
+        },
+        "persistence": {
+          "kappa": 0.5947879704496539,
+          "mcc": 0.5947879704496539,
+          "macro_f1": 0.7457943749765311,
+          "ordinal_skill": 0.6236832153854466
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.33729972497953653,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.5947879704496539,
+        "mcc": 0.5947879704496539,
+        "macro_f1": 0.7457943749765311,
+        "ordinal_skill": 0.6236832153854466
+      },
+      "n_train": 387
+    },
+    "si1s": {
+      "class": "metals",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.07219662058371736,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.20595238095238097,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": 0.01977002219084123,
+          "mcc": 0.019835527371952134,
+          "macro_f1": 0.3350696608249211,
+          "ordinal_skill": 0.029603195523023595
+        },
+        "persistence": {
+          "kappa": 0.4401415503772451,
+          "mcc": 0.4401468343431241,
+          "macro_f1": 0.5501767054550748,
+          "ordinal_skill": 0.5197632076815101
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.06977002219084123,
+        "mcc": 0.06983552737195214,
+        "macro_f1": 0.3850696608249211,
+        "ordinal_skill": 0.0796031955230236
+      },
+      "persistence_reference": {
+        "kappa": 0.4401415503772451,
+        "mcc": 0.4401468343431241,
+        "macro_f1": 0.5501767054550748,
+        "ordinal_skill": 0.5197632076815101
+      },
+      "n_train": 387
+    },
+    "hg1s": {
+      "class": "metals",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.016792611251049538,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.23085585585585586,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.0004991361105779468,
+          "mcc": -0.0005013786794060716,
+          "macro_f1": 0.3255832377969783,
+          "ordinal_skill": 0.00041379954749032333
+        },
+        "persistence": {
+          "kappa": 0.6239932499808238,
+          "mcc": 0.6240025490800493,
+          "macro_f1": 0.5498400056886866,
+          "ordinal_skill": 0.6586911005338737
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.3755832377969783,
+        "ordinal_skill": 0.050413799547490326
+      },
+      "persistence_reference": {
+        "kappa": 0.6239932499808238,
+        "mcc": 0.6240025490800493,
+        "macro_f1": 0.5498400056886866,
+        "ordinal_skill": 0.6586911005338737
+      },
+      "n_train": 387
+    },
+    "pl1s": {
+      "class": "metals",
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.0735632183908046,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.24783549783549785,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.037379714155126864,
+          "mcc": -0.03748059517887579,
+          "macro_f1": 0.3186796116278487,
+          "ordinal_skill": -0.04301455062003301
+        },
+        "persistence": {
+          "kappa": 0.5529510859755731,
+          "mcc": 0.5529590367732772,
+          "macro_f1": 0.6253261255201294,
+          "ordinal_skill": 0.6489072164948453
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.3686796116278487,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.5529510859755731,
+        "mcc": 0.5529590367732772,
+        "macro_f1": 0.6253261255201294,
+        "ordinal_skill": 0.6489072164948453
+      },
+      "n_train": 387
+    }
+  },
+  "per_asset_class": {
+    "equity": {
+      "members": [
+        "es1s",
+        "nq1s",
+        "fesx1s"
+      ],
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.041969330104923326,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.24092409240924093,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": -0.0009967297379671614,
+          "mcc": -0.0009976112987014564,
+          "macro_f1": 0.33609126257244365,
+          "ordinal_skill": -0.00299351248980817
+        },
+        "persistence": {
+          "kappa": 0.5383324352007635,
+          "mcc": 0.5383333424342686,
+          "macro_f1": 0.594704124717528,
+          "ordinal_skill": 0.5864604940599661
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.05,
+        "mcc": 0.05,
+        "macro_f1": 0.38609126257244364,
+        "ordinal_skill": 0.05
+      },
+      "persistence_reference": {
+        "kappa": 0.5383324352007635,
+        "mcc": 0.5383333424342686,
+        "macro_f1": 0.594704124717528,
+        "ordinal_skill": 0.5864604940599661
+      },
+      "n_train": 1161
+    },
+    "energy": {
+      "members": [
+        "cl1s",
+        "ho1s",
+        "rb1s",
+        "ng1s"
+      ],
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.24162548050521693,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.24162548050521693,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": 0.0034186781398597432,
+          "mcc": 0.0034197480369873847,
+          "macro_f1": 0.3395100974226623,
+          "ordinal_skill": 0.004622676811774973
+        },
+        "persistence": {
+          "kappa": 0.8039604476272629,
+          "mcc": 0.8039604476272629,
+          "macro_f1": 0.8681438262264126,
+          "ordinal_skill": 0.8011445497869082
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.053418678139859746,
+        "mcc": 0.05341974803698739,
+        "macro_f1": 0.3895100974226623,
+        "ordinal_skill": 0.054622676811774976
+      },
+      "persistence_reference": {
+        "kappa": 0.8039604476272629,
+        "mcc": 0.8039604476272629,
+        "macro_f1": 0.8681438262264126,
+        "ordinal_skill": 0.8011445497869082
+      },
+      "n_train": 1548
+    },
+    "metals": {
+      "members": [
+        "gc1s",
+        "si1s",
+        "hg1s",
+        "pl1s"
+      ],
+      "baseline_metrics": {
+        "always_flat": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.1297259798820673,
+          "ordinal_skill": 0.0
+        },
+        "majority_class": {
+          "kappa": 0.0,
+          "mcc": 0.0,
+          "macro_f1": 0.1984271022383545,
+          "ordinal_skill": 0.0
+        },
+        "stratified_random": {
+          "kappa": 0.012200064068669247,
+          "mcc": 0.012203260094189617,
+          "macro_f1": 0.33885950128121894,
+          "ordinal_skill": 0.026524985084734776
+        },
+        "persistence": {
+          "kappa": 0.629405988254549,
+          "mcc": 0.6294064024616504,
+          "macro_f1": 0.7489337216769368,
+          "ordinal_skill": 0.6491801168273176
+        }
+      },
+      "suggested_cutoffs": {
+        "kappa": 0.06220006406866925,
+        "mcc": 0.06220326009418962,
+        "macro_f1": 0.38885950128121893,
+        "ordinal_skill": 0.07652498508473478
+      },
+      "persistence_reference": {
+        "kappa": 0.629405988254549,
+        "mcc": 0.6294064024616504,
+        "macro_f1": 0.7489337216769368,
+        "ordinal_skill": 0.6491801168273176
+      },
+      "n_train": 1548
+    }
+  }
+}
