@@ -1,8 +1,15 @@
 # stml
 
-Course project: fitting a meta-model on a label indicating whether the signal is worth trading, where underlying signal generation process is unknown. Meta-model can be found by exploring various ML models. Research on a panel of futures price data + primary-signal labels (11 instruments, 2020–2022 signal window inside 1990–2022 price history).
+Course project on futures OHLCV data and released primary-signal labels. The
+repo now contains both the shared data-cleaning foundation and a signal
+characterization / replication study for the unknown primary signal generation
+process.
 
-This README is the single source of truth for getting set up and for our collaboration workflow. Read sections **2** (setup), **4** (working with the data), **5** (why we set things up this way), and **6** (workflow) at least once.
+This README is the entry point for setup, project status, and collaboration
+workflow. For the signal-replication terminology and gate logic, start with
+[`reports/README.md`](reports/README.md). For structured result artifacts, see
+[`results/jj/README.md`](results/jj/README.md). For implementation orientation,
+see [`src/README.md`](src/README.md).
 
 ---
 
@@ -17,9 +24,16 @@ stml/
 ├── notebooks/               shared notebooks (edits via PR review)
 │   ├── agent_eda.ipynb      project-wide EDA (includes the NA-handling section)
 │   └── <initials>/          your personal notebooks (e.g. notebooks/jay/)
-├── results/<initials>/      your figures / tables / intermediate outputs
+├── results/
+│   ├── <initials>/          personal figures / tables / intermediate outputs
+│   └── jj/                  canonical replication JSON artifacts
 ├── reports/                 shared deliverables (markdown / PDF write-ups)
-│   └── missing-data-report.md    our findings: WHAT is missing + how we handle it
+│   ├── README.md            guide to replication reports, gates, and terminology
+│   ├── missing-data-report.md
+│   ├── signal-characterization.md
+│   ├── replication-summary.md
+│   ├── replication-ledger.md
+│   └── <family>.md          per-family replication reports
 ├── refs/                    reference materials (read-only)
 │   ├── project-instructions.md
 │   ├── missing-holidays.md       research note: WHY rows go missing in this data
@@ -27,12 +41,45 @@ stml/
 ├── src/stml/                shared Python package (importable as `stml`)
 │   ├── __init__.py          re-exports the loaders + the na_checks module
 │   ├── io.py                load_data() / load_clean_data() / load_returns_panel()
-│   └── na_checks.py         calendars, missing-data diagnostics, panel statistics
+│   ├── na_checks.py         calendars, missing-data diagnostics, panel statistics
+│   └── replication/         signal characterization, search, gates, metrics
 ├── pyproject.toml           project metadata, dependencies, build config
 ├── uv.lock                  pinned dependency versions (committed)
 ├── .gitattributes           rule that strips notebook outputs at commit time
 └── .gitignore               OS junk + verification artifacts
 ```
+
+
+---
+
+## 1.1 Current project status
+
+The data-cleaning layer is in place and documented in
+[`reports/missing-data-report.md`](reports/missing-data-report.md). The
+replication study has also been run and rendered:
+
+- [`reports/signal-characterization.md`](reports/signal-characterization.md)
+  characterizes the released signal and calibrates train-only thresholds.
+- [`reports/replication-summary.md`](reports/replication-summary.md) summarizes
+  the family x cell replication outcomes.
+- `reports/<family>.md` files show per-family parameter spaces, gate diagnostics,
+  and per-cell pass/fail details.
+- [`results/jj/thresholds.json`](results/jj/thresholds.json) stores train-only
+  baseline cutoffs.
+- [`results/jj/ledger.json`](results/jj/ledger.json) stores trial-level search
+  audit records.
+- [`results/jj/top_candidates.json`](results/jj/top_candidates.json) stores the
+  best passing candidate per passing family.
+
+Current headline from the canonical replication summary: **3 of 6 families
+replicate at least one cell**, below the study target of 5. The shortfall is
+reported honestly as structural, mainly due to low post-embargo effective sample
+size, base-rate drift, parameter-instability checks, and the expected weakness
+of cross-asset ranking for near-independent signals.
+
+Important caveat: the gate constants are transparent checkpoint heuristics, not
+fully optimized statistical cutoffs. [`reports/README.md`](reports/README.md)
+now documents the rationale, risks, and recommended calibration improvements.
 
 ---
 
@@ -93,6 +140,9 @@ uv run jupyter lab
 | Run a Python script with project deps | `uv run python path/to/script.py` |
 | Open a Python REPL with project deps | `uv run python` |
 | Open JupyterLab | `uv run jupyter lab` |
+| Regenerate missing-data diagnostics | `uv run python -m stml.na_checks` |
+| Regenerate signal characterization + thresholds | `uv run python -m stml.replication.run_characterize` |
+| Regenerate replication reports + candidates | `uv run python -m stml.replication.run_replicate` |
 | Add a runtime dependency | `uv add <pkg>` |
 | Add a dev-only tool | `uv add --dev <pkg>` |
 | Remove a dependency | `uv remove <pkg>` |
@@ -157,12 +207,44 @@ Useful building blocks (all in `stml.na_checks`):
 | Machine-readable lists (holidays, glitches, anomalies, per-instrument summary) | [`data/meta/`](data/meta) |
 | The code behind all of it | [`src/stml/na_checks.py`](src/stml/na_checks.py) |
 | A worked example end-to-end | the "0b. Missing-data handling" section of `notebooks/agent_eda.ipynb` |
+| Signal replication report guide | [`reports/README.md`](reports/README.md) |
+| Structured replication artifacts | [`results/jj/README.md`](results/jj/README.md) |
+| Replication implementation guide | [`src/README.md`](src/README.md) |
 
 ### 4.4 Golden rules for statistics on this panel
 
 1. Compute returns on each instrument's **native series**, never on a union-of-dates wide grid.
 2. After pivoting, **leave structural NaNs alone** — no `ffill`, no `fillna(0)`. They mean "this venue was closed", which is information.
 3. For correlation use **pairwise-complete** (`corr_max_info`); for rolling pair correlation **align on the intersection** (`rolling_pair_corr`). Calling `.dropna()` first truncates everything to the shortest-history instrument.
+
+
+### 4.5 Running the replication pipeline
+
+The characterization step writes the signal report and train-only thresholds:
+
+```bash
+uv run python -m stml.replication.run_characterize
+```
+
+The replication step searches all six families across standalone cells and the
+energy pool, then writes reports and result JSON:
+
+```bash
+uv run python -m stml.replication.run_replicate
+```
+
+Useful options:
+
+```bash
+uv run python -m stml.replication.run_replicate --families mean_reversion
+uv run python -m stml.replication.run_replicate --budget 64 --seed 0
+```
+
+The released signal panel is split chronologically: train is `2020-01-03` to
+`2021-07-01`, validation is `2021-07-02` to `2021-12-30`, and test is
+`2021-12-31` to `2022-06-30`. Search and threshold calibration use train only;
+G1-G4 gates use validation; the held-out test block is touched once for final
+confirmation after gates are frozen.
 
 ---
 
