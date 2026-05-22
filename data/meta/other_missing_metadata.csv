@@ -1,0 +1,62 @@
+date,year,category,label,scope,venue_group,n_missing,n_active,affected_instruments
+1990-09-04,1990,glitch,,exchange_specific,US_FUTURES,1,8,gc1s
+1990-12-24,1990,early_close,Christmas Eve (early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-04-19,1991,glitch,,exchange_specific,US_FUTURES,1,8,hg1s
+1991-07-05,1991,early_close,July 5 (Independence Day Friday bridge),exchange_specific,US_FUTURES,3,8,"gc1s,hg1s,si1s"
+1992-09-08,1992,glitch,,exchange_specific,US_FUTURES,1,8,ho1s
+1992-11-27,1992,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,5,8,"cl1s,ho1s,ng1s,pl1s,rb1s"
+1992-12-24,1992,early_close,Christmas Eve (early close),exchange_specific,US_FUTURES,5,8,"cl1s,ho1s,ng1s,pl1s,rb1s"
+1993-06-24,1993,glitch,,exchange_specific,US_FUTURES,1,8,pl1s
+1993-11-26,1993,early_close,Day after Thanksgiving (early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-11-25,1994,early_close,Day after Thanksgiving (early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-07-03,1995,early_close,July 3 (pre-Independence Day early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-11-24,1995,early_close,Day after Thanksgiving (early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-01-08,1996,glitch,,exchange_specific,US_FUTURES,1,8,ng1s
+1996-07-05,1996,early_close,July 5 (Independence Day Friday bridge),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-11-29,1996,early_close,Day after Thanksgiving (early close),global,ALL,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-11-28,1997,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,9,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-11-27,1998,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,10,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-12-24,1998,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,10,fesx1s
+1998-12-31,1998,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,10,fesx1s
+1999-05-13,1999,glitch,,exchange_specific,EUREX,1,10,fesx1s
+1999-06-03,1999,glitch,,exchange_specific,EUREX,1,10,fesx1s
+1999-11-26,1999,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-01-03,2000,early_close,Jan 3 (New Year Monday bridge),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-07-03,2000,early_close,July 3 (pre-Independence Day early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-11-24,2000,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2001-11-23,2001,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2001-12-24,2001,early_close,Christmas Eve (early close),mixed,MIXED,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2001-12-31,2001,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2002-07-05,2002,early_close,July 5 (Independence Day Friday bridge),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2002-11-29,2002,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2002-12-24,2002,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2002-12-31,2002,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2003-11-28,2003,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2003-12-24,2003,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2003-12-31,2003,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2004-01-02,2004,early_close,Jan 2 (New Year Friday bridge),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2004-11-26,2004,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2005-11-25,2005,early_close,Day after Thanksgiving (early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2006-07-03,2006,early_close,July 3 (pre-Independence Day early close),exchange_specific,US_FUTURES,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2007-12-24,2007,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2007-12-31,2007,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2008-12-24,2008,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2008-12-31,2008,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2009-12-24,2009,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2009-12-31,2009,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2010-12-31,2010,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2012-12-24,2012,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2012-12-31,2012,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2013-12-24,2013,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2013-12-31,2013,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2014-12-24,2014,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2014-12-31,2014,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2015-12-24,2015,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2015-12-31,2015,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2018-12-24,2018,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2018-12-31,2018,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2019-12-24,2019,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2019-12-31,2019,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2020-12-24,2020,early_close,Christmas Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2020-12-31,2020,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
+2021-12-31,2021,early_close,New Year's Eve (early close),exchange_specific,EUREX,1,11,fesx1s
