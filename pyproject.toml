@@ -15,6 +15,13 @@ dependencies = [
     "tqdm>=4.67.3",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
@@ -28,4 +35,13 @@ dev = [
     "jupyterlab>=4.5.7",
     "nbstripout>=0.9.1",
     "ruff>=0.15.13",
+]
+# Optional: external exchange calendars used only as a cross-check in
+# stml.na_checks. The hand-coded tables are authoritative, so these are not
+# required to run the notebook or the diagnostics. Install with:
+#   uv sync --group calendars
+calendars = [
+    "pandas-market-calendars>=5.0",
+    "exchange-calendars>=4.0",
+    "holidays>=0.40",
 ]

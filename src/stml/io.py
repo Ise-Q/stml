@@ -39,3 +39,39 @@ def load_data(data_dir: str | Path | None = None) -> tuple[pd.DataFrame, pd.Data
     ohlcv = ohlcv.sort_values(['instrument', 'date']).reset_index(drop=True)
     signals = signals.sort_values('date').reset_index(drop=True)
     return ohlcv, signals
+
+
+def load_clean_data(
+    data_dir: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Like :func:`load_data` but the OHLCV frame has NAs handled per the policy
+    in ``refs/missing-data-report.md``: weekend / non-finite / bad-bounds rows
+    are dropped, zero-volume *weekday* rows (valid settles) are kept, and no
+    calendar grid is forward-filled.
+
+    Returns
+    -------
+    ohlcv_clean : long format, artifact rows removed.
+    signals : unchanged from :func:`load_data`.
+    """
+    from stml.na_checks import clean_long
+
+    ohlcv, signals = load_data(data_dir)
+    return clean_long(ohlcv), signals
+
+
+def load_returns_panel(
+    data_dir: str | Path | None = None, kind: str = 'log'
+) -> pd.DataFrame:
+    """Wide ``date x instrument`` log-return panel ready for cross-sectional work.
+
+    Returns are computed on each instrument's own dense series (so holiday-spanning
+    moves are correct), then pivoted. The only remaining NaNs are STRUCTURAL
+    (pre-inception or other-venue holidays) and must not be filled. See
+    :func:`stml.na_checks.corr_max_info` / :func:`stml.na_checks.rolling_pair_corr`
+    for the correct way to consume this panel.
+    """
+    from stml.na_checks import native_returns, wide_returns
+
+    ohlcv, _ = load_clean_data(data_dir)
+    return wide_returns(native_returns(ohlcv, kind=kind))
