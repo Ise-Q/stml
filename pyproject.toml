@@ -11,8 +11,10 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
     "statsmodels>=0.14.6",
-    "torch>=2.12.0",
+    "torch>=2.2.0,<2.3.0",
     "tqdm>=4.67.3",
+    "xgboost>=2.0.0",
+    "hmmlearn>=0.3.0",
 ]
 
 [build-system]
@@ -34,6 +36,7 @@ torch = { index = "pytorch-cpu" }
 dev = [
     "jupyterlab>=4.5.7",
     "nbstripout>=0.9.1",
+    "pytest>=9.0.3",
     "ruff>=0.15.13",
 ]
 # Optional: external exchange calendars used only as a cross-check in
