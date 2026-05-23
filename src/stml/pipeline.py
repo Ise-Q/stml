@@ -33,7 +33,7 @@ from stml.labeling import (
     get_meta_labels,
     get_uniqueness_weights,
 )
-from stml.models import ElasticNetLogReg
+from stml.models import ElasticNetLogReg, XGBoostMeta, MlpMeta
 from stml.regimes import compute_regime_features
 from stml.evaluation import (
     classification_report,
@@ -82,10 +82,36 @@ class PipelineConfig:
     # Universe (None = all 11 instruments)
     instruments: Optional[list[str]] = None
 
+    # Model selection: 'logreg' | 'xgboost'  (VSN handled separately for clarity)
+    model_name: str = "logreg"
+
 
 # --------------------------------------------------------------------------- #
 # Pipeline                                                                     #
 # --------------------------------------------------------------------------- #
+def _make_model(cfg: "PipelineConfig", embargo: pd.Timedelta):
+    """Construct the model from the config name."""
+    name = cfg.model_name.lower()
+    if name == "logreg":
+        return ElasticNetLogReg(
+            n_splits_inner=cfg.inner_n_splits, n_iter=cfg.n_iter,
+            embargo_td=embargo, random_state=cfg.random_state,
+        )
+    if name == "xgboost":
+        return XGBoostMeta(
+            n_splits_inner=cfg.inner_n_splits, n_iter=cfg.n_iter,
+            embargo_td=embargo, random_state=cfg.random_state,
+        )
+    if name == "mlp":
+        return MlpMeta(
+            n_splits_inner=cfg.inner_n_splits, n_iter=cfg.n_iter,
+            embargo_td=embargo, random_state=cfg.random_state,
+        )
+    raise ValueError(
+        f"Unknown model_name {cfg.model_name!r}; expected 'logreg' | 'xgboost' | 'mlp'."
+    )
+
+
 @dataclass
 class PipelineResult:
     config: PipelineConfig
@@ -94,7 +120,7 @@ class PipelineResult:
     weights: pd.Series
     train_idx: np.ndarray
     predict_idx: np.ndarray
-    model: ElasticNetLogReg
+    model: object  # ElasticNetLogReg | XGBoostMeta | VsnMeta
     predictions: pd.DataFrame                # deliverable CSV content
     eval_report: dict[str, float] = field(default_factory=dict)
     per_instrument: pd.DataFrame = field(default_factory=pd.DataFrame)
@@ -222,15 +248,10 @@ def run_pipeline(
         t_train = t_train.loc[X_train.index]
         t1_train = t1_train.loc[X_train.index]
 
-    model = ElasticNetLogReg(
-        n_splits_inner=cfg.inner_n_splits,
-        n_iter=cfg.n_iter,
-        embargo_td=embargo,
-        random_state=cfg.random_state,
-    )
+    model = _make_model(cfg, embargo)
     model.fit(X_train, y_train, t=t_train, t1=t1_train, sample_weight=sw_train)
     if verbose:
-        print(f"[5/7] model fit. best_params={model.best_params_}")
+        print(f"[5/7] model={cfg.model_name} fit. best_params={model.best_params_}")
 
     # 6. In-sample + out-of-sample evaluation ----------------------------- #
     # In-sample (sanity check — should be moderate, not too perfect)
