@@ -91,7 +91,7 @@ now documents the rationale, risks, and recommended calibration improvements.
 
 The **feature-engineering layer** for the triple-barrier metamodel is now built
 under `src/stml/metamodel/`. It produces a leakage-safe, tidy-long feature matrix
-(4,984 non-zero-signal trade days × 71 features) with train/val/test provenance, a
+(4,984 non-zero-signal trade days × 75 features) with train/val/test provenance, a
 documented [feature catalog](reports/feature-catalog.md), a redundancy map, and a
 per-instrument fitting-scope registry. Every feature uses only information `<= t`;
 fitted models (GMM/Markov regimes, PCA/clustering/autoencoder) are trained on the
@@ -280,7 +280,7 @@ uv run python -m stml.metamodel.build_features --instruments si1s   # smoke subs
 ```
 
 This writes `results/feature_matrix.{parquet,csv}` (tidy-long: one row per
-non-zero-signal trade day, 71 feature columns + `partition` + `fe_train_end_date`
+non-zero-signal trade day, 75 feature columns + `partition` + `fe_train_end_date`
 provenance), the `results/feature_redundancy.{json,csv}` map, the
 `results/instrument_scope.json` registry, `results/feature_matrix_provenance.json`,
 and the `reports/feature-catalog.md` documentation. The build is deterministic

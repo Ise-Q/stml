@@ -5,7 +5,8 @@ instruments, computed at each non-zero-signal trade day using only information
 ``<= t`` (execution is next-day ``r_{t+1}``):
 
 * engineered E-class features (counter-trend, vol/dispersion, signal-derived,
-  momentum-contrast, microstructure, calendar) — :mod:`stml.metamodel.features`;
+  momentum-contrast, microstructure, OHLC price-action returns, calendar) —
+  :mod:`stml.metamodel.features`;
 * filtered (causal) GMM + Markov-switching regime posteriors —
   :mod:`stml.metamodel.regime_features`;
 * unsupervised latent structure (PCA, clustering, a shallow dense autoencoder
@@ -44,6 +45,7 @@ from stml.metamodel.features import (
     f6_momentum_contrast,
     f7_microstructure,
     f8_calendar,
+    f10_price_action,
 )
 from stml.metamodel.latent import (
     LatentBundle,
@@ -78,6 +80,7 @@ __all__ = [
     "f6_momentum_contrast",
     "f7_microstructure",
     "f8_calendar",
+    "f10_price_action",
     # regime (F3, TF)
     "RegimeBundle",
     "fit_regime",

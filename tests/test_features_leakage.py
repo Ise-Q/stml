@@ -40,6 +40,7 @@ PRICE_FAMILIES = {
     "f2": F.f2_vol_dispersion,
     "f6": F.f6_momentum_contrast,
     "f7": F.f7_microstructure,
+    "f10": F.f10_price_action,
 }
 
 # The high-risk trailing F5 columns the contract demands be enumerated.
@@ -106,6 +107,7 @@ def test_every_family_returns_finite_or_nan_floats(
         "f5": F.f5_signal_derived(s),
         "f6": F.f6_momentum_contrast(oi),
         "f7": F.f7_microstructure(oi),
+        "f10": F.f10_price_action(oi),
         "f8": F.f8_calendar(oi["date"].drop_duplicates().sort_values()),
     }
     for name, block in blocks.items():
@@ -329,6 +331,79 @@ def test_f7_amihud_mixed_zero_volume_never_inf() -> None:
     df.loc[15, "volume"] = 0.0  # a single zero-volume day among positives
     f7 = F.f7_microstructure(df)
     assert not np.isinf(f7["f7_amihud_20"].to_numpy(dtype=float)).any()
+
+
+# --------------------------------------------------------------------------- #
+# F10 price-action returns: closed-form math, first-row NaN, non-positive guard #
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("inst", SAMPLE_INSTRUMENTS)
+def test_f10_matches_log_definitions(
+    inst: str, data: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    """The f10 columns equal their closed-form log definitions on real data."""
+    ohlcv, _ = data
+    oi = _inst_ohlcv(ohlcv, inst)
+    f10 = F.f10_price_action(oi)
+    df = F._ohlcv_indexed(oi)  # same sorted/deduped frame the feature uses
+
+    hl = np.log(df["high"] / df["low"])
+    oto = np.log(df["open"] / df["open"].shift(1))
+
+    # Daily values match the closed forms (finite rows within tolerance).
+    for col, ref in (("f10_hl_range", hl), ("f10_oto_ret", oto)):
+        a = f10[col]
+        b = ref.reindex(a.index)
+        diff = (a - b).abs().to_numpy(dtype=float)
+        finite = diff[np.isfinite(diff)]
+        assert finite.size and finite.max() <= 1e-12, f"{inst}: {col} != log def"
+
+    # The *_mean_20 columns are exactly a trailing right-aligned rolling(20) mean.
+    assert np.allclose(
+        f10["f10_hl_range_mean_20"].to_numpy(dtype=float),
+        f10["f10_hl_range"].rolling(20, min_periods=20).mean().to_numpy(dtype=float),
+        equal_nan=True,
+    )
+    assert np.allclose(
+        f10["f10_oto_ret_mean_20"].to_numpy(dtype=float),
+        f10["f10_oto_ret"].rolling(20, min_periods=20).mean().to_numpy(dtype=float),
+        equal_nan=True,
+    )
+
+
+def _synthetic_ohlcv(n: int = 25) -> pd.DataFrame:
+    """A clean strictly-positive OHLCV frame for the F10 edge-case tests."""
+    idx = pd.bdate_range("2020-01-01", periods=n)
+    return pd.DataFrame(
+        {
+            "date": idx,
+            "instrument": "z",
+            "open": np.linspace(10.0, 12.0, n),
+            "high": np.linspace(10.2, 12.2, n),
+            "low": np.linspace(9.8, 11.8, n),
+            "close": np.linspace(10.0, 12.0, n),
+            "volume": np.full(n, 100.0),
+            "open_interest": np.arange(n, dtype=float),
+        }
+    )
+
+
+def test_f10_first_open_to_open_is_nan() -> None:
+    """The first row has no prior open, so the open-to-open return is NaN."""
+    f10 = F.f10_price_action(_synthetic_ohlcv())
+    assert np.isnan(f10["f10_oto_ret"].iloc[0]), "first open-to-open must be NaN"
+    assert np.isfinite(f10["f10_oto_ret"].iloc[1:].to_numpy(dtype=float)).all()
+
+
+def test_f10_nonpositive_price_is_nan_not_inf() -> None:
+    """A zero high/low/open yields NaN, never an inf (mirrors the Parkinson guard)."""
+    df = _synthetic_ohlcv()
+    df.loc[10, "low"] = 0.0  # zero low -> high/low range NaN on that row
+    df.loc[12, "open"] = 0.0  # zero open -> oto NaN on rows 12 and 13
+    f10 = F.f10_price_action(df)
+    assert not np.isinf(f10.to_numpy(dtype=float)).any(), "f10 produced an inf"
+    assert np.isnan(f10["f10_hl_range"].iloc[10]), "zero-low range must be NaN"
+    assert np.isnan(f10["f10_oto_ret"].iloc[12]), "zero-open oto must be NaN"
+    assert np.isnan(f10["f10_oto_ret"].iloc[13]), "oto off a zero prior open is NaN"
 
 
 # --------------------------------------------------------------------------- #

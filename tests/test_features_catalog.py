@@ -113,9 +113,9 @@ def test_catalog_column_set_equals_produced_features(matrix) -> None:
     assert set(CATALOG) == set(produced), (
         "CATALOG keys must match the produced feature columns exactly"
     )
-    # 71 documented feature columns (75 matrix columns minus 4 meta).
-    assert len(produced) == 71
-    assert len(CATALOG) == 71
+    # 75 documented feature columns (79 matrix columns minus 4 meta).
+    assert len(produced) == 75
+    assert len(CATALOG) == 75
 
 
 def test_meta_columns_have_no_spec(matrix) -> None:
@@ -167,8 +167,8 @@ def test_leakage_class_composition() -> None:
     # LI = exactly the label-interface subset.
     assert li == {"f2_vol_20", "f5_trailing_run_length"}
 
-    # The three classes partition the 71 columns.
-    assert len(eng) == 54
+    # The three classes partition the 75 columns.
+    assert len(eng) == 58
     assert tf | li | eng == set(CATALOG)
     assert not (tf & li) and not (tf & eng) and not (li & eng)
 

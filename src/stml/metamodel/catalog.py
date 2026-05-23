@@ -67,6 +67,7 @@ _FAMILY_TITLES: dict[str, str] = {
     "F2": "F2 — Volatility & dispersion",
     "F6": "F6 — Momentum & trend-contrast",
     "F7": "F7 — Microstructure (volume / open-interest)",
+    "F10": "F10 — OHLC price-action returns (range / open-to-open)",
     "F5": "F5 — Signal-derived (trailing run structure)",
     "F8": "F8 — Calendar (deterministic sin/cos)",
     "F3": "F3 — Regime posteriors (filtered GMM + Markov, fitted)",
@@ -130,7 +131,7 @@ def _spec(
 # --------------------------------------------------------------------------- #
 # The registry — one FeatureSpec per produced feature column.                 #
 # Order mirrors the produced matrix (features.assemble_engineered: F1,F2,F6,  #
-# F7,F5,F8; then F3, F4, F9). Leakage classes per CONTRACT_FE Section 3:      #
+# F7,F10,F5,F8; then F3, F4, F9). Leakage classes per CONTRACT_FE Section 3:  #
 # F3_*/F4_* = TF; f2_vol_20 (sigma) + f5_trailing_run_length = LI; rest = E.  #
 # --------------------------------------------------------------------------- #
 CATALOG: dict[str, FeatureSpec] = dict(
@@ -464,6 +465,43 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "20d",
             "E",
             "features.f7_microstructure",
+        ),
+        # ----- F10 OHLC price-action returns (4) — raw range / open-to-open -- #
+        _spec(
+            "f10_hl_range",
+            "F10",
+            "Daily intraday high-low log range log(high/low): the per-bar "
+            "trading range (raw daily form of the f2_parkinson_20 input).",
+            "1d",
+            "E",
+            "features.f10_price_action",
+        ),
+        _spec(
+            "f10_hl_range_mean_20",
+            "F10",
+            "Trailing 20d mean of the daily high-low log range (typical recent "
+            "intraday range).",
+            "20d",
+            "E",
+            "features.f10_price_action",
+        ),
+        _spec(
+            "f10_oto_ret",
+            "F10",
+            "Daily open-to-open log return log(open_t/open_{t-1}); the "
+            "open-anchored, overnight-inclusive counterpart to the close return.",
+            "1d",
+            "E",
+            "features.f10_price_action",
+        ),
+        _spec(
+            "f10_oto_ret_mean_20",
+            "F10",
+            "Trailing 20d mean of the open-to-open log return (open-anchored "
+            "drift).",
+            "20d",
+            "E",
+            "features.f10_price_action",
         ),
         # ----- F5 signal-derived (9); f5_trailing_run_length = LI ------------ #
         _spec(

@@ -51,6 +51,7 @@ Public API
 - :func:`f6_momentum_contrast` — momentum & trend-contrast family.
 - :func:`f7_microstructure`    — volume / open-interest microstructure family.
 - :func:`f8_calendar`          — deterministic calendar (sin/cos) family.
+- :func:`f10_price_action`     — OHLC price-action returns (range / open-to-open).
 - :func:`assemble_engineered`  — concat every family on the date index.
 """
 
@@ -68,6 +69,7 @@ __all__ = [
     "f6_momentum_contrast",
     "f7_microstructure",
     "f8_calendar",
+    "f10_price_action",
     "assemble_engineered",
 ]
 
@@ -601,6 +603,73 @@ def f7_microstructure(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------- #
+# F10 — OHLC price-action returns (intraday range / open-to-open).            #
+# --------------------------------------------------------------------------- #
+def f10_price_action(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
+    """OHLC price-action return features for one instrument.
+
+    Two raw OHLC-derived returns the other families only consume in aggregate
+    form, surfaced here as first-class features. Both use **log** returns to
+    match the layer's house convention (:func:`stml.na_checks.native_returns`
+    ``kind="log"``), each as a single-day value plus its trailing 20-day mean:
+
+    * the intraday **high-low log range** ``log(high / low)`` — the per-bar
+      trading range (the same quantity :func:`f2_vol_dispersion`'s Parkinson vol
+      aggregates over 20 days, exposed here as the raw daily range and a typical
+      recent range); and
+    * the **open-to-open log return** ``log(open_t / open_{t-1})`` — the
+      open-anchored counterpart to the close-based returns used by F1/F6,
+      capturing the overnight-inclusive move a close-to-close return blends away.
+
+    Leakage contract
+    ----------------
+    Look-ahead-free by construction: the daily range uses only the same-day
+    high/low (info ``<= t``); the open-to-open return uses today's and
+    yesterday's open (``shift(+1)``, info ``<= t``); the 20-day means are
+    right-aligned trailing ``rolling(20)`` averages. Non-positive prices map to
+    ``NaN`` (never an ``inf`` — mirrors the Parkinson guard in
+    :func:`f2_vol_dispersion`), and warm-up rows are ``NaN`` and never ffilled.
+
+    Columns
+    -------
+    f10_hl_range : daily intraday high-low log range ``log(high / low)``.
+    f10_hl_range_mean_20 : trailing 20d mean of ``f10_hl_range`` (typical range).
+    f10_oto_ret : daily open-to-open log return ``log(open_t / open_{t-1})``.
+    f10_oto_ret_mean_20 : trailing 20d mean of ``f10_oto_ret`` (open-drift).
+
+    Parameters
+    ----------
+    ohlcv_inst : pd.DataFrame
+        Full-history long OHLCV for one instrument.
+
+    Returns
+    -------
+    pd.DataFrame
+        Date-indexed float features (NaN on warm-up rows; never ffilled).
+    """
+    df = _ohlcv_indexed(ohlcv_inst)
+    high = df["high"]
+    low = df["low"]
+    open_ = df["open"]
+    out: dict[str, pd.Series] = {}
+
+    # Intraday high-low log range; non-positive high/low -> NaN (never inf),
+    # matching the f2_parkinson_20 guard so a bad bar cannot blow up.
+    hl_range = np.log((high / low).where((high > 0.0) & (low > 0.0)))
+    out["f10_hl_range"] = hl_range
+    out["f10_hl_range_mean_20"] = hl_range.rolling(20, min_periods=20).mean()
+
+    # Open-to-open log return; needs both today's and yesterday's open > 0,
+    # else NaN. The first row is NaN by construction (no prior open).
+    prev_open = open_.shift(1)
+    oto = np.log((open_ / prev_open).where((open_ > 0.0) & (prev_open > 0.0)))
+    out["f10_oto_ret"] = oto
+    out["f10_oto_ret_mean_20"] = oto.rolling(20, min_periods=20).mean()
+
+    return pd.DataFrame(out, index=df.index)
+
+
+# --------------------------------------------------------------------------- #
 # F8 — Calendar (deterministic sin/cos of day-of-week and month).            #
 # --------------------------------------------------------------------------- #
 def f8_calendar(index: pd.DatetimeIndex) -> pd.DataFrame:
@@ -669,6 +738,7 @@ def assemble_engineered(
     f2 = f2_vol_dispersion(ohlcv_inst)
     f6 = f6_momentum_contrast(ohlcv_inst)
     f7 = f7_microstructure(ohlcv_inst)
+    f10 = f10_price_action(ohlcv_inst)
 
     sig = pd.Series(signal_inst).sort_index()
     mr_score = f1["f1_mr_score_20"].reindex(sig.index)
@@ -678,6 +748,6 @@ def assemble_engineered(
     union_idx = price_idx.union(f5.index)
     f8 = f8_calendar(pd.DatetimeIndex(union_idx))
 
-    frames = [f1, f2, f6, f7, f5, f8]
+    frames = [f1, f2, f6, f7, f10, f5, f8]
     out = pd.concat([f.reindex(union_idx) for f in frames], axis=1)
     return out.sort_index()
