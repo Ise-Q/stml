@@ -495,6 +495,12 @@ def compute_features(
     else:
         breadth = pd.DataFrame()
 
+    # G8 — cross-sectional / economic-intuition features
+    if "G8" in include_groups:
+        g8 = compute_cross_sectional_features(ohlcv_long, events, signals)
+    else:
+        g8 = pd.DataFrame()
+
     # Calendar features (G7).
     if "G7" in include_groups:
         cal_idx = pd.DatetimeIndex(sorted(set(events["t"])))
@@ -530,12 +536,208 @@ def compute_features(
     df = pd.DataFrame(rows, index=events.index)
     # Drop helper columns from the output (we'll keep events as the source of truth for t, inst).
     df = df.drop(columns=["__t__", "__instrument__"], errors="ignore")
+    # Join G8 cross-sectional features if requested.
+    if "G8" in include_groups and not g8.empty:
+        df = df.join(g8, how="left")
     return df
 
 
 # --------------------------------------------------------------------------- #
 # 7. Feature-group registry (populated at import)                             #
 # --------------------------------------------------------------------------- #
+def compute_cross_sectional_features(
+    ohlcv_long: pd.DataFrame,
+    events: pd.DataFrame,
+    signals: pd.DataFrame,
+) -> pd.DataFrame:
+    """Cross-sectional / cross-asset features (G8) — economic intuition.
+
+    For each (date, instrument) event, compute features that depend on the
+    *cross-section* of instruments at that date:
+      - cross_sec_mom_rank_21d : rank of instrument's 21d return within its
+        asset class (0 = lowest, 1 = highest).
+      - cross_sec_vol_rank_21d : similarly for 21d vol.
+      - corr_to_sector_63d    : rolling 63d correlation of instrument's
+        returns to the sector mean (excluding self).
+      - avg_cross_asset_corr_63d : average of pairwise correlations across all
+        11 instruments (crisis indicator — rises when everything correlates).
+      - signal_breadth_full   : (#long - #short) / 11 across the whole panel
+        at this date.
+      - signal_consensus_pct  : fraction of instruments with signal in this
+        instrument's direction (excluding self).
+      - trend_persistence     : number of consecutive same-sign primary signals
+        before this date (causal).
+
+    All causal — uses only data up to and including the event date.
+    """
+    out_rows: list[dict] = []
+    # Pre-compute per-instrument returns and 21d momentum/vol once.
+    inst_data: dict[str, dict] = {}
+    for inst in events["instrument"].unique():
+        s = (
+            ohlcv_long.loc[ohlcv_long["instrument"] == inst]
+            .set_index("date")["close"]
+            .sort_index()
+        )
+        s = s[~s.index.duplicated(keep="last")]
+        ret = np.log(s).diff()
+        mom_21 = ret.rolling(21).sum()
+        vol_21 = ret.rolling(21).std() * np.sqrt(252)
+        inst_data[inst] = {"ret": ret, "mom_21": mom_21, "vol_21": vol_21}
+
+    # Build wide returns panel for correlation work.
+    ret_wide_dict = {inst: d["ret"] for inst, d in inst_data.items()}
+    ret_wide = pd.DataFrame(ret_wide_dict).sort_index()
+
+    # Pre-compute signal panel.
+    if "date" in signals.columns:
+        sig_panel = signals.set_index("date")
+    else:
+        sig_panel = signals
+
+    # Asset classes.
+    instruments_by_class: dict[str, list[str]] = {}
+    for inst, sec in ASSET_CLASSES.items():
+        instruments_by_class.setdefault(sec, []).append(inst)
+
+    # For each event, sample the cross-sectional features.
+    for ev_id, ev in events.iterrows():
+        t, inst = ev["t"], ev["instrument"]
+        sec = ASSET_CLASSES.get(inst, "other")
+        sec_mates = [k for k in instruments_by_class.get(sec, []) if k in inst_data]
+        row: dict = {}
+
+        # 1. cross-sectional momentum and vol rank within sector
+        if len(sec_mates) > 1:
+            mom_vals = {}
+            vol_vals = {}
+            for m in sec_mates:
+                mr = inst_data[m]["mom_21"]
+                vr = inst_data[m]["vol_21"]
+                if t in mr.index and not pd.isna(mr.loc[t]):
+                    mom_vals[m] = float(mr.loc[t])
+                if t in vr.index and not pd.isna(vr.loc[t]):
+                    vol_vals[m] = float(vr.loc[t])
+            if inst in mom_vals and len(mom_vals) > 1:
+                ranks = pd.Series(mom_vals).rank(pct=True)
+                row["cross_sec_mom_rank_21d"] = float(ranks[inst])
+            else:
+                row["cross_sec_mom_rank_21d"] = 0.5
+            if inst in vol_vals and len(vol_vals) > 1:
+                ranks = pd.Series(vol_vals).rank(pct=True)
+                row["cross_sec_vol_rank_21d"] = float(ranks[inst])
+            else:
+                row["cross_sec_vol_rank_21d"] = 0.5
+        else:
+            row["cross_sec_mom_rank_21d"] = 0.5
+            row["cross_sec_vol_rank_21d"] = 0.5
+
+        # 2. correlation to sector mean (rolling 63d, ending at t)
+        if inst in inst_data and len(sec_mates) > 1:
+            mates_no_self = [m for m in sec_mates if m != inst]
+            ret_self = inst_data[inst]["ret"]
+            # Sector mean return excluding self.
+            sec_panel = ret_wide[mates_no_self]
+            sec_mean = sec_panel.mean(axis=1)
+            # 63d rolling correlation up to t (inclusive).
+            try:
+                ret_self_window = ret_self.loc[:t].tail(63)
+                sec_mean_window = sec_mean.loc[:t].tail(63)
+                joined = pd.concat([ret_self_window, sec_mean_window], axis=1).dropna()
+                if len(joined) >= 30:
+                    corr = joined.iloc[:, 0].corr(joined.iloc[:, 1])
+                    row["corr_to_sector_63d"] = float(corr) if not pd.isna(corr) else 0.0
+                else:
+                    row["corr_to_sector_63d"] = 0.0
+            except (KeyError, IndexError):
+                row["corr_to_sector_63d"] = 0.0
+        else:
+            row["corr_to_sector_63d"] = 0.0
+
+        # 3. average pairwise correlation across all instruments (crisis indicator)
+        try:
+            window = ret_wide.loc[:t].tail(63).dropna(axis=1, thresh=30)
+            if window.shape[1] >= 3:
+                corr_mat = window.corr()
+                # off-diagonal mean
+                mask = ~np.eye(corr_mat.shape[0], dtype=bool)
+                row["avg_cross_asset_corr_63d"] = float(corr_mat.values[mask].mean())
+            else:
+                row["avg_cross_asset_corr_63d"] = 0.5
+        except (KeyError, IndexError):
+            row["avg_cross_asset_corr_63d"] = 0.5
+
+        # 4. Signal breadth (whole panel)
+        if t in sig_panel.index:
+            sig_row = sig_panel.loc[t]
+            if isinstance(sig_row, pd.DataFrame):
+                sig_row = sig_row.iloc[0]
+            n_long = float((sig_row == 1).sum())
+            n_short = float((sig_row == -1).sum())
+            n_active = float((sig_row != 0).sum())
+            row["signal_breadth_full"] = (n_long - n_short) / max(len(sig_row), 1)
+            # Signal consensus with this instrument's direction (excluding self).
+            my_side = ev["side"]
+            others = sig_row.drop(inst) if inst in sig_row.index else sig_row
+            same_dir = float((others == my_side).sum())
+            row["signal_consensus_pct"] = same_dir / max(len(others), 1)
+        else:
+            row["signal_breadth_full"] = 0.0
+            row["signal_consensus_pct"] = 0.5
+
+        # 5. Trend persistence — consecutive same-sign signals BEFORE t (causal)
+        if inst in sig_panel.columns:
+            prior_signals = sig_panel.loc[:t, inst]
+            # Drop the current date so it's strictly prior.
+            prior_signals = prior_signals.iloc[:-1] if len(prior_signals) > 0 else prior_signals
+            if len(prior_signals):
+                # Find consecutive same-sign streak ending right before t.
+                target = ev["side"]
+                streak = 0
+                for v in prior_signals.iloc[::-1]:
+                    if v == target:
+                        streak += 1
+                    else:
+                        break
+                row["trend_persistence"] = float(streak)
+            else:
+                row["trend_persistence"] = 0.0
+        else:
+            row["trend_persistence"] = 0.0
+
+        # 6. Vol clustering: autocorr of |returns| over 21d
+        if inst in inst_data:
+            ret = inst_data[inst]["ret"]
+            abs_ret_window = ret.abs().loc[:t].tail(21).dropna()
+            if len(abs_ret_window) >= 5 and abs_ret_window.std() > 0:
+                row["vol_clustering_21d"] = float(abs_ret_window.autocorr(lag=1))
+            else:
+                row["vol_clustering_21d"] = 0.0
+        else:
+            row["vol_clustering_21d"] = 0.0
+
+        # 7. Recent shock: yesterday's |return| z-score vs 63d
+        if inst in inst_data:
+            ret = inst_data[inst]["ret"]
+            try:
+                idx = ret.index.get_loc(t)
+                if idx >= 63:
+                    window = ret.iloc[idx - 63:idx]
+                    yesterday = ret.iloc[idx - 1] if idx >= 1 else 0.0
+                    z = (abs(yesterday) - window.abs().mean()) / (window.abs().std() + 1e-12)
+                    row["recent_shock_z"] = float(z) if not pd.isna(z) else 0.0
+                else:
+                    row["recent_shock_z"] = 0.0
+            except (KeyError, IndexError):
+                row["recent_shock_z"] = 0.0
+        else:
+            row["recent_shock_z"] = 0.0
+
+        out_rows.append(row)
+
+    return pd.DataFrame(out_rows, index=events.index)
+
+
 _register("G1_vol", [
     "vol_5d", "vol_21d", "vol_63d", "ewma_vol_50",
     "vol_ratio_5_63", "vol_of_vol_63", "semivol_21d",
@@ -566,4 +768,10 @@ _register("G5_signal", [
 ])
 _register("G7_calendar", [
     "month_sin", "month_cos", "dow_sin", "dow_cos",
+])
+_register("G8_cross_section", [
+    "cross_sec_mom_rank_21d", "cross_sec_vol_rank_21d",
+    "corr_to_sector_63d", "avg_cross_asset_corr_63d",
+    "signal_breadth_full", "signal_consensus_pct",
+    "trend_persistence", "vol_clustering_21d", "recent_shock_z",
 ])
