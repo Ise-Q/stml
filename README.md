@@ -24,15 +24,22 @@ stml/
 ├── notebooks/               shared notebooks (edits via PR review)
 │   ├── agent_eda.ipynb      project-wide EDA (includes the NA-handling section)
 │   └── <initials>/          your personal notebooks (e.g. notebooks/jay/)
+│       └── feature_engineering.ipynb   metamodel feature layer, end-to-end
 ├── results/
+│   ├── README.md            guide to the feature matrix + redundancy / scope maps
+│   ├── feature_matrix.parquet / .csv   tidy-long metamodel feature matrix
+│   ├── feature_redundancy.json / .csv  feature correlation + hierarchical clusters
+│   ├── instrument_scope.json           per-instrument D5 fitting-scope registry
+│   ├── feature_matrix_provenance.json  FE→model handoff contract
 │   ├── <initials>/          personal figures / tables / intermediate outputs
 │   └── jj/                  canonical replication JSON artifacts
 ├── reports/                 shared deliverables (markdown / PDF write-ups)
-│   ├── README.md            guide to replication reports, gates, and terminology
+│   ├── README.md            guide to replication reports, gates, terminology + feature catalog
 │   ├── missing-data-report.md
 │   ├── signal-characterization.md
 │   ├── replication-summary.md
 │   ├── replication-ledger.md
+│   ├── feature-catalog.md   metamodel feature-engineering layer documentation
 │   └── <family>.md          per-family replication reports
 ├── refs/                    reference materials (read-only)
 │   ├── project-instructions.md
@@ -42,7 +49,8 @@ stml/
 │   ├── __init__.py          re-exports the loaders + the na_checks module
 │   ├── io.py                load_data() / load_clean_data() / load_returns_panel()
 │   ├── na_checks.py         calendars, missing-data diagnostics, panel statistics
-│   └── replication/         signal characterization, search, gates, metrics
+│   ├── replication/         signal characterization, search, gates, metrics
+│   └── metamodel/           feature-engineering layer for the triple-barrier metamodel
 ├── pyproject.toml           project metadata, dependencies, build config
 ├── uv.lock                  pinned dependency versions (committed)
 ├── .gitattributes           rule that strips notebook outputs at commit time
@@ -80,6 +88,18 @@ of cross-asset ranking for near-independent signals.
 Important caveat: the gate constants are transparent checkpoint heuristics, not
 fully optimized statistical cutoffs. [`reports/README.md`](reports/README.md)
 now documents the rationale, risks, and recommended calibration improvements.
+
+The **feature-engineering layer** for the triple-barrier metamodel is now built
+under `src/stml/metamodel/`. It produces a leakage-safe, tidy-long feature matrix
+(4,984 non-zero-signal trade days × 71 features) with train/val/test provenance, a
+documented [feature catalog](reports/feature-catalog.md), a redundancy map, and a
+per-instrument fitting-scope registry. Every feature uses only information `<= t`;
+fitted models (GMM/Markov regimes, PCA/clustering/autoencoder) are trained on the
+FE-train partition (ending `2021-07-01`) and applied causally, backed by two
+separate leakage proofs — truncation-invariance for engineered features and a
+fit-provenance assertion for fitted ones. Build it with
+`uv run python -m stml.metamodel.build_features`; see
+[`results/README.md`](results/README.md) and [`src/README.md`](src/README.md).
 
 ---
 
@@ -143,6 +163,7 @@ uv run jupyter lab
 | Regenerate missing-data diagnostics | `uv run python -m stml.na_checks` |
 | Regenerate signal characterization + thresholds | `uv run python -m stml.replication.run_characterize` |
 | Regenerate replication reports + candidates | `uv run python -m stml.replication.run_replicate` |
+| Build the metamodel feature matrix | `uv run python -m stml.metamodel.build_features` |
 | Add a runtime dependency | `uv add <pkg>` |
 | Add a dev-only tool | `uv add --dev <pkg>` |
 | Remove a dependency | `uv remove <pkg>` |
@@ -209,7 +230,9 @@ Useful building blocks (all in `stml.na_checks`):
 | A worked example end-to-end | the "0b. Missing-data handling" section of `notebooks/agent_eda.ipynb` |
 | Signal replication report guide | [`reports/README.md`](reports/README.md) |
 | Structured replication artifacts | [`results/jj/README.md`](results/jj/README.md) |
-| Replication implementation guide | [`src/README.md`](src/README.md) |
+| Replication + metamodel implementation guide | [`src/README.md`](src/README.md) |
+| Feature matrix + redundancy / scope artifacts | [`results/README.md`](results/README.md) |
+| Feature catalog (every feature column documented) | [`reports/feature-catalog.md`](reports/feature-catalog.md) |
 
 ### 4.4 Golden rules for statistics on this panel
 
@@ -245,6 +268,39 @@ The released signal panel is split chronologically: train is `2020-01-03` to
 `2021-12-31` to `2022-06-30`. Search and threshold calibration use train only;
 G1-G4 gates use validation; the held-out test block is touched once for final
 confirmation after gates are frozen.
+
+### 4.6 Building the metamodel feature matrix
+
+The feature-engineering layer turns the cleaned panel + released signals into a
+leakage-safe feature matrix for the triple-barrier metamodel:
+
+```bash
+uv run python -m stml.metamodel.build_features                      # all 11 instruments
+uv run python -m stml.metamodel.build_features --instruments si1s   # smoke subset
+```
+
+This writes `results/feature_matrix.{parquet,csv}` (tidy-long: one row per
+non-zero-signal trade day, 71 feature columns + `partition` + `fe_train_end_date`
+provenance), the `results/feature_redundancy.{json,csv}` map, the
+`results/instrument_scope.json` registry, `results/feature_matrix_provenance.json`,
+and the `reports/feature-catalog.md` documentation. The build is deterministic
+(rebuild reproduces the matrix frame-for-frame; autoencoder columns within
+`1e-10`) and never touches `results/jj/`.
+
+From Python:
+
+```python
+from stml.io import load_clean_data
+from stml.metamodel import FeaturePipeline
+
+ohlcv, signals = load_clean_data()
+matrix = FeaturePipeline().fit(ohlcv, signals).transform(ohlcv, signals)
+```
+
+`fit` trains the regime/latent models on the FE-train partition only (ending
+`2021-07-01`); `transform` applies them causally and assembles the tidy-long
+matrix. See [`src/README.md`](src/README.md) for the module map and
+[`results/README.md`](results/README.md) for the artifact schemas.
 
 ---
 

@@ -22,6 +22,12 @@ data handling.
 `reports/replication-summary.md`, updates the ledger, and writes
 `results/jj/top_candidates.json`.
 
+`stml.metamodel.build_features`
+: Builds the leakage-safe feature matrix for the triple-barrier metamodel and
+writes `results/feature_matrix.{parquet,csv}`,
+`results/feature_redundancy.{json,csv}`, `results/instrument_scope.json`,
+`results/feature_matrix_provenance.json`, and `reports/feature-catalog.md`.
+
 ## Replication Module Map
 
 `replication/align.py`
@@ -60,6 +66,55 @@ floor and exhaustive grid below it.
 `replication/splits.py`
 : Defines chronological train/validation/test splits, embargo logic, and
 effective sample size.
+
+## Metamodel Module Map (Feature Engineering)
+
+The `stml.metamodel` package builds the feature-engineering layer for the
+triple-barrier metamodel. Every feature is computed at a non-zero-signal trade
+day using only information `<= t`; fitted models are trained on the
+feature-engineering train partition (FE-train, ending `2021-07-01`) and applied
+causally. Engineered features prove causality by truncation-invariance; fitted
+features prove it by a separate fit-provenance assertion.
+
+`metamodel/features.py`
+: Engineered, no-fit, trailing-only features (F1 counter-trend, F2
+vol/dispersion, F5 signal-derived, F6 momentum-contrast, F7 microstructure, F8
+calendar). Mirrors `replication.archetypes` score formulas and reuses
+`na_checks` returns/vol.
+
+`metamodel/regime_features.py`
+: F3 regime posteriors. Fits a Gaussian mixture on `(return, vol)` and a 2-state
+Markov-switching model on FE-train, then emits **filtered** (one-sided, causal)
+per-day high-vol probabilities. Does not import `replication.characterize`
+(that path is smoothed and signal-era-fit); it re-implements a causal path.
+
+`metamodel/latent.py`
+: F4 unsupervised structure. Fits a `StandardScaler`, `PCA(4)`, `KMeans`, and a
+deterministic shallow dense autoencoder on the class-pooled FE-train block, then
+transforms each instrument's series. Records autoencoder-vs-PCA(k=4)
+reconstruction MSE per class.
+
+`metamodel/xsection.py`
+: F9 cross-sectional features: per-day rank over the finite-score subset,
+universe size, and mean rolling pair-correlation to asset-class peers
+(expected-negative).
+
+`metamodel/scope.py`
+: The D5 `InstrumentScope` registry: per-instrument fitting scope, `n_eff_gate`,
+low-power flag, and embargo width. Persists `results/instrument_scope.json`.
+
+`metamodel/catalog.py`
+: The `FeatureSpec` registry documenting every produced column; renders
+`reports/feature-catalog.md` and asserts 1:1 column coverage.
+
+`metamodel/pipeline.py`
+: `FeaturePipeline.fit(...).transform(...)` orchestrates the families into one
+tidy-long matrix, attaches `partition` + `fe_train_end_date` provenance, and
+restricts rows to non-zero-signal trade days.
+
+`metamodel/build_features.py`
+: CLI that loads data, runs the pipeline over all 11 instruments, and persists
+the matrix, redundancy map, scope registry, provenance, and catalog.
 
 ## End-To-End Flow
 
@@ -196,7 +251,7 @@ next-day return convention.
 
 ## Generated Artifacts
 
-The source code writes:
+The replication code writes:
 
 - `reports/signal-characterization.md`
 - `results/jj/thresholds.json`
@@ -206,5 +261,14 @@ The source code writes:
 - `results/jj/ledger.json`
 - `results/jj/top_candidates.json`
 
-The README files in `reports/` and `results/jj/` explain how to read those
-artifacts from a user perspective.
+The metamodel feature layer (`stml.metamodel.build_features`) additionally
+writes:
+
+- `results/feature_matrix.parquet` and `results/feature_matrix.csv`
+- `results/feature_redundancy.json` and `results/feature_redundancy.csv`
+- `results/instrument_scope.json`
+- `results/feature_matrix_provenance.json`
+- `reports/feature-catalog.md`
+
+The README files in `reports/`, `results/`, and `results/jj/` explain how to
+read those artifacts from a user perspective.
