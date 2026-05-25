@@ -11,14 +11,18 @@ from stml.harry.signal_audit import (
     DEFAULT_LAGS,
     INSTRUMENTS,
     _build_aligned_frame,
+    _classify_tag,
     _corr_col,
     _forward_cumret,
     _lag_corr,
     _log_returns,
     _moving_block_indices,
+    _safe_ci_excludes_zero,
+    _split_signals_halves,
     _statistics_from_frame,
     audit_all,
     audit_instrument,
+    audit_stability,
 )
 
 
@@ -130,7 +134,7 @@ def test_audit_instrument_tags_momentum():
     row = audit_instrument(
         ohlcv, signals, "es1s", h=10, n_boot=50, block_size=20, seed=42
     )
-    assert row["sign_label"] == "trend"
+    assert row["tag"] == "trend"
     assert row["mean_trail_corr"] > 0.05
     assert row["corr_trail_1"] > 0.5
 
@@ -142,7 +146,7 @@ def test_audit_instrument_tags_mean_reversion():
     row = audit_instrument(
         ohlcv, signals, "cl1s", h=10, n_boot=50, block_size=20, seed=42
     )
-    assert row["sign_label"] == "mean_reverting"
+    assert row["tag"] == "mean_reverting"
     assert row["mean_trail_corr"] < -0.05
     assert row["corr_trail_1"] < -0.5
 
@@ -155,7 +159,7 @@ def test_audit_instrument_random_signal_is_mixed():
         ohlcv, signals, "es1s", h=10, n_boot=50, block_size=20, seed=42
     )
     # A random signal should fall in "mixed" almost surely.
-    assert row["sign_label"] == "mixed"
+    assert row["tag"] == "mixed"
     assert abs(row["mean_trail_corr"]) < 0.1
 
 
@@ -223,8 +227,11 @@ def test_audit_all_schema_and_one_row_per_instrument():
         for c in (stat, f"{stat}_lo", f"{stat}_hi"):
             assert c in df.columns
     assert "mean_trail_corr" in df.columns
-    assert "sign_label" in df.columns
-    assert set(df["sign_label"]).issubset({"trend", "mean_reverting", "mixed", "n/a"})
+    for tag_col in ("tag", "tag_trail_1", "tag_trail_h10"):
+        assert tag_col in df.columns
+        assert set(df[tag_col]).issubset(
+            {"trend", "mean_reverting", "mixed", "n/a"}
+        )
 
 
 def test_statistics_from_frame_pnl_definitions():
@@ -254,3 +261,163 @@ def test_statistics_from_frame_pnl_definitions():
     # pnl_h defined at t in {0,1,2,3}; intersection {0,1,2}; pnl_h values
     # [-0.10, 0.10, -0.90], hits = [F, T, F] → 1/3.
     assert stats["hit_rate_h"] == pytest.approx(1 / 3)
+
+
+# --------------------------------------------------------------------------- #
+# Per-horizon tagging (Step 1 addendum)                                        #
+# --------------------------------------------------------------------------- #
+def test_classify_tag_thresholds():
+    assert _classify_tag(0.10, threshold=0.05) == "trend"
+    assert _classify_tag(-0.10, threshold=0.05) == "mean_reverting"
+    assert _classify_tag(0.04, threshold=0.05) == "mixed"
+    assert _classify_tag(-0.04, threshold=0.05) == "mixed"
+    assert _classify_tag(0.0, threshold=0.05) == "mixed"
+    assert _classify_tag(float("nan"), threshold=0.05) == "n/a"
+    # Threshold edge: strictly greater on either side; equal => mixed.
+    assert _classify_tag(0.05, threshold=0.05) == "mixed"
+    assert _classify_tag(-0.05, threshold=0.05) == "mixed"
+
+
+def test_per_horizon_tags_in_audit_instrument_output():
+    ohlcv, signals = _make_synthetic_instrument(
+        "es1s", n=600, construction="momentum", seed=4
+    )
+    row = audit_instrument(
+        ohlcv, signals, "es1s", h=10, n_boot=50, block_size=20, seed=42
+    )
+    # On strong momentum data both horizons should be "trend".
+    assert row["tag_trail_1"] == "trend"
+    # tag is multi-horizon mean — should also be trend here.
+    assert row["tag"] == "trend"
+    # tag_trail_h10 must reflect corr_trail_10 only.
+    expected = "trend" if row["corr_trail_10"] > 0.05 else (
+        "mean_reverting" if row["corr_trail_10"] < -0.05 else "mixed"
+    )
+    assert row["tag_trail_h10"] == expected
+
+
+def test_per_horizon_tags_can_disagree_with_canonical():
+    """A signal that loads strongly negatively at lag 1 but is noise elsewhere
+    will tag mean_reverting on trail_1 and mixed on the multi-horizon mean.
+    """
+    rng = np.random.default_rng(31)
+    n = 600
+    dates = pd.date_range("2020-01-03", periods=n, freq="B")
+    r = pd.Series(rng.normal(0, 0.01, size=n), index=dates)
+    close = pd.Series(100 * np.exp(r.cumsum()), index=dates).values
+    # Signal is -sign(r_{t-1}) — strong reversion at trail_1, near-zero elsewhere.
+    s = (-np.sign(r.shift(1))).fillna(0).astype(int).values
+    ohlcv = pd.DataFrame({"date": dates, "instrument": "es1s", "close": close})
+    signals = pd.DataFrame({"date": dates, "es1s": s})
+    row = audit_instrument(
+        ohlcv, signals, "es1s", h=10, n_boot=50, block_size=20, seed=42
+    )
+    # trail_1 lights up; trail_10 is noise → canonical multi-horizon mean is
+    # diluted by the noisy horizons.
+    assert row["tag_trail_1"] == "mean_reverting"
+    # Either way the per-horizon tags + canonical tag must agree with the
+    # numeric values according to the threshold rule.
+    assert row["tag"] == _classify_tag(row["mean_trail_corr"], threshold=0.05)
+    assert row["tag_trail_h10"] == _classify_tag(row["corr_trail_10"], threshold=0.05)
+
+
+# --------------------------------------------------------------------------- #
+# Stability check (Step 1 addendum)                                            #
+# --------------------------------------------------------------------------- #
+def test_split_signals_halves_median_split():
+    dates = pd.date_range("2020-01-03", periods=11, freq="B")
+    sigs = pd.DataFrame({"date": dates, "es1s": np.ones(len(dates))})
+    first, second, split = _split_signals_halves(sigs, split_date=None)
+    # Median of 11 contiguous dates is the 6th; first half has 5 rows.
+    assert len(first) == 5
+    assert len(second) == 6
+    assert (first["date"] < split).all()
+    assert (second["date"] >= split).all()
+
+
+def test_safe_ci_excludes_zero_handles_nan_and_signs():
+    assert _safe_ci_excludes_zero(0.1, 0.2)
+    assert _safe_ci_excludes_zero(-0.2, -0.1)
+    assert not _safe_ci_excludes_zero(-0.1, 0.1)  # spans zero
+    assert not _safe_ci_excludes_zero(float("nan"), 0.1)
+    assert not _safe_ci_excludes_zero(0.1, float("nan"))
+    assert not _safe_ci_excludes_zero(0.0, 0.1)  # touches zero
+    assert not _safe_ci_excludes_zero(-0.1, 0.0)
+
+
+def test_audit_stability_schema_and_no_flips_on_stable_signal():
+    """A stationary momentum signal across the whole window should not flip."""
+    pieces_ohlcv: list[pd.DataFrame] = []
+    sig_cols: dict[str, object] = {"date": None}
+    n = 400
+    dates = pd.date_range("2020-01-03", periods=n, freq="B")
+    sig_cols["date"] = dates
+    rng = np.random.default_rng(73)
+    for inst in INSTRUMENTS:
+        r = pd.Series(rng.normal(0, 0.01, size=n), index=dates)
+        close = (100 * np.exp(r.cumsum())).values
+        pieces_ohlcv.append(
+            pd.DataFrame({"date": dates, "instrument": inst, "close": close})
+        )
+        # Same construction in both halves → no real sign flip.
+        s = np.sign(r.shift(1)).fillna(0).astype(int)
+        sig_cols[inst] = s.values
+    ohlcv = pd.concat(pieces_ohlcv, ignore_index=True)
+    signals = pd.DataFrame(sig_cols)
+
+    stab = audit_stability(ohlcv, signals, n_boot=50, block_size=20, seed=42)
+    expected_cols = {
+        "instrument",
+        "metric",
+        "full_window",
+        "first_half",
+        "second_half",
+        "sign_flip_flag",
+    }
+    assert expected_cols.issubset(set(stab.columns))
+    # 11 instruments × 8 metrics = 88 rows.
+    assert len(stab) == 11 * 8
+    # The strongest stable signal here is the trailing-1 construction — its
+    # sign should be the same in both halves for every instrument. Noisier
+    # metrics (corr_fwd_*, mean_pnl_*) can flip on pure random returns even
+    # when the construction is stationary; we accept up to a handful of those.
+    trail1 = stab[stab["metric"] == "corr_trail_1"]
+    assert trail1["sign_flip_flag"].sum() == 0, (
+        f"unexpected sign flip on corr_trail_1: {trail1[trail1['sign_flip_flag']]}"
+    )
+    # Sanity cap on overall noise-driven flips.
+    assert stab["sign_flip_flag"].sum() <= 4
+
+
+def test_audit_stability_flags_constructed_flip():
+    """Build a signal that is momentum in the first half and counter-trend in
+    the second. The corr_trail_1 row for that instrument should flag a flip.
+    """
+    n = 600
+    dates = pd.date_range("2020-01-03", periods=n, freq="B")
+    rng = np.random.default_rng(101)
+    pieces_ohlcv = []
+    sig_cols: dict[str, object] = {"date": dates}
+    for inst in INSTRUMENTS:
+        r = pd.Series(rng.normal(0, 0.01, size=n), index=dates)
+        close = (100 * np.exp(r.cumsum())).values
+        pieces_ohlcv.append(
+            pd.DataFrame({"date": dates, "instrument": inst, "close": close})
+        )
+        if inst == "es1s":
+            half = n // 2
+            s_mom = np.sign(r.shift(1)).fillna(0).astype(int).values
+            s_mr = (-np.sign(r.shift(1))).fillna(0).astype(int).values
+            s = np.concatenate([s_mom[:half], s_mr[half:]])
+        else:
+            s = np.sign(r.shift(1)).fillna(0).astype(int).values
+        sig_cols[inst] = s
+    ohlcv = pd.concat(pieces_ohlcv, ignore_index=True)
+    signals = pd.DataFrame(sig_cols)
+
+    stab = audit_stability(ohlcv, signals, n_boot=200, block_size=20, seed=42)
+    flips = stab[stab["sign_flip_flag"]]
+    # es1s / corr_trail_1 must be among the flagged rows.
+    assert (
+        (flips["instrument"] == "es1s") & (flips["metric"] == "corr_trail_1")
+    ).any()

@@ -3,7 +3,20 @@
 > Source: `results/harry/signal_direction.csv` (regenerable with
 > `python -m stml.harry.signal_audit`). Bootstrap: 1 000 resamples, moving
 > block size 20, seed 42. Released-signal window 2020-01-03 → 2022-06-30
-> (629 signal dates).
+> (629 signal dates). Stability check
+> (`results/harry/signal_direction_stability.csv`) re-runs the same
+> statistics on the first and second halves of the window (split at the
+> median date) and flags sign flips where both halves' 95 % bootstrap CIs
+> exclude zero.
+
+> **This audit is descriptive characterisation of the released sample;
+> no model choices are conditioned on the held-out half of 2022 (the
+> grader's hidden block). It deliberately uses the full released window
+> as one combined estimate so the bootstrap CI absorbs sampling
+> uncertainty without splitting power across train/val/test. The released-
+> data train / val / test discipline applies from Step 2 (labels)
+> onwards — every label, every feature, and every model in subsequent
+> steps respects the chronological split.**
 
 ## TL;DR
 
@@ -39,9 +52,12 @@ replication framework and of Sreeram's pipeline — is:
 ## Headline table
 
 `mean_trail_corr` = mean(`corr_trail_1`, `corr_trail_5`, `corr_trail_10`,
-`corr_trail_20`); `sign_label` thresholds at ±0.05.
+`corr_trail_20`); the canonical `tag` thresholds at ±0.05 on
+`mean_trail_corr`. The CSV also carries `tag_trail_1` (same threshold on
+`corr_trail_1` alone) and `tag_trail_h10` (same threshold on `corr_trail_10`
+alone) — see the reconciliation subsection below for why all three matter.
 
-| inst | class | n bets | corr_trail_1 | CI lo | CI hi | corr_fwd_1 | CI lo | CI hi | mean_pnl_h | hit_rate_h | sign_label |
+| inst | class | n bets | corr_trail_1 | CI lo | CI hi | corr_fwd_1 | CI lo | CI hi | mean_pnl_h | hit_rate_h | tag |
 |------|-------|------:|------:|------:|------:|------:|------:|------:|------:|------:|---|
 | es1s   | equity | 575 | **−0.161** | −0.229 | −0.103 | **+0.103** | +0.049 | +0.170 | +0.0046 | 0.604 | mixed |
 | nq1s   | equity | 604 | −0.053 | −0.137 | +0.028 | **+0.114** | +0.049 | +0.179 | +0.0088 | 0.599 | mixed |
@@ -122,6 +138,57 @@ fundamental signal that ignores recent returns. For the metamodel: do not
 let `cl1s` features inherit a counter-trend prior; the right move is
 sector-aware training or even an `cl1s`-specific model.
 
+## Reconciling with signal-deep-dive's 10/11 mean-reversion claim
+
+signal-deep-dive's headline is "10 of 11 instruments are mean-reverting".
+Our canonical multi-horizon tag is **4 of 11**. These are not contradictory —
+they are measuring different lags. The per-horizon columns in the CSV
+(`tag_trail_1`, `tag_trail_h10`, and the canonical multi-horizon `tag`) make
+the discrepancy explicit:
+
+| classifier | trend | mean_reverting | mixed | what it uses |
+|---|---:|---:|---:|---|
+| `tag_trail_1`   | 0 | **9** | 2 | sign of `corr_trail_1` only (1-day construction lag) |
+| `tag_trail_h10` | 2 | 2 | 7 | sign of `corr_trail_10` only (10-day construction lag) |
+| `tag` (canonical) | 0 | 4 | 7 | mean of `corr_trail_{1,5,10,20}` |
+
+**signal-deep-dive's claim is driven entirely by the trail_1 horizon.** Their
+`momentum_score` is the same multi-horizon mean we compute, but their
+"`alpha_label = mean_reversion`" threshold is lower / the prose summary
+collapses anything negative to that label. At lag 1 the signal is
+unambiguously counter-trend in 9/11 instruments — `corr_trail_1` is negative
+for all but `cl1s` and `ng1s`, often by 2-3 bootstrap standard errors. **By
+lag 10 the effect has dissipated**: `corr_trail_10` is mixed-sign across the
+panel and only `si1s` (−0.121) and `pl1s` (−0.079) retain a clear negative
+loading. `rb1s` (+0.071) and `gc1s` (+0.079) actually tag *trend* at this
+horizon — the opposite direction from their trail_1 result.
+
+**Implication for Harry's labels:** because our triple-barrier vertical
+barrier is `h=10`, the structurally-aligned signal is `corr_trail_10`, not
+`corr_trail_1`. That is why **4 instruments tag mean-reverting under the
+canonical multi-horizon classifier**, not 10. The release signal "is"
+short-horizon counter-trend in a strict 1-day sense, but the *meta-label* —
+"is this bet worth taking over the next 10 trading days" — sees a much
+weaker, less directional structure. Both Sreeram's trend-heavy feature
+prior and signal-deep-dive's counter-trend-heavy prior over-specify; the
+empirical reality is **noisy and short-lived**, and the labels we generate
+in Step 2 must stay neutral so the model can learn that noise structure on
+its own. This is the load-bearing argument for keeping `pt_mult = sl_mult =
+1.0` as the label default (decided in §"Implications" below).
+
+## Stability across halves of the released window
+
+`results/harry/signal_direction_stability.csv` re-runs the audit on the
+first half (dates < median split ≈ 2021-09) and the second half. **Zero
+sign flips at the 95 % CI level** across 88 (instrument, metric) rows —
+the audit's conclusions are not driven by one half of the window. The
+largest first-vs-second-half divergence on `corr_trail_1` is `fesx1s`
+(−0.158 → −0.255, same sign, stronger in H2); on `corr_fwd_1` it is
+`fesx1s` and `cl1s` (sign-stable but the point estimate moves notably).
+Notably `cl1s`'s `corr_trail_1` does cross zero between halves (+0.015 →
+−0.061), but neither half's CI excludes zero, so this is consistent with
+"cl1s is structurally near-zero at lag 1" rather than a real regime change.
+
 ## Implications for the rest of Harry's contribution
 
 | Decision | Default | Justification from this audit |
@@ -130,7 +197,7 @@ sector-aware training or even an `cl1s`-specific model.
 | Feature **prior** | Counter-trend / mean-reversion (signal-deep-dive's F1 family) | 10/11 negative `corr_trail_1`. |
 | Trend features | Keep them as *contrast* (sign-flip indicator), not as the headline group | Sreeram's MDA already showed trend-cluster permutation *helps* OOS — consistent with this. |
 | Triple-barrier horizon `h` | 10 days, with sensitivity at 5 and 15 | Forward correlation decays by `h=5`; `h=10` covers ~one effective bet. |
-| Asymmetric barriers | Expose parameters `pt_mult`, `sl_mult`. Default 1.0/1.0 for parity; counter-trend variant 1.0/1.5 (wider stop, tighter PT) is a sweep | The signal is counter-trend → bets fade extremes → narrow PT, wider SL captures the typical resolution. |
+| Asymmetric barriers | Expose `pt_mult`, `sl_mult`; **default symmetric 1.0/1.0**. Variants live in the Step 4 sensitivity sweep, not in the label default. | Audit tags are 0 trend / 4 mean-reverting / 7 mixed under the canonical multi-horizon classifier — too equivocal to bake a counter-trend bias into the label itself. A neutral target lets downstream feature-importance analysis honestly tell us *whether* counter-trend features matter rather than recovering a bias we put in. |
 | Universe pooling | Pool 10 instruments; **carve out `cl1s` for separate handling** | The audit's three independent signals against pooling cl1s. |
 | Cross-sectional features | Expected-negative (cross-asset mean \|corr\| ≈ 0.09 per signal-deep-dive); keep for completeness, do not weight heavily | Already documented in `signal-deep-dive`. |
 

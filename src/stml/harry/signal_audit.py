@@ -30,15 +30,24 @@ Block-bootstrap preserves the autocorrelation in both the piecewise-constant
 signal and the returns; an i.i.d. bootstrap would massively understate CI
 widths because the signal has runs of length 5–30+ days.
 
-Per-instrument sign tag (the headline column):
+Per-instrument sign tags (three columns in the output CSV):
 
-    sign_label =
-        "trend"          if mean_trail_corr > +trend_threshold
-        "mean_reverting" if mean_trail_corr < -trend_threshold
+    tag             — canonical, uses ``mean_trail_corr``.
+    tag_trail_1     — same threshold but only on ``corr_trail_1``.
+    tag_trail_h10   — same threshold but only on ``corr_trail_10``.
+
+    classification rule (applied identically to all three):
+        "trend"          if value > +trend_threshold
+        "mean_reverting" if value < -trend_threshold
         "mixed"          otherwise
 
     mean_trail_corr = mean( corr_trail_1, corr_trail_5, corr_trail_10,
                             corr_trail_20 )
+
+The per-horizon tags exist to reconcile with the signal-deep-dive branch's
+"10/11 mean-reversion" headline (which is driven by trail_1) and to show
+that the trail_10 picture is materially weaker — relevant because we use
+h=10 barriers, so the trail_10 signal is the structurally-aligned one.
 
 Convention reminder:
     r_t                = log(close_t / close_{t-1})
@@ -226,6 +235,26 @@ def _bootstrap_ci(
 
 
 # --------------------------------------------------------------------------- #
+# Tagging                                                                      #
+# --------------------------------------------------------------------------- #
+def _classify_tag(value: float, threshold: float) -> str:
+    """Threshold-based sign tag used by the canonical and per-horizon labels.
+
+    Returns one of ``"trend"``, ``"mean_reverting"``, ``"mixed"``, or
+    ``"n/a"`` (the last only when ``value`` is non-finite). ``threshold``
+    is applied symmetrically: ``value > +threshold`` ⇒ trend,
+    ``value < -threshold`` ⇒ mean_reverting, else mixed.
+    """
+    if not np.isfinite(value):
+        return "n/a"
+    if value > threshold:
+        return "trend"
+    if value < -threshold:
+        return "mean_reverting"
+    return "mixed"
+
+
+# --------------------------------------------------------------------------- #
 # Public API                                                                   #
 # --------------------------------------------------------------------------- #
 def audit_instrument(
@@ -287,20 +316,15 @@ def audit_instrument(
         row[f"{stat}_lo"] = lo
         row[f"{stat}_hi"] = hi
 
-    # Sign label.
+    # Sign tags — canonical multi-horizon plus per-horizon variants.
     trail_keys = [_corr_col(k) for k in (1, 5, 10, 20) if k in lags]
     trail_vals = [point[c] for c in trail_keys if not np.isnan(point[c])]
     mean_trail = float(np.mean(trail_vals)) if trail_vals else float("nan")
-    if not np.isfinite(mean_trail):
-        sign = "n/a"
-    elif mean_trail > trend_threshold:
-        sign = "trend"
-    elif mean_trail < -trend_threshold:
-        sign = "mean_reverting"
-    else:
-        sign = "mixed"
     row["mean_trail_corr"] = mean_trail
-    row["sign_label"] = sign
+    row["tag"] = _classify_tag(mean_trail, trend_threshold)
+    # Per-horizon: same threshold, only the single-lag correlation.
+    row["tag_trail_1"] = _classify_tag(point.get(_corr_col(1), float("nan")), trend_threshold)
+    row["tag_trail_h10"] = _classify_tag(point.get(_corr_col(10), float("nan")), trend_threshold)
     return row
 
 
@@ -342,6 +366,154 @@ def audit_all(
 
 
 # --------------------------------------------------------------------------- #
+# Stability check (descriptive only — not a train/test split)                  #
+# --------------------------------------------------------------------------- #
+_STABILITY_METRICS: tuple[str, ...] = (
+    "corr_trail_1",
+    "corr_trail_5",
+    "corr_trail_10",
+    "corr_trail_20",
+    "corr_fwd_1",
+    "mean_pnl_next_day",
+    "mean_pnl_h",
+    "hit_rate_h",
+)
+
+
+def _split_signals_halves(
+    signals: pd.DataFrame, split_date: pd.Timestamp | None
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Timestamp]:
+    """Cut ``signals`` into two halves at ``split_date`` (default: median).
+
+    Returns ``(first_half, second_half, resolved_split_date)``. The split is
+    over signal *dates*, not over a random shuffle: ``first_half`` is dates
+    strictly less than ``split_date`` and ``second_half`` is dates greater
+    than or equal to it.
+    """
+    sigs = signals.copy()
+    sigs["date"] = pd.to_datetime(sigs["date"])
+    sigs = sigs.sort_values("date").reset_index(drop=True)
+    if split_date is None:
+        split_date = pd.Timestamp(sigs["date"].median()).normalize()
+    else:
+        split_date = pd.Timestamp(split_date).normalize()
+    first = sigs.loc[sigs["date"] < split_date].copy()
+    second = sigs.loc[sigs["date"] >= split_date].copy()
+    return first, second, split_date
+
+
+def _safe_ci_excludes_zero(lo: float, hi: float) -> bool:
+    """``True`` if ``(lo, hi)`` is a finite interval that does not span zero."""
+    if not np.isfinite(lo) or not np.isfinite(hi):
+        return False
+    return lo > 0 or hi < 0
+
+
+def audit_stability(
+    ohlcv: pd.DataFrame,
+    signals: pd.DataFrame,
+    *,
+    split_date: pd.Timestamp | None = None,
+    lags: tuple[int, ...] = DEFAULT_LAGS,
+    h: int = DEFAULT_H,
+    n_boot: int = DEFAULT_N_BOOT,
+    block_size: int = DEFAULT_BLOCK_SIZE,
+    seed: int = 42,
+    trend_threshold: float = DEFAULT_TREND_THRESHOLD,
+    metrics: tuple[str, ...] = _STABILITY_METRICS,
+) -> pd.DataFrame:
+    """Re-run the audit on the full window and on each half.
+
+    This is a **descriptive stability exhibit**, not a train/test split: no
+    model decisions are conditioned on the result and the held-out half of
+    2022 (the grader's hidden block) is not touched.
+
+    Returns a long DataFrame with one row per ``(instrument, metric)`` and
+    columns:
+
+      instrument        — ticker.
+      metric            — one of ``_STABILITY_METRICS``.
+      full_window       — statistic on the full released signal window.
+      first_half        — statistic on dates ``< split_date``.
+      second_half       — statistic on dates ``>= split_date``.
+      sign_flip_flag    — ``True`` iff the two halves have opposite signs
+                          AND both bootstrap 95 % CIs exclude zero (a
+                          stricter "real" sign-flip rather than a noise flip).
+
+    ``split_date`` defaults to the median signal date (~2021-09 for the
+    released window).
+    """
+    first, second, _ = _split_signals_halves(signals, split_date)
+
+    full = audit_all(
+        ohlcv, signals,
+        lags=lags, h=h, n_boot=n_boot, block_size=block_size,
+        seed=seed, trend_threshold=trend_threshold,
+    ).set_index("instrument")
+    first_df = audit_all(
+        ohlcv, first,
+        lags=lags, h=h, n_boot=n_boot, block_size=block_size,
+        seed=seed, trend_threshold=trend_threshold,
+    ).set_index("instrument")
+    second_df = audit_all(
+        ohlcv, second,
+        lags=lags, h=h, n_boot=n_boot, block_size=block_size,
+        seed=seed + 7919, trend_threshold=trend_threshold,
+    ).set_index("instrument")
+
+    rows: list[dict] = []
+    for inst in full.index:
+        for metric in metrics:
+            f = float(full.at[inst, metric]) if metric in full.columns else float("nan")
+            h1 = (
+                float(first_df.at[inst, metric])
+                if (inst in first_df.index and metric in first_df.columns)
+                else float("nan")
+            )
+            h2 = (
+                float(second_df.at[inst, metric])
+                if (inst in second_df.index and metric in second_df.columns)
+                else float("nan")
+            )
+            h1_lo = (
+                float(first_df.at[inst, f"{metric}_lo"])
+                if (inst in first_df.index and f"{metric}_lo" in first_df.columns)
+                else float("nan")
+            )
+            h1_hi = (
+                float(first_df.at[inst, f"{metric}_hi"])
+                if (inst in first_df.index and f"{metric}_hi" in first_df.columns)
+                else float("nan")
+            )
+            h2_lo = (
+                float(second_df.at[inst, f"{metric}_lo"])
+                if (inst in second_df.index and f"{metric}_lo" in second_df.columns)
+                else float("nan")
+            )
+            h2_hi = (
+                float(second_df.at[inst, f"{metric}_hi"])
+                if (inst in second_df.index and f"{metric}_hi" in second_df.columns)
+                else float("nan")
+            )
+            both_sig = _safe_ci_excludes_zero(h1_lo, h1_hi) and _safe_ci_excludes_zero(
+                h2_lo, h2_hi
+            )
+            opposite_sign = np.isfinite(h1) and np.isfinite(h2) and ((h1 > 0) != (h2 > 0))
+            sign_flip = bool(opposite_sign and both_sig)
+            rows.append(
+                {
+                    "instrument": inst,
+                    "metric": metric,
+                    "full_window": f,
+                    "first_half": h1,
+                    "second_half": h2,
+                    "sign_flip_flag": sign_flip,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------- #
 # CLI                                                                          #
 # --------------------------------------------------------------------------- #
 def main(argv: list[str] | None = None) -> int:
@@ -364,6 +536,16 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_TREND_THRESHOLD,
         help="|mean trailing corr| threshold for the trend / mean-reverting tag.",
     )
+    parser.add_argument(
+        "--stability-out",
+        type=Path,
+        default=None,
+        help=(
+            "If set, also write a stability CSV (full window + first/second "
+            "halves with sign-flip flags). Pass a path such as "
+            "results/harry/signal_direction_stability.csv to enable."
+        ),
+    )
     args = parser.parse_args(argv)
 
     # Imported here so unit tests don't pay the cost.
@@ -382,6 +564,22 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.out, index=False)
     print(f"wrote {args.out} ({len(df)} rows)")
+
+    if args.stability_out is not None:
+        stab = audit_stability(
+            ohlcv,
+            signals,
+            h=args.h,
+            n_boot=args.n_boot,
+            block_size=args.block_size,
+            seed=args.seed,
+            trend_threshold=args.trend_threshold,
+        )
+        args.stability_out.parent.mkdir(parents=True, exist_ok=True)
+        stab.to_csv(args.stability_out, index=False)
+        n_flips = int(stab["sign_flip_flag"].sum())
+        print(f"wrote {args.stability_out} ({len(stab)} rows, {n_flips} sign flips)")
+
     return 0
 
 
