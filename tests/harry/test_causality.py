@@ -68,6 +68,9 @@ def _synth_single_instrument(n: int = 500, seed: int = 42) -> pd.DataFrame:
     # Persistent signal: every 10 bars we redraw; otherwise we carry forward.
     base = rng.choice([-1, 0, 1], size=(n + 9) // 10, p=[0.4, 0.2, 0.4])
     s = np.repeat(base, 10)[:n].astype(float)
+    # Rolling-60 realised vol — features in conditional_risk need this as
+    # the barrier scale. NaN for the first 59 rows.
+    vol = pd.Series(r).rolling(60, min_periods=60).std().to_numpy()
     panel = pd.DataFrame(
         {
             "open": open_,
@@ -78,6 +81,7 @@ def _synth_single_instrument(n: int = 500, seed: int = 42) -> pd.DataFrame:
             "open_interest": open_interest,
             "signal": s,
             "return": r,
+            "vol": vol,
         },
         index=dates,
     )
@@ -125,6 +129,7 @@ ADAPTERS: dict[str, Callable[[pd.DataFrame], tuple]] = {
     "signal_returns":  lambda df: (df["signal"], df["return"]),
     "close":           lambda df: (df["close"],),
     "returns":         lambda df: (df["return"],),
+    "returns_vol":     lambda df: (df["return"], df["vol"]),
     "panel":           lambda df: (df,),
 }
 
