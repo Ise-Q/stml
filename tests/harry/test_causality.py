@@ -138,9 +138,32 @@ def _adapt(panel: pd.DataFrame, adapter: str) -> tuple:
 # --------------------------------------------------------------------------- #
 # Registry                                                                     #
 # --------------------------------------------------------------------------- #
-# Each feature module's tests append its registrations here. Initially
-# empty; each Step-3 commit grows the list.
+# Each feature module exposes a module-level constant
+# ``CAUSALITY_REGISTRATIONS`` (a list of dicts following the schema above)
+# and the harness picks them up automatically. Adding a new feature module
+# requires no edits here — just create the file and list it in
+# ``_FEATURE_MODULES``.
+_FEATURE_MODULES: tuple[str, ...] = (
+    "stml.harry.features.signal_trajectory",
+    "stml.harry.features.conditional_risk",
+    "stml.harry.features.information_theoretic",
+    "stml.harry.features.microstructure_fixed",
+    "stml.harry.features.cross_asset",
+    "stml.harry.features.wavelet",
+    "stml.harry.features.concept_drift",
+)
+
 REGISTRATIONS: list[dict] = []
+for _module_name in _FEATURE_MODULES:
+    try:
+        _mod = importlib.import_module(_module_name)
+    except ImportError:
+        # Acceptable for optional extras (e.g. ``wavelet`` if pywavelets
+        # is not installed). The harness silently drops the module's
+        # entries; the unit tests in tests/harry/test_<name>.py will
+        # raise explicit ImportErrors if the user tries to use them.
+        continue
+    REGISTRATIONS.extend(getattr(_mod, "CAUSALITY_REGISTRATIONS", ()))
 
 
 # --------------------------------------------------------------------------- #
