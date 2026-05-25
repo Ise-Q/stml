@@ -1,0 +1,91 @@
+{
+  "n_events": 4886,
+  "label_balance_per_instrument": {
+    "cl1s": {
+      "n_events": 411,
+      "n_long": 375,
+      "n_short": 36,
+      "n_label_1": 287,
+      "n_label_0": 124
+    },
+    "es1s": {
+      "n_events": 564,
+      "n_long": 446,
+      "n_short": 118,
+      "n_label_1": 326,
+      "n_label_0": 238
+    },
+    "fesx1s": {
+      "n_events": 626,
+      "n_long": 286,
+      "n_short": 340,
+      "n_label_1": 323,
+      "n_label_0": 303
+    },
+    "gc1s": {
+      "n_events": 161,
+      "n_long": 129,
+      "n_short": 32,
+      "n_label_1": 99,
+      "n_label_0": 62
+    },
+    "hg1s": {
+      "n_events": 617,
+      "n_long": 298,
+      "n_short": 319,
+      "n_label_1": 317,
+      "n_label_0": 300
+    },
+    "ho1s": {
+      "n_events": 63,
+      "n_long": 53,
+      "n_short": 10,
+      "n_label_1": 41,
+      "n_label_0": 22
+    },
+    "ng1s": {
+      "n_events": 120,
+      "n_long": 0,
+      "n_short": 120,
+      "n_label_1": 67,
+      "n_label_0": 53
+    },
+    "nq1s": {
+      "n_events": 593,
+      "n_long": 397,
+      "n_short": 196,
+      "n_label_1": 354,
+      "n_label_0": 239
+    },
+    "pl1s": {
+      "n_events": 547,
+      "n_long": 411,
+      "n_short": 136,
+      "n_label_1": 282,
+      "n_label_0": 265
+    },
+    "rb1s": {
+      "n_events": 617,
+      "n_long": 358,
+      "n_short": 259,
+      "n_label_1": 315,
+      "n_label_0": 302
+    },
+    "si1s": {
+      "n_events": 567,
+      "n_long": 297,
+      "n_short": 270,
+      "n_label_1": 307,
+      "n_label_0": 260
+    }
+  },
+  "sha256_of_csv": "2f254689e6ea6cf2a5ee607f09e786ff9ff184b27b209c56dc5ca6119b958979",
+  "generated_at": "2026-05-25T21:26:50+00:00",
+  "label_config_hash": "c00ad8a0306118d2ce7eeeb9c94ca14091fe590b012db2cafc9b751d74241fe8",
+  "label_config": {
+    "h": 10,
+    "pt_mult": 1.0,
+    "sl_mult": 1.0,
+    "vol_span": 100
+  }
+}
