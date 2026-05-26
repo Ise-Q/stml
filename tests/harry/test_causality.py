@@ -131,6 +131,9 @@ ADAPTERS: dict[str, Callable[[pd.DataFrame], tuple]] = {
     "returns":         lambda df: (df["return"],),
     "returns_vol":     lambda df: (df["return"], df["vol"]),
     "vol_signal_return": lambda df: (df["vol"], df["signal"], df["return"]),
+    "returns_volume":  lambda df: (df["return"], df["volume"]),
+    "close_only":      lambda df: (df["close"],),
+    "open_close_lagged": lambda df: (df["open"], df["close"].shift(1)),
     "panel":           lambda df: (df,),
 }
 
