@@ -135,6 +135,7 @@ ADAPTERS: dict[str, Callable[[pd.DataFrame], tuple]] = {
     "close_only":      lambda df: (df["close"],),
     "open_close_lagged": lambda df: (df["open"], df["close"].shift(1)),
     "panel":           lambda df: (df,),
+    "drift_features":  lambda df: (df[["return", "vol", "signal"]],),
 }
 
 
