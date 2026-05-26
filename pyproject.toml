@@ -15,6 +15,13 @@ dependencies = [
     "tqdm>=4.67.3",
 ]
 
+[project.optional-dependencies]
+# Optional extras for Harry's branch. Install with:
+#   uv sync --extra harry-features
+# Currently only the wavelet module needs an extra wheel; TDA (ripser) is
+# deferred. See reports/harry/SETUP.md.
+harry-features = ["pywavelets>=1.4"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
