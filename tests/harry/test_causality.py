@@ -110,11 +110,95 @@ def _synth_returns_panel(
     return df
 
 
+def _synth_macro_panel(n: int = 500, seed: int = 42) -> pd.DataFrame:
+    """Synthetic macro panel for M1–M6 feature tests.
+
+    All columns are fully non-NaN (no structural missing data) so the
+    no-NaN-past-warmup harness test passes cleanly on the synthetic panel.
+
+    * EIA columns change every 5 rows (weekly release cadence).
+    * PMI columns change every 21 rows (monthly release cadence).
+    * All level series are constrained to physically meaningful ranges.
+    """
+    rng = np.random.default_rng(seed)
+    dates = pd.date_range("2005-01-03", periods=n, freq="B")
+
+    # M1 — volatility
+    vix  = np.clip(15.0 + np.cumsum(rng.normal(0, 0.3, n)), 8.0, 80.0)
+    vix3m = np.clip(vix + rng.normal(0, 0.5, n), 8.0, 85.0)
+    move  = np.clip(80.0 + np.cumsum(rng.normal(0, 1.0, n)), 40.0, 200.0)
+    skew  = np.clip(115.0 + np.cumsum(rng.normal(0, 0.5, n)), 100.0, 150.0)
+
+    # M2 — rates
+    ust10 = np.clip(3.0 + np.cumsum(rng.normal(0, 0.02, n)), 0.1, 10.0)
+    ust2  = np.clip(ust10 - 1.0 + rng.normal(0, 0.1, n), 0.05, 9.0)
+    bund  = np.clip(1.0 + np.cumsum(rng.normal(0, 0.02, n)), -0.9, 5.0)
+    tips  = np.clip(ust10 - 2.0 + rng.normal(0, 0.05, n), -2.0, 5.0)
+    be    = np.clip(2.0 + rng.normal(0, 0.05, n), 0.5, 4.0)
+
+    # M3 — credit
+    hy = np.clip(400.0 + np.cumsum(rng.normal(0, 2.0, n)), 100.0, 2000.0)
+    ig = np.clip(100.0 + np.cumsum(rng.normal(0, 1.0, n)),  20.0,  500.0)
+
+    # M4 — FX
+    dxy    = np.clip(95.0 + np.cumsum(rng.normal(0, 0.1, n)), 70.0, 120.0)
+    eurusd = np.clip(1.1  + np.cumsum(rng.normal(0, 0.002, n)), 0.8, 1.6)
+
+    # M5 — EIA weekly (change every 5 rows) + copper + BDI (daily)
+    def _eia_walk(start: float, step_std: float) -> np.ndarray:
+        vals = np.empty(n, dtype=float)
+        level = start
+        for i in range(n):
+            if i % 5 == 0:
+                level += rng.normal(0, step_std)
+            vals[i] = level
+        return vals
+
+    crude    = _eia_walk(450_000.0, 2_000.0)
+    dist_    = _eia_walk(120_000.0, 1_000.0)
+    gasoline = _eia_walk(220_000.0, 1_500.0)
+    ng       = _eia_walk(3_000.0, 100.0)
+    copper   = np.clip(200_000.0 + np.cumsum(rng.normal(0, 500.0, n)), 10_000.0, 600_000.0)
+    bdi      = np.clip(1_500.0   + np.cumsum(rng.normal(0, 10.0, n)),  200.0,    10_000.0)
+
+    # M6 — PMI monthly (change every 21 rows)
+    def _pmi_walk(center: float, std: float) -> np.ndarray:
+        vals = np.empty(n, dtype=float)
+        level = center + rng.normal(0, std)
+        for i in range(n):
+            if i % 21 == 0:
+                level = center + rng.normal(0, std)
+            vals[i] = level
+        return vals
+
+    ism   = _pmi_walk(52.0, 4.0)
+    china = _pmi_walk(51.0, 3.0)
+
+    df = pd.DataFrame(
+        {
+            "VIX": vix, "VIX3M": vix3m, "MOVE": move, "CBOE_SKEW": skew,
+            "10Y_UST": ust10, "2Y_UST": ust2, "10Y_BUND": bund,
+            "TIPS10Y": tips, "BE10Y": be,
+            "HY_OAS": hy, "IG_OAS": ig,
+            "DXY": dxy, "EURUSD": eurusd,
+            "EIA_CRUDE_STOCK": crude, "EIA_DIST_STOCK": dist_,
+            "EIA_GASOLINE_STOCK": gasoline, "EIA_NG_STOCK": ng,
+            "LME_COPPER_STOCK": copper, "BAL_DRY_INDEX": bdi,
+            "US_ISM_MFG_PMI": ism, "CHINA_PMI_MFG": china,
+        },
+        index=dates,
+    )
+    df.index.name = "date"
+    return df
+
+
 def _synth_panel(kind: str, n: int = 500, seed: int = 42) -> pd.DataFrame:
     if kind == "single_instrument":
         return _synth_single_instrument(n=n, seed=seed)
     if kind == "returns_panel":
         return _synth_returns_panel(n=n, seed=seed)
+    if kind == "macro_panel":
+        return _synth_macro_panel(n=n, seed=seed)
     raise ValueError(f"unknown data_kind {kind!r}")
 
 
@@ -136,6 +220,8 @@ ADAPTERS: dict[str, Callable[[pd.DataFrame], tuple]] = {
     "open_close_lagged": lambda df: (df["open"], df["close"].shift(1)),
     "panel":           lambda df: (df,),
     "drift_features":  lambda df: (df[["return", "vol", "signal"]],),
+    # Macro panel passes the entire DataFrame to macro group functions.
+    "macro_panel":     lambda df: (df,),
 }
 
 
@@ -161,6 +247,7 @@ _FEATURE_MODULES: tuple[str, ...] = (
     "stml.harry.features.cross_asset",
     "stml.harry.features.wavelet",
     "stml.harry.features.concept_drift",
+    "stml.harry.features.macro_features",
 )
 
 REGISTRATIONS: list[dict] = []
