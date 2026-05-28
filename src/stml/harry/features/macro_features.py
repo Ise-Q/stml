@@ -27,6 +27,7 @@ M2 — rates / curve: UST, Bund, TIPS, breakeven
 M3 — credit: HY OAS, IG OAS
 M4 — FX / dollar: DXY, EURUSD
 M5 — commodity fundamentals: EIA inventory surprises, copper stocks, BDI
+M6 — macro growth: ISM PMI, China PMI, global breadth
 
 CITATIONS
 =========
@@ -49,6 +50,7 @@ __all__ = [
     "m3_credit",
     "m4_fx_dollar",
     "m5_commodity_fundamentals",
+    "m6_macro_growth",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -90,6 +92,11 @@ MACRO_INSTRUMENT_TARGETS: dict[str, list[str]] = {
     "copper_stock_z":          ["hg1s"],
     "baltic_dry_z":            ["cl1s", "hg1s"],
     "baltic_5d_change":        ["cl1s", "hg1s"],
+    # M6 — macro growth
+    "ism_pmi_level":      ["es1s", "nq1s", "fesx1s", "hg1s", "cl1s"],
+    "ism_pmi_3m_change":  ["es1s", "nq1s", "fesx1s"],
+    "china_pmi_level":    ["hg1s", "cl1s"],
+    "global_pmi_breadth": ["es1s", "nq1s", "fesx1s"],
 }
 
 
@@ -344,6 +351,15 @@ CAUSALITY_REGISTRATIONS: list[dict] = [
         "warmup": 60,
         "data_kind": "macro_panel",
     },
+    {
+        "name": "m6_macro_growth",
+        "module": __name__,
+        "func": "m6_macro_growth",
+        "adapter": "macro_panel",
+        "kwargs": {"shift_days": 21},
+        "warmup": 21,
+        "data_kind": "macro_panel",
+    },
 ]
 
 
@@ -455,6 +471,69 @@ def m5_commodity_fundamentals(
             "copper_stock_z":          _rolling_z(copper, window),
             "baltic_dry_z":            _rolling_z(bdi, window),
             "baltic_5d_change":        bdi - bdi.shift(5),
+        },
+        index=macro_df.index,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# M6 — macro growth                                                           #
+# --------------------------------------------------------------------------- #
+def m6_macro_growth(
+    macro_df: pd.DataFrame,
+    *,
+    shift_days: int = 63,
+) -> pd.DataFrame:
+    """M6: ISM PMI, China PMI, and global PMI breadth.
+
+    Features
+    --------
+    ism_pmi_level     : US ISM Manufacturing PMI level (forward-filled from
+                        monthly release). Values above 50 indicate expansion.
+                        ISM methodology: diffusion index of 5 sub-indices.
+    ism_pmi_3m_change : ISM_PMI(t) − ISM_PMI(t − ``shift_days``). Captures
+                        the cyclical direction of US manufacturing momentum
+                        over ~3 months. Positive → expanding faster.
+    china_pmi_level   : China Caixin/Official Manufacturing PMI level
+                        (forward-filled). Above 50 = expansion. Leading
+                        indicator for copper (hg1s) and crude (cl1s) demand.
+    global_pmi_breadth: Fraction of {US_ISM_MFG_PMI, CHINA_PMI_MFG} that
+                        are above 50, ignoring NaN (mean of 1[pmi > 50]).
+                        Range: {0.0, 0.5, 1.0} when both series are available.
+                        A breadth of 1.0 = synchronised global expansion;
+                        0.0 = synchronised contraction.
+
+    Parameters
+    ----------
+    macro_df : pd.DataFrame
+        Must contain: ``US_ISM_MFG_PMI``, ``CHINA_PMI_MFG``.
+    shift_days : int
+        Look-back horizon for ism_pmi_3m_change (default 63 trading days
+        ≈ 3 calendar months).
+
+    Warmup
+    ------
+    ``shift_days`` rows (ism_pmi_3m_change is NaN for the first shift_days rows).
+    """
+    ism   = macro_df["US_ISM_MFG_PMI"].astype("float64")
+    china = macro_df["CHINA_PMI_MFG"].astype("float64")
+
+    # Global breadth: row-wise mean of binary above-50 indicators, skip NaN
+    above_50 = pd.DataFrame(
+        {
+            "us":    (ism > 50).astype("float64"),
+            "china": (china > 50).astype("float64"),
+        }
+    )
+    above_50.loc[china.isna(), "china"] = np.nan
+    breadth = above_50.mean(axis=1, skipna=True)
+
+    return pd.DataFrame(
+        {
+            "ism_pmi_level":      ism,
+            "ism_pmi_3m_change":  ism - ism.shift(shift_days),
+            "china_pmi_level":    china,
+            "global_pmi_breadth": breadth,
         },
         index=macro_df.index,
     )

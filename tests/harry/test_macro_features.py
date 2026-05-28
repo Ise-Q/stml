@@ -25,6 +25,7 @@ from stml.harry.features.macro_features import (
     m3_credit,
     m4_fx_dollar,
     m5_commodity_fundamentals,
+    m6_macro_growth,
 )
 
 
@@ -427,10 +428,76 @@ class TestM5CommodityFundamentals:
 
 
 # --------------------------------------------------------------------------- #
-# Catalog sanity (M1–M5)                                                      #
+# M6 — macro growth                                                           #
+# --------------------------------------------------------------------------- #
+class TestM6MacroGrowth:
+    def test_shape(self):
+        df = _make_macro_panel()
+        out = m6_macro_growth(df, shift_days=21)
+        assert out.shape == (len(df), 4)
+        assert list(out.columns) == [
+            "ism_pmi_level", "ism_pmi_3m_change", "china_pmi_level",
+            "global_pmi_breadth",
+        ]
+
+    def test_index_preserved(self):
+        df = _make_macro_panel()
+        out = m6_macro_growth(df, shift_days=21)
+        assert out.index.equals(df.index)
+
+    def test_global_pmi_breadth_range(self):
+        """With two non-NaN PMI indicators, breadth ∈ {0.0, 0.5, 1.0}."""
+        df = _make_macro_panel(n=400)
+        out = m6_macro_growth(df, shift_days=21)
+        breadth = out["global_pmi_breadth"].dropna().values
+        allowed = {0.0, 0.5, 1.0}
+        unique_vals = set(np.unique(np.round(breadth, 10)))
+        assert unique_vals.issubset(allowed), f"breadth values {unique_vals} ⊄ {allowed}"
+
+    def test_global_pmi_breadth_half(self):
+        """US=55 (above 50), China=45 (below 50) → breadth = 0.5."""
+        n = 30
+        df = _tiny_panel(US_ISM_MFG_PMI=np.full(n, 55.0), CHINA_PMI_MFG=np.full(n, 45.0))
+        out = m6_macro_growth(df, shift_days=5)
+        assert np.allclose(out["global_pmi_breadth"], 0.5, atol=1e-10)
+
+    def test_global_pmi_breadth_full(self):
+        """Both above 50 → breadth = 1.0."""
+        n = 30
+        df = _tiny_panel(US_ISM_MFG_PMI=np.full(n, 56.0), CHINA_PMI_MFG=np.full(n, 52.0))
+        out = m6_macro_growth(df, shift_days=5)
+        assert np.allclose(out["global_pmi_breadth"], 1.0, atol=1e-10)
+
+    def test_global_pmi_breadth_zero(self):
+        """Both below 50 → breadth = 0.0."""
+        n = 30
+        df = _tiny_panel(US_ISM_MFG_PMI=np.full(n, 48.0), CHINA_PMI_MFG=np.full(n, 47.0))
+        out = m6_macro_growth(df, shift_days=5)
+        assert np.allclose(out["global_pmi_breadth"], 0.0, atol=1e-10)
+
+    def test_ism_pmi_3m_change_warmup(self):
+        """ism_pmi_3m_change is NaN for first shift_days rows, valid after."""
+        df = _make_macro_panel(n=400)
+        shift = 21
+        out = m6_macro_growth(df, shift_days=shift)
+        assert out["ism_pmi_3m_change"].iloc[:shift].isna().all()
+        assert out["ism_pmi_3m_change"].iloc[shift:].notna().all()
+
+    def test_no_nan_past_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m6_macro_growth(df, shift_days=21)
+        for col in ("ism_pmi_level", "china_pmi_level", "global_pmi_breadth"):
+            assert out[col].notna().all(), f"{col} should have no NaN"
+        tail = out["ism_pmi_3m_change"].iloc[21:]
+        assert tail.notna().all()
+        assert np.isfinite(tail).all()
+
+
+# --------------------------------------------------------------------------- #
+# Catalog sanity (M1–M6)                                                      #
 # --------------------------------------------------------------------------- #
 class TestMacroInstrumentTargets:
-    def test_m1_to_m5_features_documented(self):
+    def test_all_features_documented(self):
         features = {
             "vix_level_z", "vix_5d_change", "vix_term_slope",
             "move_z", "move_vix_ratio", "skew_z",
@@ -441,6 +508,8 @@ class TestMacroInstrumentTargets:
             "crude_stock_surprise", "dist_stock_surprise",
             "gasoline_stock_surprise", "ng_stock_surprise",
             "copper_stock_z", "baltic_dry_z", "baltic_5d_change",
+            "ism_pmi_level", "ism_pmi_3m_change", "china_pmi_level",
+            "global_pmi_breadth",
         }
         missing = features - set(MACRO_INSTRUMENT_TARGETS.keys())
         assert not missing, f"Features missing from catalog: {missing}"
