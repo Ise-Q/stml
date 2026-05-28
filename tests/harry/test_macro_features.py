@@ -24,6 +24,7 @@ from stml.harry.features.macro_features import (
     m2_rates_curve,
     m3_credit,
     m4_fx_dollar,
+    m5_commodity_fundamentals,
 )
 
 
@@ -356,10 +357,80 @@ class TestM4FxDollar:
 
 
 # --------------------------------------------------------------------------- #
-# Catalog sanity (M1–M4)                                                      #
+# M5 — commodity fundamentals                                                 #
+# --------------------------------------------------------------------------- #
+class TestM5CommodityFundamentals:
+    def test_shape(self):
+        df = _make_macro_panel()
+        out = m5_commodity_fundamentals(df, n_releases=5, window=60)
+        assert out.shape == (len(df), 7)
+        assert list(out.columns) == [
+            "crude_stock_surprise", "dist_stock_surprise",
+            "gasoline_stock_surprise", "ng_stock_surprise",
+            "copper_stock_z", "baltic_dry_z", "baltic_5d_change",
+        ]
+
+    def test_index_preserved(self):
+        df = _make_macro_panel()
+        out = m5_commodity_fundamentals(df, n_releases=5, window=60)
+        assert out.index.equals(df.index)
+
+    def test_eia_surprise_large_build_positive(self):
+        """Large unexpected inventory build produces positive surprise."""
+        n = 60
+        crude = np.empty(n, dtype=float)
+        level = 450_000.0
+        for i in range(n):
+            if i % 5 == 0 and i < 30:
+                level += 200.0
+            elif i == 30:
+                level += 50_000.0  # big build
+            crude[i] = level
+        df = _tiny_panel(
+            EIA_CRUDE_STOCK=crude, EIA_DIST_STOCK=np.full(n, 120_000.0),
+            EIA_GASOLINE_STOCK=np.full(n, 220_000.0), EIA_NG_STOCK=np.full(n, 3_000.0),
+            LME_COPPER_STOCK=np.full(n, 200_000.0), BAL_DRY_INDEX=np.full(n, 1_500.0),
+        )
+        out = m5_commodity_fundamentals(df, n_releases=5, window=30)
+        post = out["crude_stock_surprise"].iloc[30:].dropna()
+        assert (post > 0).any(), "Large build should give positive surprise"
+
+    def test_z_scores_mean_zero(self):
+        df = _make_macro_panel(n=400)
+        out = m5_commodity_fundamentals(df, n_releases=5, window=60)
+        for col in ("copper_stock_z", "baltic_dry_z"):
+            tail = out[col].iloc[60:]
+            assert abs(tail.mean()) < 0.5, f"{col} mean={tail.mean():.3f}"
+
+    def test_no_nan_past_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m5_commodity_fundamentals(df, n_releases=5, window=60)
+        for col in out.columns:
+            tail = out[col].iloc[60:]
+            assert tail.notna().all(), f"{col} NaN past warmup=60"
+            assert np.isfinite(tail).all(), f"{col} Inf past warmup=60"
+
+    def test_eia_surprise_truncation_invariance(self):
+        """EIA surprise helper is truncation-invariant."""
+        df = _make_macro_panel(n=200)
+        out_full = m5_commodity_fundamentals(df, n_releases=5, window=60)
+        for t in (80, 100, 150):
+            out_trunc = m5_commodity_fundamentals(df.iloc[:t + 1], n_releases=5, window=60)
+            for col in ("crude_stock_surprise", "dist_stock_surprise"):
+                fv = out_full[col].iloc[t]
+                tv = out_trunc[col].iloc[t]
+                if pd.isna(fv) and pd.isna(tv):
+                    continue
+                assert float(fv) == pytest.approx(float(tv), rel=1e-9), (
+                    f"{col} t={t}: full={fv} trunc={tv}"
+                )
+
+
+# --------------------------------------------------------------------------- #
+# Catalog sanity (M1–M5)                                                      #
 # --------------------------------------------------------------------------- #
 class TestMacroInstrumentTargets:
-    def test_m1_to_m4_features_documented(self):
+    def test_m1_to_m5_features_documented(self):
         features = {
             "vix_level_z", "vix_5d_change", "vix_term_slope",
             "move_z", "move_vix_ratio", "skew_z",
@@ -367,6 +438,9 @@ class TestMacroInstrumentTargets:
             "ust_bund_spread", "real_yield_10y", "breakeven_10y", "be_5d_change",
             "hy_oas_z", "hy_oas_5d_change", "ig_oas_z", "hy_ig_ratio",
             "dxy_z", "dxy_5d_change", "eurusd_5d_change",
+            "crude_stock_surprise", "dist_stock_surprise",
+            "gasoline_stock_surprise", "ng_stock_surprise",
+            "copper_stock_z", "baltic_dry_z", "baltic_5d_change",
         }
         missing = features - set(MACRO_INSTRUMENT_TARGETS.keys())
         assert not missing, f"Features missing from catalog: {missing}"

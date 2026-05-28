@@ -26,6 +26,7 @@ M1 — volatility / term structure: VIX, MOVE, CBOE SKEW
 M2 — rates / curve: UST, Bund, TIPS, breakeven
 M3 — credit: HY OAS, IG OAS
 M4 — FX / dollar: DXY, EURUSD
+M5 — commodity fundamentals: EIA inventory surprises, copper stocks, BDI
 
 CITATIONS
 =========
@@ -47,6 +48,7 @@ __all__ = [
     "m2_rates_curve",
     "m3_credit",
     "m4_fx_dollar",
+    "m5_commodity_fundamentals",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -77,9 +79,17 @@ MACRO_INSTRUMENT_TARGETS: dict[str, list[str]] = {
     "ig_oas_z":          ["es1s", "nq1s", "fesx1s"],
     "hy_ig_ratio":       ["es1s", "nq1s", "fesx1s"],
     # M4 — FX / dollar
-    "dxy_z":             ["gc1s", "si1s", "hg1s", "cl1s"],
-    "dxy_5d_change":     ["gc1s", "si1s", "hg1s"],
-    "eurusd_5d_change":  ["fesx1s", "gc1s"],
+    "dxy_z":                   ["gc1s", "si1s", "hg1s", "cl1s"],
+    "dxy_5d_change":           ["gc1s", "si1s", "hg1s"],
+    "eurusd_5d_change":        ["fesx1s", "gc1s"],
+    # M5 — commodity fundamentals
+    "crude_stock_surprise":    ["cl1s", "ho1s", "rb1s"],
+    "dist_stock_surprise":     ["ho1s"],
+    "gasoline_stock_surprise": ["rb1s"],
+    "ng_stock_surprise":       ["ng1s"],
+    "copper_stock_z":          ["hg1s"],
+    "baltic_dry_z":            ["cl1s", "hg1s"],
+    "baltic_5d_change":        ["cl1s", "hg1s"],
 }
 
 
@@ -325,6 +335,15 @@ CAUSALITY_REGISTRATIONS: list[dict] = [
         "warmup": 60,
         "data_kind": "macro_panel",
     },
+    {
+        "name": "m5_commodity_fundamentals",
+        "module": __name__,
+        "func": "m5_commodity_fundamentals",
+        "adapter": "macro_panel",
+        "kwargs": {"n_releases": 5, "window": 60},
+        "warmup": 60,
+        "data_kind": "macro_panel",
+    },
 ]
 
 
@@ -366,6 +385,76 @@ def m4_fx_dollar(
             "dxy_z":            _rolling_z(dxy, window),
             "dxy_5d_change":     dxy    - dxy.shift(5),
             "eurusd_5d_change":  eurusd - eurusd.shift(5),
+        },
+        index=macro_df.index,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# M5 — commodity fundamentals                                                 #
+# --------------------------------------------------------------------------- #
+def m5_commodity_fundamentals(
+    macro_df: pd.DataFrame,
+    *,
+    n_releases: int = 5,
+    window: int = 252,
+) -> pd.DataFrame:
+    """M5: EIA inventory surprises, copper stocks, Baltic Dry Index.
+
+    Features
+    --------
+    crude_stock_surprise    : EIA weekly crude oil inventory surprise,
+                              computed as (current_release − mean_prev_n) /
+                              std_prev_n where n = ``n_releases``. Positive =
+                              unexpected build (bearish cl1s); negative =
+                              unexpected draw (bullish cl1s, ho1s, rb1s).
+                              Window counts releases, not calendar days.
+                              EIA Weekly Petroleum Status Report.
+    dist_stock_surprise     : Same for distillate (diesel) stocks. Target: ho1s.
+    gasoline_stock_surprise : Same for gasoline stocks. Target: rb1s.
+    ng_stock_surprise       : Same for natural gas storage. Target: ng1s.
+                              EIA Natural Gas Storage Report (weekly).
+    copper_stock_z          : z-score of LME copper warehouse stocks.
+                              Rising stocks → oversupply → bearish hg1s;
+                              falling stocks → tightness → bullish hg1s.
+                              "Dr. Copper" demand signal.
+    baltic_dry_z            : z-score of Baltic Dry Index. Proxy for global
+                              dry-bulk shipping demand = leading indicator of
+                              industrial activity. High BDI → bullish cl1s, hg1s.
+    baltic_5d_change        : 5-day BDI change. Short-term shipping momentum.
+
+    Parameters
+    ----------
+    macro_df : pd.DataFrame
+        Must contain: ``EIA_CRUDE_STOCK``, ``EIA_DIST_STOCK``,
+        ``EIA_GASOLINE_STOCK``, ``EIA_NG_STOCK``, ``LME_COPPER_STOCK``,
+        ``BAL_DRY_INDEX``.
+    n_releases : int
+        Number of prior releases for the EIA surprise denominator (default 5).
+    window : int
+        Trailing window for copper_stock_z and baltic_dry_z (default 252).
+
+    Warmup
+    ------
+    ``window`` rows (z-scores bind; EIA surprises require only
+    (n_releases + 1) releases × weekly cadence ≈ 30–40 days).
+    """
+    crude    = macro_df["EIA_CRUDE_STOCK"].astype("float64")
+    dist     = macro_df["EIA_DIST_STOCK"].astype("float64")
+    gasoline = macro_df["EIA_GASOLINE_STOCK"].astype("float64")
+    ng       = macro_df["EIA_NG_STOCK"].astype("float64")
+    copper   = macro_df["LME_COPPER_STOCK"].astype("float64")
+    bdi      = macro_df["BAL_DRY_INDEX"].astype("float64")
+
+    return pd.DataFrame(
+        {
+            "crude_stock_surprise":    _eia_surprise(crude, n_releases),
+            "dist_stock_surprise":     _eia_surprise(dist, n_releases),
+            "gasoline_stock_surprise": _eia_surprise(gasoline, n_releases),
+            "ng_stock_surprise":       _eia_surprise(ng, n_releases),
+            "copper_stock_z":          _rolling_z(copper, window),
+            "baltic_dry_z":            _rolling_z(bdi, window),
+            "baltic_5d_change":        bdi - bdi.shift(5),
         },
         index=macro_df.index,
     )
