@@ -21,6 +21,7 @@ import pytest
 from stml.harry.features.macro_features import (
     MACRO_INSTRUMENT_TARGETS,
     m1_volatility_term_structure,
+    m2_rates_curve,
 )
 
 
@@ -192,16 +193,86 @@ class TestM1VolatilityTermStructure:
 
 
 # --------------------------------------------------------------------------- #
-# Catalog sanity (M1)                                                         #
+# M2 — rates / curve                                                          #
+# --------------------------------------------------------------------------- #
+class TestM2RatesCurve:
+    def test_shape(self):
+        df = _make_macro_panel()
+        out = m2_rates_curve(df, window=60)
+        assert out.shape == (len(df), 7)
+        assert list(out.columns) == [
+            "us_2s10s_slope", "ust_10y_5d_change", "bund_10y_5d_change",
+            "ust_bund_spread", "real_yield_10y", "breakeven_10y", "be_5d_change",
+        ]
+
+    def test_index_preserved(self):
+        df = _make_macro_panel()
+        out = m2_rates_curve(df, window=60)
+        assert out.index.equals(df.index)
+
+    def test_2s10s_slope_exact(self):
+        """us_2s10s_slope = 10Y - 2Y: exact value when constant."""
+        n = 50
+        df = _tiny_panel(
+            **{"10Y_UST": np.full(n, 3.5), "2Y_UST": np.full(n, 1.5),
+               "10Y_BUND": np.full(n, 1.0), "TIPS10Y": np.full(n, 1.0),
+               "BE10Y": np.full(n, 2.5)},
+        )
+        out = m2_rates_curve(df, window=10)
+        assert np.allclose(out["us_2s10s_slope"].dropna(), 2.0, atol=1e-10)
+
+    def test_2s10s_positive_upward_curve(self):
+        """10Y > 2Y → positive slope."""
+        n = 50
+        df = _tiny_panel(
+            **{"10Y_UST": np.full(n, 3.5), "2Y_UST": np.full(n, 1.5),
+               "10Y_BUND": np.full(n, 1.0), "TIPS10Y": np.full(n, 1.0),
+               "BE10Y": np.full(n, 2.5)},
+        )
+        out = m2_rates_curve(df, window=10)
+        assert (out["us_2s10s_slope"].dropna() > 0).all()
+
+    def test_2s10s_negative_inverted_curve(self):
+        """2Y > 10Y (inverted) → negative slope."""
+        n = 50
+        df = _tiny_panel(
+            **{"10Y_UST": np.full(n, 3.0), "2Y_UST": np.full(n, 4.0),
+               "10Y_BUND": np.full(n, 1.0), "TIPS10Y": np.full(n, 1.0),
+               "BE10Y": np.full(n, 2.0)},
+        )
+        out = m2_rates_curve(df, window=10)
+        assert (out["us_2s10s_slope"].dropna() < 0).all()
+
+    def test_z_scores_mean_zero_after_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m2_rates_curve(df, window=60)
+        for col in ("real_yield_10y", "breakeven_10y"):
+            tail = out[col].iloc[60:]
+            assert tail.notna().all(), f"{col} NaN past warmup"
+            assert abs(tail.mean()) < 0.5, f"{col} mean={tail.mean():.3f}"
+
+    def test_no_nan_past_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m2_rates_curve(df, window=60)
+        for col in out.columns:
+            tail = out[col].iloc[60:]
+            assert tail.notna().all(), f"{col} NaN past warmup"
+            assert np.isfinite(tail).all(), f"{col} Inf past warmup"
+
+
+# --------------------------------------------------------------------------- #
+# Catalog sanity (M1–M2)                                                      #
 # --------------------------------------------------------------------------- #
 class TestMacroInstrumentTargets:
-    def test_m1_features_documented(self):
-        m1_features = {
+    def test_m1_m2_features_documented(self):
+        features = {
             "vix_level_z", "vix_5d_change", "vix_term_slope",
             "move_z", "move_vix_ratio", "skew_z",
+            "us_2s10s_slope", "ust_10y_5d_change", "bund_10y_5d_change",
+            "ust_bund_spread", "real_yield_10y", "breakeven_10y", "be_5d_change",
         }
-        missing = m1_features - set(MACRO_INSTRUMENT_TARGETS.keys())
-        assert not missing, f"M1 features missing from catalog: {missing}"
+        missing = features - set(MACRO_INSTRUMENT_TARGETS.keys())
+        assert not missing, f"Features missing from catalog: {missing}"
 
     def test_target_instruments_known(self):
         universe = {

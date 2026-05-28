@@ -23,12 +23,15 @@ handles relevance.
 GROUPS (added incrementally)
 ============================
 M1 — volatility / term structure: VIX, MOVE, CBOE SKEW
+M2 — rates / curve: UST, Bund, TIPS, breakeven
 
 CITATIONS
 =========
 * CBOE VIX White Paper (2019) — VIX construction and term structure.
 * Merrill Lynch MOVE Index methodology — bond vol proxy.
 * CBOE SKEW Index methodology (2011) — tail-risk / skewness of SPX options.
+* Estrella, A. & Hardouvelis, G. (1991) "The Term Structure as a Predictor
+  of Real Economic Activity", Journal of Finance 46(2): 555–576.
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ import pandas as pd
 __all__ = [
     "MACRO_INSTRUMENT_TARGETS",
     "m1_volatility_term_structure",
+    "m2_rates_curve",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -55,6 +59,14 @@ MACRO_INSTRUMENT_TARGETS: dict[str, list[str]] = {
     "move_z":         ["es1s", "nq1s", "fesx1s"],
     "move_vix_ratio": ["es1s", "nq1s", "fesx1s"],
     "skew_z":         ["es1s", "nq1s", "fesx1s"],
+    # M2 — rates / curve
+    "us_2s10s_slope":     ["es1s", "nq1s", "fesx1s"],
+    "ust_10y_5d_change":  ["es1s", "nq1s", "fesx1s"],
+    "bund_10y_5d_change": ["fesx1s"],
+    "ust_bund_spread":    ["fesx1s"],
+    "real_yield_10y":     ["gc1s", "si1s"],
+    "breakeven_10y":      ["gc1s", "si1s"],
+    "be_5d_change":       ["gc1s", "si1s"],
 }
 
 
@@ -149,6 +161,70 @@ def m1_volatility_term_structure(
 
 
 # --------------------------------------------------------------------------- #
+# M2 — rates / curve                                                          #
+# --------------------------------------------------------------------------- #
+def m2_rates_curve(
+    macro_df: pd.DataFrame,
+    *,
+    window: int = 252,
+) -> pd.DataFrame:
+    """M2: US and German rates, curve slope, TIPS real yield, breakeven.
+
+    Features
+    --------
+    us_2s10s_slope    : 10Y_UST − 2Y_UST. The classic yield-curve slope.
+                        Inversion (negative) has historically preceded US
+                        recessions (Estrella & Hardouvelis 1991). Targets
+                        equity, especially cyclical futures.
+    ust_10y_5d_change : 5-day change in 10Y UST yield. Captures rates
+                        momentum; a sharp move forces equity repricing.
+    bund_10y_5d_change: 5-day change in 10Y Bund yield. European rates
+                        driver for Euro Stoxx (fesx1s).
+    ust_bund_spread   : 10Y_UST − 10Y_BUND. Cross-border capital flow
+                        driver for EURUSD and fesx1s; positive = USD
+                        assets relatively attractive.
+    real_yield_10y    : z-score of TIPS 10Y yield. Negative real yields
+                        are historically bullish for gold (gc1s, si1s)
+                        as an inflation hedge.
+    breakeven_10y     : z-score of 10Y breakeven inflation (BE10Y).
+                        Rising breakevens boost inflation-hedge demand for
+                        gold and energy.
+    be_5d_change      : 5-day change in BE10Y. Short-term inflation
+                        regime shifts.
+
+    Parameters
+    ----------
+    macro_df : pd.DataFrame
+        Must contain columns: ``10Y_UST``, ``2Y_UST``, ``10Y_BUND``,
+        ``TIPS10Y``, ``BE10Y``.
+    window : int
+        Trailing window for z-scores (default 252).
+
+    Warmup
+    ------
+    ``window`` rows (z-scores for real_yield_10y and breakeven_10y).
+    """
+    ust10 = macro_df["10Y_UST"].astype("float64")
+    ust2  = macro_df["2Y_UST"].astype("float64")
+    bund  = macro_df["10Y_BUND"].astype("float64")
+    tips  = macro_df["TIPS10Y"].astype("float64")
+    be    = macro_df["BE10Y"].astype("float64")
+
+    return pd.DataFrame(
+        {
+            "us_2s10s_slope":     ust10 - ust2,
+            "ust_10y_5d_change":  ust10 - ust10.shift(5),
+            "bund_10y_5d_change": bund  - bund.shift(5),
+            "ust_bund_spread":    ust10 - bund,
+            "real_yield_10y":     _rolling_z(tips, window),
+            "breakeven_10y":      _rolling_z(be, window),
+            "be_5d_change":       be - be.shift(5),
+        },
+        index=macro_df.index,
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Causality harness registry                                                  #
 # --------------------------------------------------------------------------- #
 CAUSALITY_REGISTRATIONS: list[dict] = [
@@ -156,6 +232,15 @@ CAUSALITY_REGISTRATIONS: list[dict] = [
         "name": "m1_volatility_term_structure",
         "module": __name__,
         "func": "m1_volatility_term_structure",
+        "adapter": "macro_panel",
+        "kwargs": {"window": 60},
+        "warmup": 60,
+        "data_kind": "macro_panel",
+    },
+    {
+        "name": "m2_rates_curve",
+        "module": __name__,
+        "func": "m2_rates_curve",
         "adapter": "macro_panel",
         "kwargs": {"window": 60},
         "warmup": 60,
