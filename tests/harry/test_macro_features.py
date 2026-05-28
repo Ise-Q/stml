@@ -23,6 +23,7 @@ from stml.harry.features.macro_features import (
     m1_volatility_term_structure,
     m2_rates_curve,
     m3_credit,
+    m4_fx_dollar,
 )
 
 
@@ -309,16 +310,63 @@ class TestM3Credit:
 
 
 # --------------------------------------------------------------------------- #
-# Catalog sanity (M1–M3)                                                      #
+# M4 — FX / dollar                                                            #
+# --------------------------------------------------------------------------- #
+class TestM4FxDollar:
+    def test_shape(self):
+        df = _make_macro_panel()
+        out = m4_fx_dollar(df, window=60)
+        assert out.shape == (len(df), 3)
+        assert list(out.columns) == ["dxy_z", "dxy_5d_change", "eurusd_5d_change"]
+
+    def test_index_preserved(self):
+        df = _make_macro_panel()
+        out = m4_fx_dollar(df, window=60)
+        assert out.index.equals(df.index)
+
+    def test_5d_change_rising(self):
+        """Rising DXY by 1/day → 5d change = +5."""
+        n = 20
+        dxy = np.arange(100.0, 100.0 + n)
+        df = _tiny_panel(DXY=dxy, EURUSD=np.full(n, 1.1))
+        out = m4_fx_dollar(df, window=10)
+        assert np.allclose(out["dxy_5d_change"].iloc[5:], 5.0, atol=1e-10)
+
+    def test_5d_change_constant(self):
+        """Constant DXY → dxy_5d_change = 0."""
+        n = 20
+        df = _tiny_panel(DXY=np.full(n, 97.0), EURUSD=np.full(n, 1.08))
+        out = m4_fx_dollar(df, window=10)
+        assert np.allclose(out["dxy_5d_change"].iloc[5:], 0.0, atol=1e-10)
+
+    def test_z_score_mean_zero_after_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m4_fx_dollar(df, window=60)
+        tail = out["dxy_z"].iloc[60:]
+        assert tail.notna().all()
+        assert abs(tail.mean()) < 0.5, f"dxy_z mean={tail.mean():.3f}"
+
+    def test_no_nan_past_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m4_fx_dollar(df, window=60)
+        for col in out.columns:
+            tail = out[col].iloc[60:]
+            assert tail.notna().all(), f"{col} NaN past warmup"
+            assert np.isfinite(tail).all(), f"{col} Inf past warmup"
+
+
+# --------------------------------------------------------------------------- #
+# Catalog sanity (M1–M4)                                                      #
 # --------------------------------------------------------------------------- #
 class TestMacroInstrumentTargets:
-    def test_m1_m2_m3_features_documented(self):
+    def test_m1_to_m4_features_documented(self):
         features = {
             "vix_level_z", "vix_5d_change", "vix_term_slope",
             "move_z", "move_vix_ratio", "skew_z",
             "us_2s10s_slope", "ust_10y_5d_change", "bund_10y_5d_change",
             "ust_bund_spread", "real_yield_10y", "breakeven_10y", "be_5d_change",
             "hy_oas_z", "hy_oas_5d_change", "ig_oas_z", "hy_ig_ratio",
+            "dxy_z", "dxy_5d_change", "eurusd_5d_change",
         }
         missing = features - set(MACRO_INSTRUMENT_TARGETS.keys())
         assert not missing, f"Features missing from catalog: {missing}"

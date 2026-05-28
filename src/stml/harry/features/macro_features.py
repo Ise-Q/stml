@@ -25,6 +25,7 @@ GROUPS (added incrementally)
 M1 — volatility / term structure: VIX, MOVE, CBOE SKEW
 M2 — rates / curve: UST, Bund, TIPS, breakeven
 M3 — credit: HY OAS, IG OAS
+M4 — FX / dollar: DXY, EURUSD
 
 CITATIONS
 =========
@@ -45,6 +46,7 @@ __all__ = [
     "m1_volatility_term_structure",
     "m2_rates_curve",
     "m3_credit",
+    "m4_fx_dollar",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -74,6 +76,10 @@ MACRO_INSTRUMENT_TARGETS: dict[str, list[str]] = {
     "hy_oas_5d_change":  ["es1s", "nq1s", "fesx1s"],
     "ig_oas_z":          ["es1s", "nq1s", "fesx1s"],
     "hy_ig_ratio":       ["es1s", "nq1s", "fesx1s"],
+    # M4 — FX / dollar
+    "dxy_z":             ["gc1s", "si1s", "hg1s", "cl1s"],
+    "dxy_5d_change":     ["gc1s", "si1s", "hg1s"],
+    "eurusd_5d_change":  ["fesx1s", "gc1s"],
 }
 
 
@@ -310,4 +316,56 @@ CAUSALITY_REGISTRATIONS: list[dict] = [
         "warmup": 60,
         "data_kind": "macro_panel",
     },
+    {
+        "name": "m4_fx_dollar",
+        "module": __name__,
+        "func": "m4_fx_dollar",
+        "adapter": "macro_panel",
+        "kwargs": {"window": 60},
+        "warmup": 60,
+        "data_kind": "macro_panel",
+    },
 ]
+
+
+# --------------------------------------------------------------------------- #
+# M4 — FX / dollar                                                            #
+# --------------------------------------------------------------------------- #
+def m4_fx_dollar(
+    macro_df: pd.DataFrame,
+    *,
+    window: int = 252,
+) -> pd.DataFrame:
+    """M4: Dollar index and EURUSD features.
+
+    Features
+    --------
+    dxy_z           : z-score of DXY. Strong dollar suppresses commodity
+                      prices (invoiced in USD) and pressures EM; weak
+                      dollar is broadly bullish for gold, oil, and metals.
+    dxy_5d_change   : 5-day DXY change. Short-term dollar momentum.
+    eurusd_5d_change: 5-day EURUSD change. Direct driver of fesx1s (Euro-
+                      denominated equity index) P&L converted to USD.
+
+    Parameters
+    ----------
+    macro_df : pd.DataFrame
+        Must contain columns: ``DXY``, ``EURUSD``.
+    window : int
+        Trailing window for z-score (default 252).
+
+    Warmup
+    ------
+    ``window`` rows (dxy_z).
+    """
+    dxy    = macro_df["DXY"].astype("float64")
+    eurusd = macro_df["EURUSD"].astype("float64")
+
+    return pd.DataFrame(
+        {
+            "dxy_z":            _rolling_z(dxy, window),
+            "dxy_5d_change":     dxy    - dxy.shift(5),
+            "eurusd_5d_change":  eurusd - eurusd.shift(5),
+        },
+        index=macro_df.index,
+    )
