@@ -22,6 +22,7 @@ from stml.harry.features.macro_features import (
     MACRO_INSTRUMENT_TARGETS,
     m1_volatility_term_structure,
     m2_rates_curve,
+    m3_credit,
 )
 
 
@@ -261,15 +262,63 @@ class TestM2RatesCurve:
 
 
 # --------------------------------------------------------------------------- #
-# Catalog sanity (M1–M2)                                                      #
+# M3 — credit                                                                 #
+# --------------------------------------------------------------------------- #
+class TestM3Credit:
+    def test_shape(self):
+        df = _make_macro_panel()
+        out = m3_credit(df, window=60)
+        assert out.shape == (len(df), 4)
+        assert list(out.columns) == [
+            "hy_oas_z", "hy_oas_5d_change", "ig_oas_z", "hy_ig_ratio",
+        ]
+
+    def test_index_preserved(self):
+        df = _make_macro_panel()
+        out = m3_credit(df, window=60)
+        assert out.index.equals(df.index)
+
+    def test_hy_ig_ratio_positive(self):
+        """HY spreads always > IG in realistic data → ratio > 0."""
+        df = _make_macro_panel(n=400)
+        out = m3_credit(df, window=60)
+        assert (out["hy_ig_ratio"].dropna() > 0).all()
+
+    def test_hy_ig_ratio_exact(self):
+        """HY=400, IG=100 → ratio = 4.0."""
+        n = 50
+        df = _tiny_panel(HY_OAS=np.full(n, 400.0), IG_OAS=np.full(n, 100.0))
+        out = m3_credit(df, window=10)
+        assert np.allclose(out["hy_ig_ratio"].dropna(), 4.0, atol=1e-10)
+
+    def test_z_scores_mean_zero_after_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m3_credit(df, window=60)
+        for col in ("hy_oas_z", "ig_oas_z"):
+            tail = out[col].iloc[60:]
+            assert tail.notna().all()
+            assert abs(tail.mean()) < 0.5, f"{col} mean={tail.mean():.3f}"
+
+    def test_no_nan_past_warmup(self):
+        df = _make_macro_panel(n=400)
+        out = m3_credit(df, window=60)
+        for col in out.columns:
+            tail = out[col].iloc[60:]
+            assert tail.notna().all(), f"{col} NaN past warmup"
+            assert np.isfinite(tail).all(), f"{col} Inf past warmup"
+
+
+# --------------------------------------------------------------------------- #
+# Catalog sanity (M1–M3)                                                      #
 # --------------------------------------------------------------------------- #
 class TestMacroInstrumentTargets:
-    def test_m1_m2_features_documented(self):
+    def test_m1_m2_m3_features_documented(self):
         features = {
             "vix_level_z", "vix_5d_change", "vix_term_slope",
             "move_z", "move_vix_ratio", "skew_z",
             "us_2s10s_slope", "ust_10y_5d_change", "bund_10y_5d_change",
             "ust_bund_spread", "real_yield_10y", "breakeven_10y", "be_5d_change",
+            "hy_oas_z", "hy_oas_5d_change", "ig_oas_z", "hy_ig_ratio",
         }
         missing = features - set(MACRO_INSTRUMENT_TARGETS.keys())
         assert not missing, f"Features missing from catalog: {missing}"

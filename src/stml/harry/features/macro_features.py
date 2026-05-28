@@ -24,6 +24,7 @@ GROUPS (added incrementally)
 ============================
 M1 — volatility / term structure: VIX, MOVE, CBOE SKEW
 M2 — rates / curve: UST, Bund, TIPS, breakeven
+M3 — credit: HY OAS, IG OAS
 
 CITATIONS
 =========
@@ -43,6 +44,7 @@ __all__ = [
     "MACRO_INSTRUMENT_TARGETS",
     "m1_volatility_term_structure",
     "m2_rates_curve",
+    "m3_credit",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -67,6 +69,11 @@ MACRO_INSTRUMENT_TARGETS: dict[str, list[str]] = {
     "real_yield_10y":     ["gc1s", "si1s"],
     "breakeven_10y":      ["gc1s", "si1s"],
     "be_5d_change":       ["gc1s", "si1s"],
+    # M3 — credit
+    "hy_oas_z":          ["es1s", "nq1s", "fesx1s"],
+    "hy_oas_5d_change":  ["es1s", "nq1s", "fesx1s"],
+    "ig_oas_z":          ["es1s", "nq1s", "fesx1s"],
+    "hy_ig_ratio":       ["es1s", "nq1s", "fesx1s"],
 }
 
 
@@ -225,6 +232,54 @@ def m2_rates_curve(
 
 
 # --------------------------------------------------------------------------- #
+# M3 — credit                                                                 #
+# --------------------------------------------------------------------------- #
+def m3_credit(
+    macro_df: pd.DataFrame,
+    *,
+    window: int = 252,
+) -> pd.DataFrame:
+    """M3: High-yield and investment-grade credit spread features.
+
+    Features
+    --------
+    hy_oas_z        : z-score of HY option-adjusted spread. Elevated HY
+                      spreads signal credit stress and predict equity
+                      drawdowns (Feldhuetter & Lando 2008). Targets equity.
+    hy_oas_5d_change: 5-day change in HY OAS. Rapid widening = credit
+                      deterioration in progress.
+    ig_oas_z        : z-score of IG OAS. Complement to hy_oas_z; IG is
+                      less volatile but captures systemic risk earlier.
+    hy_ig_ratio     : HY_OAS / IG_OAS. Pure risk-premium ratio; always
+                      positive. Elevated ratio = excess compensation for
+                      credit quality step-down = stress in junk market.
+
+    Parameters
+    ----------
+    macro_df : pd.DataFrame
+        Must contain columns: ``HY_OAS``, ``IG_OAS``.
+    window : int
+        Trailing window for z-scores (default 252).
+
+    Warmup
+    ------
+    ``window`` rows (z-scores).
+    """
+    hy = macro_df["HY_OAS"].astype("float64")
+    ig = macro_df["IG_OAS"].astype("float64")
+
+    return pd.DataFrame(
+        {
+            "hy_oas_z":          _rolling_z(hy, window),
+            "hy_oas_5d_change":  hy - hy.shift(5),
+            "ig_oas_z":          _rolling_z(ig, window),
+            "hy_ig_ratio":       hy / ig.replace(0.0, np.nan),
+        },
+        index=macro_df.index,
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Causality harness registry                                                  #
 # --------------------------------------------------------------------------- #
 CAUSALITY_REGISTRATIONS: list[dict] = [
@@ -241,6 +296,15 @@ CAUSALITY_REGISTRATIONS: list[dict] = [
         "name": "m2_rates_curve",
         "module": __name__,
         "func": "m2_rates_curve",
+        "adapter": "macro_panel",
+        "kwargs": {"window": 60},
+        "warmup": 60,
+        "data_kind": "macro_panel",
+    },
+    {
+        "name": "m3_credit",
+        "module": __name__,
+        "func": "m3_credit",
         "adapter": "macro_panel",
         "kwargs": {"window": 60},
         "warmup": 60,
