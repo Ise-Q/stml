@@ -6,13 +6,17 @@ dependencies = [
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.9",
     "numpy>=2.4.6",
+    "openpyxl>=3.1.0",
+    "optuna>=4.8.0",
     "pandas>=3.0.3",
     "pyarrow>=24.0.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
+    "shap>=0.46.0",
     "statsmodels>=0.14.6",
     "torch>=2.12.0",
     "tqdm>=4.67.3",
+    "xgboost>=2.1.0",
 ]
 
 [build-system]
@@ -34,6 +38,7 @@ torch = { index = "pytorch-cpu" }
 dev = [
     "jupyterlab>=4.5.7",
     "nbstripout>=0.9.1",
+    "pytest>=9.0.3",
     "ruff>=0.15.13",
 ]
 # Optional: external exchange calendars used only as a cross-check in
@@ -44,4 +49,15 @@ calendars = [
     "pandas-market-calendars>=5.0",
     "exchange-calendars>=4.0",
     "holidays>=0.40",
+]
+# Optional: third-party libraries required only by two fitted/engineered
+# feature families ported from teammate branches:
+#   * F13 wavelet multiscale energy  -> pywavelets   (Harry)
+#   * F17 HMM regime posteriors       -> hmmlearn      (Sreeram)
+# The full feature matrix build (stml.metamodel.build_features) needs these.
+# Install with:
+#   uv sync --group features-extra
+features-extra = [
+    "pywavelets>=1.4",
+    "hmmlearn>=0.3.0",
 ]

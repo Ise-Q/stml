@@ -1,0 +1,101 @@
+{
+  "es1s": {
+    "instrument": "es1s",
+    "asset_class": "EQ",
+    "n_eff_gate": 35,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 10
+  },
+  "nq1s": {
+    "instrument": "nq1s",
+    "asset_class": "EQ",
+    "n_eff_gate": 20,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 8
+  },
+  "fesx1s": {
+    "instrument": "fesx1s",
+    "asset_class": "EQ",
+    "n_eff_gate": 25,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 9
+  },
+  "cl1s": {
+    "instrument": "cl1s",
+    "asset_class": "EN",
+    "n_eff_gate": 9,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": true,
+    "embargo_p90": 14
+  },
+  "ho1s": {
+    "instrument": "ho1s",
+    "asset_class": "EN",
+    "n_eff_gate": 9,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": true,
+    "embargo_p90": 26
+  },
+  "rb1s": {
+    "instrument": "rb1s",
+    "asset_class": "EN",
+    "n_eff_gate": 13,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 19
+  },
+  "ng1s": {
+    "instrument": "ng1s",
+    "asset_class": "EN",
+    "n_eff_gate": 2,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": true,
+    "embargo_p90": 33
+  },
+  "gc1s": {
+    "instrument": "gc1s",
+    "asset_class": "ME",
+    "n_eff_gate": 11,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 12
+  },
+  "si1s": {
+    "instrument": "si1s",
+    "asset_class": "ME",
+    "n_eff_gate": 19,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 7
+  },
+  "hg1s": {
+    "instrument": "hg1s",
+    "asset_class": "ME",
+    "n_eff_gate": 29,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 11
+  },
+  "pl1s": {
+    "instrument": "pl1s",
+    "asset_class": "ME",
+    "n_eff_gate": 26,
+    "fit_scope_regime": "per_instrument",
+    "fit_scope_latent": "pooled_within_class",
+    "low_power": false,
+    "embargo_p90": 8
+  }
+}
