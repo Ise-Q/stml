@@ -1,19 +1,5 @@
 # stml — shared feature-engineering base
 
-This is the **shared feature-engineering foundation** for the futures OHLCV +
-primary-signal coursework. It is deliberately **model-free**: it cleans and
-aligns the panel, then builds one leakage-safe, standardized, documented feature
-matrix that **everyone branches off from to build their own model**. There is no
-modelling code and no labels here — each teammate adds their own labelling and
-modelling on a branch cut from this one.
-
-It is a **curated union of three branches**: the structure and the F1–F11
-feature layer come from `signal-deep-dive`; the genuinely novel features from
-`Harry` (wavelet energy, conditional-risk/first-passage, concept-drift, signal
-entropy/flip-rate, Roll/Kyle/overnight microstructure, cross-asset positioning)
-and `Sreeram` (Hurst, variance ratio, efficiency ratio, autocorrelation, trend
-t-values, Rogers-Satchell vol, HMM regimes) are folded in, de-duplicated.
-
 This README is the entry point for setup, the feature layer, and the
 collaboration workflow. For every feature column documented, see
 [`reports/feature-catalog.md`](reports/feature-catalog.md); for the artifact
