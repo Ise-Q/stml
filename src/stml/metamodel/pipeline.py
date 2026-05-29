@@ -17,7 +17,11 @@ feature modules into one fitted, persisted, tidy-long feature matrix:
   **fit pooled-within-asset-class** on the FE-train nonzero-signal engineered
   rows of every class member, then applied **per-instrument-series**;
 * cross-sectional rank / pair-correlation (:mod:`stml.metamodel.xsection`, F9) --
-  E-class, computed over the whole-universe panel.
+  E-class, computed over the whole-universe panel;
+* cross-asset macro context (:mod:`stml.metamodel.macro_features`, F11) --
+  TF-class, **fit on the FE-train trade-date slice** of the point-in-time
+  publication-lagged macro panel, then broadcast identically to every
+  instrument on each date.
 
 Leakage contract (CONTRACT_FE Sections 0 and 3 -- the crux, graded)
 -------------------------------------------------------------------
@@ -43,11 +47,20 @@ exposed for ``tests/test_features_provenance.py``.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 from stml.metamodel.features import assemble_engineered
 from stml.metamodel.latent import LatentBundle, fit_latent, transform_latent
+from stml.metamodel.macro_features import (
+    DEFAULT_MACRO_PATH,
+    MacroBundle,
+    assemble_macro_raw,
+    fit_macro,
+    transform_macro,
+)
 from stml.metamodel.regime_features import RegimeBundle, fit_regime, transform_regime
 from stml.metamodel.scope import ASSET_CLASS_MAP, InstrumentScope, build_scope
 from stml.metamodel.xsection import xsection_features
@@ -82,6 +95,10 @@ class FeaturePipeline:
     seed : int, default 0
         Determinism seed threaded into the regime GMM and the latent
         KMeans / autoencoder fits.
+    macro_path : str, default ``"data/additional_data.xlsx"``
+        Path to the F11 cross-asset macro workbook. The macro panel is built
+        and FE-train-frozen-standardized internally (the single leakage
+        keystone); a missing path fails fast at the top of :meth:`fit`.
 
     Attributes
     ----------
@@ -89,14 +106,22 @@ class FeaturePipeline:
         D5 per-instrument scope registry (built at ``fit``).
     """
 
-    def __init__(self, fe_train_end: str = "2021-07-01", seed: int = 0) -> None:
+    def __init__(
+        self,
+        fe_train_end: str = "2021-07-01",
+        seed: int = 0,
+        macro_path: str = DEFAULT_MACRO_PATH,
+    ) -> None:
         self.fe_train_end = fe_train_end
         self.fe_train_end_ts = pd.Timestamp(fe_train_end)
         self.seed = seed
+        self.macro_path = macro_path
 
         # Populated by fit():
         self._regime: dict[str, RegimeBundle] = {}
         self._latent: dict[str, LatentBundle] = {}
+        self._macro: MacroBundle | None = None
+        self._macro_raw: pd.DataFrame | None = None
         self.scope: dict[str, InstrumentScope] = {}
         self._engineered: dict[str, pd.DataFrame] = {}
         self._ret_vol: dict[str, pd.DataFrame] = {}
@@ -163,7 +188,23 @@ class FeaturePipeline:
         -------
         FeaturePipeline
             ``self`` (fitted), so calls can be chained with :meth:`transform`.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``macro_path`` does not resolve to a file (raised before any
+            per-instrument work so the F11 dependency fails fast, not late as a
+            silently all-NaN macro family).
         """
+        # Fail-fast: the F11 macro workbook must resolve BEFORE any per-instrument
+        # work (M3) -- otherwise a missing path surfaces late or all-NaN.
+        macro_file = Path(self.macro_path)
+        if not macro_file.is_file():
+            raise FileNotFoundError(
+                f"FeaturePipeline.fit: macro workbook not found at "
+                f"{macro_file.resolve()}"
+            )
+
         instruments = self._instruments(signals)
 
         # Chronological split of the released signal dates: train ends at
@@ -221,6 +262,23 @@ class FeaturePipeline:
             pooled = pd.concat(blocks).sort_index()
             pooled.attrs["asset_class"] = asset_class
             self._latent[asset_class] = fit_latent(pooled, k=4, seed=self.seed)
+
+        # F11 cross-asset macro context. Build the PIT-applied + momentum panel
+        # on the nonzero-signal trade-date union (the released-window dates that
+        # appear in the matrix), then freeze the z-score on the FE-train slice
+        # only -- a single leakage boundary. The momentum-warm-up buffer lives
+        # inside assemble_macro_raw and is dropped here by the trade-date slice,
+        # so it never enters the frozen stats. The frame is one row per trade
+        # date (NOT the 11x instrument-stacked panel), so the stats are not
+        # instrument-inflated.
+        nz_union: set[pd.Timestamp] = set()
+        for inst in instruments:
+            sig = self._signal_series(signals, inst)
+            nz_union.update(sig.index[sig != 0])
+        all_trade_dates = pd.DatetimeIndex(sorted(nz_union))
+        self._macro_raw = assemble_macro_raw(all_trade_dates, self.macro_path)
+        raw_train = self._macro_raw[self._macro_raw.index <= self.fe_train_end_ts]
+        self._macro = fit_macro(raw_train)
 
         self._fitted = True
         return self
@@ -290,6 +348,11 @@ class FeaturePipeline:
         instruments = self._instruments(signals)
         per_inst_frames: list[pd.DataFrame] = []
 
+        # F11 macro is GLOBAL: build the FE-train-frozen-standardized panel once
+        # (date-indexed) and broadcast it identically into every instrument's
+        # join, so the same macro values land on every instrument on a date.
+        macro_std = transform_macro(self._macro, self._macro_raw)
+
         for inst in instruments:
             sig = self._signal_series(signals, inst)
             engineered = self._engineered.get(inst)
@@ -315,8 +378,9 @@ class FeaturePipeline:
 
             # Outer-join every block on this instrument's dates. The engineered
             # frame carries the instrument's full price+signal date union; the
-            # other blocks align onto it (structural NaN where absent).
-            joined = engineered.join([regime, latent, xsect], how="outer")
+            # other blocks (incl. the global macro panel) align onto it
+            # (structural NaN where absent).
+            joined = engineered.join([regime, latent, xsect, macro_std], how="outer")
             joined = joined.sort_index()
 
             # Restrict to nonzero-signal trade-days within the released window.

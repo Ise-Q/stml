@@ -46,6 +46,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from stml.metamodel.macro_features import (
+    KEEP as _MACRO_KEEP,
+    MOMENTUM as _MACRO_MOMENTUM,
+    SPREADS as _MACRO_SPREADS,
+)
+
 __all__ = [
     "FeatureSpec",
     "CATALOG",
@@ -73,6 +79,7 @@ _FAMILY_TITLES: dict[str, str] = {
     "F3": "F3 — Regime posteriors (filtered GMM + Markov, fitted)",
     "F4": "F4 — Latent structure (PCA / KMeans / autoencoder, fitted)",
     "F9": "F9 — Cross-sectional (rank / pair-correlation)",
+    "F11": "F11 — Cross-asset macro context (PIT publication-lagged, FE-train z-scored, fitted)",
 }
 
 
@@ -775,6 +782,76 @@ CATALOG: dict[str, FeatureSpec] = dict(
 
 
 # --------------------------------------------------------------------------- #
+# F11 cross-asset macro context (45) — TF, generated from the SAME traversal   #
+# macro_features.macro_feature_columns uses, so the catalog entry set and the  #
+# produced-column set cannot drift (test_macro_catalog_roundtrip pins this).   #
+# --------------------------------------------------------------------------- #
+_MACRO_REUSE = "fit: FE-train frozen z-score (macro_features)"
+
+
+def _macro_specs() -> list[tuple[str, FeatureSpec]]:
+    """Build the F11 ``(name, FeatureSpec)`` pairs from the macro MACRO_SPEC.
+
+    Mirrors :func:`stml.metamodel.macro_features.macro_feature_columns`: per
+    standalone series and per spread, a PIT-applied ``level`` plus two
+    ``chg{h}`` momentum columns (``h`` business days). All are leakage-class
+    ``TF`` (FE-train-frozen standardizer).
+    """
+    specs: list[tuple[str, FeatureSpec]] = []
+    for name, (rcls, captures) in _MACRO_KEEP.items():
+        slug = name.lower()
+        h1, h2 = _MACRO_MOMENTUM[rcls]
+        specs.append(
+            _spec(
+                f"f11_{slug}_level",
+                "F11",
+                f"Point-in-time-applied level. {captures}",
+                "PIT level",
+                "TF",
+                _MACRO_REUSE,
+            )
+        )
+        for h in (h1, h2):
+            specs.append(
+                _spec(
+                    f"f11_{slug}_chg{h}",
+                    "F11",
+                    f"{h}-business-day change of the PIT-applied level. {captures}",
+                    f"{h}d",
+                    "TF",
+                    _MACRO_REUSE,
+                )
+            )
+    for sname, (_, _, rcls, captures) in _MACRO_SPREADS.items():
+        h1, h2 = _MACRO_MOMENTUM[rcls]
+        specs.append(
+            _spec(
+                f"f11_spread_{sname}_level",
+                "F11",
+                f"Point-in-time-applied spread level. {captures}",
+                "PIT level",
+                "TF",
+                _MACRO_REUSE,
+            )
+        )
+        for h in (h1, h2):
+            specs.append(
+                _spec(
+                    f"f11_spread_{sname}_chg{h}",
+                    "F11",
+                    f"{h}-business-day change of the PIT-applied spread. {captures}",
+                    f"{h}d",
+                    "TF",
+                    _MACRO_REUSE,
+                )
+            )
+    return specs
+
+
+CATALOG.update(dict(_macro_specs()))
+
+
+# --------------------------------------------------------------------------- #
 # Coverage guard (AC-1): exact 1:1 spec <-> produced-column correspondence.   #
 # --------------------------------------------------------------------------- #
 def _feature_columns(matrix_columns: object) -> list[str]:
@@ -860,6 +937,22 @@ _ANNOTATIONS: list[str] = [
     "**F7 `f7_amihud_20` uses a zero-volume -> NaN guard.** A zero-volume day "
     "contributes NaN to the trailing Amihud illiquidity mean rather than "
     "dividing by zero; the resulting structural NaNs are never forward-filled.",
+    "**F11 macro context is point-in-time publication-lagged (per-class).** "
+    "Daily market series (VIX, MOVE, DXY, yields, OAS, breakevens) are available "
+    "at their own EOD close (lag 0); weekly EIA inventories are stamped on the "
+    "Friday week-ending date and made available 6 calendar days later (a "
+    "conservative buffer past the real ~Wed/~Thu release); monthly PMIs are "
+    "stamped at month-end and made available on the next business day (the "
+    "ISM/Caixin release). A 12-series + 3-spread subset was curated aggressively "
+    "from the 22-series workbook (10 series dropped). The z-score is fit on the "
+    "FE-train slice of the macro panel after it is reindexed onto the equity "
+    "trade-date cadence (so the standardizer reflects the trade calendar, by "
+    "design), then frozen forward; momentum is the h-business-day change of the "
+    "PIT-applied level (measured on a business-day grid, which diverges from the "
+    "equity trading calendar only on market holidays). F11 values are broadcast "
+    "identically to all 11 "
+    "instruments, so the redundancy map shows F11 internal clustering by "
+    "construction.",
 ]
 
 

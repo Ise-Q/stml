@@ -2,7 +2,7 @@
   "fe_train_end_date": "2021-07-01",
   "seed": 0,
   "n_rows": 4984,
-  "n_feature_cols": 75,
+  "n_feature_cols": 120,
   "instruments": [
     "cl1s",
     "es1s",
@@ -115,6 +115,67 @@
       "recon_mse": {
         "pca_k4": 0.4612377854652631,
         "ae_k4": 0.47685378789901733
+      }
+    }
+  },
+  "macro": {
+    "train_index": {
+      "count": 387,
+      "min": "2020-01-03",
+      "max": "2021-07-01"
+    },
+    "n_macro_features": 45,
+    "kept_series": [
+      "10Y_UST",
+      "2Y_UST",
+      "BE10Y",
+      "CHINA_PMI_MFG",
+      "DXY",
+      "EIA_CRUDE_STOCK",
+      "EIA_NG_STOCK",
+      "HY_OAS",
+      "MOVE",
+      "TIPS10Y",
+      "US_ISM_MFG_PMI",
+      "VIX"
+    ],
+    "lag_config": {
+      "daily": "availability = observation date (close, EOD t); lag 0 days",
+      "weekly_eia": "Friday W-FRI stamp + 6 calendar days",
+      "monthly_pmi": "month-end (ME) stamp + 1 business day",
+      "momentum_basis": "diff(h) on PIT-applied level over a business-day grid",
+      "series_classes": {
+        "VIX": "daily",
+        "MOVE": "daily",
+        "DXY": "daily",
+        "10Y_UST": "daily",
+        "2Y_UST": "daily",
+        "HY_OAS": "daily",
+        "BE10Y": "daily",
+        "TIPS10Y": "daily",
+        "EIA_CRUDE_STOCK": "weekly_eia",
+        "EIA_NG_STOCK": "weekly_eia",
+        "US_ISM_MFG_PMI": "monthly_pmi",
+        "CHINA_PMI_MFG": "monthly_pmi"
+      },
+      "spread_classes": {
+        "vix_term": "daily",
+        "curve_slope": "daily",
+        "credit_diff": "daily"
+      },
+      "momentum_horizons": {
+        "daily": [
+          5,
+          20
+        ],
+        "weekly_eia": [
+          5,
+          20
+        ],
+        "monthly_pmi": [
+          21,
+          63
+        ]
       }
     }
   }

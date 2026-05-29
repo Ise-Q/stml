@@ -32,14 +32,21 @@ within `1e-10`. Running the CLI does **not** touch `jj/`.
 : The tidy-long feature matrix. Parquet is canonical; CSV is the convenience
 copy. One row per **non-zero-signal trade day** per instrument over the released
 window (`2020-01-03` to `2022-06-30`): **4,984 rows** across the 11 instruments,
-**75 columns** = 4 metadata + 71 feature columns.
+**124 columns** = 4 metadata + 120 feature columns.
+
+`data/macro_features_engineered.parquet` / `.csv` (sibling of this dir)
+: The standalone **F11 cross-asset macro** dataset — the standardized,
+matrix-aligned F11 columns keyed by `date`,`instrument`, row-aligned to the
+matrix's nonzero-signal rows (`4,984 × (2 + 45)`). The same values also live in
+the master matrix; this file is the ML-ready macro slice on its own.
 
 `feature_redundancy.json` / `feature_redundancy.csv`
 : The feature redundancy map: a pairwise-complete correlation matrix
-(`na_checks.corr_max_info`) over the 71 feature columns, plus a SciPy hierarchical
+(`na_checks.corr_max_info`) over the 120 feature columns, plus a SciPy hierarchical
 clustering of `1 - |corr|` and, per feature, its highest-`|corr|` partner. Use it
 to see which engineered features are near-duplicates (the deferred
-importance phase consumes this map).
+importance phase consumes this map). The F11 macro columns are broadcast
+identically across instruments, so they cluster together by construction.
 
 `instrument_scope.json`
 : The D5 `InstrumentScope` registry — per-instrument fitting-scope decisions and
@@ -69,7 +76,7 @@ feature development, not the coursework's hidden Jul–Dec 2022 set.
 stored in `df.attrs`. Downstream models must respect it (train ≤ this date or
 refit through the documented hook).
 
-The 71 feature columns are grouped by family (full per-column documentation in
+The 120 feature columns are grouped by family (full per-column documentation in
 [`reports/feature-catalog.md`](../reports/feature-catalog.md)):
 
 | Family | Cols | Leakage class | What it captures |
@@ -79,10 +86,17 @@ The 71 feature columns are grouped by family (full per-column documentation in
 | F5 signal-derived | 9 | E (+ `f5_trailing_run_length` is LI) | trailing run-length / days-since-flip on `s[:t+1]`, participation, sign-agreement |
 | F6 momentum-contrast | 7 | E | vol-scaled trailing return, MA-cross / MACD, ADX, Donchian position |
 | F7 microstructure | 7 | E | volume/OI z-scores & trend, OI-price divergence, Amihud illiquidity |
+| F10 OHLC price-action | 4 | E | high-low log range (+ 20d mean), open-to-open log return (+ 20d mean) |
 | F8 calendar | 4 | E | day-of-week and month sin/cos |
 | F3 regime | 4 | TF | filtered GMM + Markov-switching high-vol posteriors, switch-prob, dwell |
 | F4 latent | 11 | TF | PCA(4), KMeans cluster id/distance, dense-autoencoder code + reconstruction error |
 | F9 cross-section | 3 | E | cross-sectional rank, universe size, mean class pair-correlation |
+| F11 macro context | 45 | TF | PIT publication-lagged + FE-train-frozen-z-scored cross-asset macro: 12 series + 3 spreads, each as level + two momentum horizons (global broadcast) |
+
+Totals: **E = 58, TF = 60, LI = 2** (the LI pair is counted inside F2/F5). The
+F11 family is built only from `data/additional_data.xlsx` with per-class
+publication lags (daily = same-day close; weekly EIA = Friday stamp + 6 days;
+monthly PMI = month-end stamp + 1 business day).
 
 `leakage_class`: **E** engineered (proven causal by truncation-invariance), **TF**
 fitted (proven causal by a fit-provenance assertion), **LI** the label-interface
@@ -125,6 +139,9 @@ fe_train_end_date  : 2021-07-01
 split boundaries   : train / val / test date ranges of the released window
 regime artifacts   : per-instrument train_index summary (min/max date + count)
 latent artifacts   : per-class train_index count
+macro artifacts    : F11 train_index bounds (387 FE-train trade dates), the
+                     per-class publication-lag config, n_macro_features (45),
+                     and the kept-series list
 matrix shape       : n rows, n feature columns
 seed               : the RNG seed used for the deterministic build
 ```

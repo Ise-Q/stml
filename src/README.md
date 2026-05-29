@@ -99,6 +99,15 @@ reconstruction MSE per class.
 universe size, and mean rolling pair-correlation to asset-class peers
 (expected-negative).
 
+`metamodel/macro_features.py`
+: F11 cross-asset macro context (TF). Ingests the `data/additional_data.xlsx`
+paired-column workbook, recovers each series' native cadence by a stamp grid
+(daily / Friday-`W-FRI` / month-end-`ME`), applies per-class point-in-time
+publication lags (daily = 0, EIA = +6 calendar days, PMI = +1 business day),
+as-of-merges onto the trade dates, derives level + two momentum horizons per
+series and per spread (12 series + 3 spreads = 45 columns), and FE-train-freezes
+a z-score (`MacroBundle`). Broadcast globally to all 11 instruments.
+
 `metamodel/scope.py`
 : The D5 `InstrumentScope` registry: per-instrument fitting scope, `n_eff_gate`,
 low-power flag, and embargo width. Persists `results/instrument_scope.json`.
@@ -265,6 +274,8 @@ The metamodel feature layer (`stml.metamodel.build_features`) additionally
 writes:
 
 - `results/feature_matrix.parquet` and `results/feature_matrix.csv`
+- `data/macro_features_engineered.parquet` and `data/macro_features_engineered.csv`
+  (the standalone F11 cross-asset macro dataset, row-aligned to the matrix)
 - `results/feature_redundancy.json` and `results/feature_redundancy.csv`
 - `results/instrument_scope.json`
 - `results/feature_matrix_provenance.json`

@@ -113,9 +113,9 @@ def test_catalog_column_set_equals_produced_features(matrix) -> None:
     assert set(CATALOG) == set(produced), (
         "CATALOG keys must match the produced feature columns exactly"
     )
-    # 75 documented feature columns (79 matrix columns minus 4 meta).
-    assert len(produced) == 75
-    assert len(CATALOG) == 75
+    # 120 documented feature columns (124 matrix columns minus 4 meta) after F11.
+    assert len(produced) == 120
+    assert len(CATALOG) == 120
 
 
 def test_meta_columns_have_no_spec(matrix) -> None:
@@ -154,20 +154,20 @@ def test_assert_coverage_detects_orphan_spec() -> None:
 # AC-1 — leakage-class composition (the contract's E / TF / LI split).        #
 # --------------------------------------------------------------------------- #
 def test_leakage_class_composition() -> None:
-    """F3/F4 are TF; f2_vol_20 + f5_trailing_run_length are LI; rest are E."""
+    """F3/F4/F11 are TF; f2_vol_20 + f5_trailing_run_length are LI; rest are E."""
     tf = {n for n, s in CATALOG.items() if s.leakage_class == "TF"}
     li = {n for n, s in CATALOG.items() if s.leakage_class == "LI"}
     eng = {n for n, s in CATALOG.items() if s.leakage_class == "E"}
 
-    # TF = exactly the F3 + F4 fitted families.
-    assert all(n.startswith(("f3_", "f4_")) for n in tf)
-    assert tf == {n for n in CATALOG if n.startswith(("f3_", "f4_"))}
-    assert len(tf) == 15
+    # TF = exactly the F3 + F4 + F11 fitted families.
+    assert all(n.startswith(("f3_", "f4_", "f11_")) for n in tf)
+    assert tf == {n for n in CATALOG if n.startswith(("f3_", "f4_", "f11_"))}
+    assert len(tf) == 60  # 4 F3 + 11 F4 + 45 F11
 
     # LI = exactly the label-interface subset.
     assert li == {"f2_vol_20", "f5_trailing_run_length"}
 
-    # The three classes partition the 75 columns.
+    # The three classes partition the 120 columns.
     assert len(eng) == 58
     assert tf | li | eng == set(CATALOG)
     assert not (tf & li) and not (tf & eng) and not (li & eng)

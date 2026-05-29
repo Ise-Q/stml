@@ -455,7 +455,8 @@ The catalog has one row per produced feature column, grouped by family, with:
 
 `family`
 : F1 counter-trend, F2 vol/dispersion, F5 signal-derived, F6 momentum-contrast,
-F7 microstructure, F8 calendar, F3 regime, F4 latent, F9 cross-section.
+F7 microstructure, F10 OHLC price-action, F8 calendar, F3 regime, F4 latent,
+F9 cross-section, F11 cross-asset macro context.
 
 `what_it_captures`
 : A one-line description of the feature's economic/statistical content.
@@ -478,15 +479,25 @@ is the highest-value family per the C1 characterization (the signal is
 short-horizon mean-reversion); F9 is expected-negative (cross-asset mean
 `|corr| ~ 0.09`); the F5 trailing run-length is causal on `s[:t+1]` and distinct
 from the full-period `run_length_p90` used only for embargo sizing; the F7 Amihud
-illiquidity uses a zero-volume → NaN guard; and the autoencoder-vs-PCA(k=4)
+illiquidity uses a zero-volume → NaN guard; the F11 cross-asset macro family is
+point-in-time publication-lagged per release class (daily market series at their
+own close = lag 0; weekly EIA inventories at the Friday stamp + 6 calendar days;
+monthly ISM/Caixin PMIs at the month-end stamp + 1 business day), z-scored on the
+FE-train slice of the macro panel reindexed onto the equity trade-date cadence and
+broadcast identically to all 11 instruments; and the autoencoder-vs-PCA(k=4)
 reconstruction MSE per asset class (the autoencoder is retained regardless — there
 is no performance gate, grading is methodology).
+
+The F11 macro family is also persisted standalone to
+`data/macro_features_engineered.{parquet,csv}` (keyed `date`,`instrument`,
+row-aligned to the matrix).
 
 ### Causality contract
 
 Every feature is computed at a non-zero-signal trade day using only information
-`<= t`. Fitted models (GMM, Markov, PCA, KMeans, autoencoder, scalers) are trained
-on the feature-engineering train partition only — `FE-train`, ending `2021-07-01` —
+`<= t`. Fitted models (GMM, Markov, PCA, KMeans, autoencoder, scalers, and the F11
+macro z-scorer) are trained on the feature-engineering train partition only —
+`FE-train`, ending `2021-07-01` —
 and the matrix carries a `partition` column and a constant `fe_train_end_date`
 column so the downstream model phase can honor that boundary. Two separate proofs
 back this up: truncation-invariance for engineered (E) features and a fit-provenance

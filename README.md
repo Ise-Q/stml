@@ -91,13 +91,18 @@ now documents the rationale, risks, and recommended calibration improvements.
 
 The **feature-engineering layer** for the triple-barrier metamodel is now built
 under `src/stml/metamodel/`. It produces a leakage-safe, tidy-long feature matrix
-(4,984 non-zero-signal trade days × 75 features) with train/val/test provenance, a
+(4,984 non-zero-signal trade days × 120 features) with train/val/test provenance, a
 documented [feature catalog](reports/feature-catalog.md), a redundancy map, and a
 per-instrument fitting-scope registry. Every feature uses only information `<= t`;
-fitted models (GMM/Markov regimes, PCA/clustering/autoencoder) are trained on the
-FE-train partition (ending `2021-07-01`) and applied causally, backed by two
-separate leakage proofs — truncation-invariance for engineered features and a
-fit-provenance assertion for fitted ones. Build it with
+fitted models (GMM/Markov regimes, PCA/clustering/autoencoder, and the F11
+cross-asset macro z-scorer) are trained on the FE-train partition (ending
+`2021-07-01`) and applied causally, backed by two separate leakage proofs —
+truncation-invariance for engineered features and a fit-provenance assertion for
+fitted ones. The **F11 macro family** (built only from `data/additional_data.xlsx`)
+is point-in-time publication-lagged per release class (daily close = lag 0; weekly
+EIA = Friday stamp + 6 days; monthly PMI = month-end + 1 business day), broadcast
+globally to all 11 instruments, and also written standalone to
+`data/macro_features_engineered.{parquet,csv}`. Build it with
 `uv run python -m stml.metamodel.build_features`; see
 [`results/README.md`](results/README.md) and [`src/README.md`](src/README.md).
 
@@ -280,8 +285,9 @@ uv run python -m stml.metamodel.build_features --instruments si1s   # smoke subs
 ```
 
 This writes `results/feature_matrix.{parquet,csv}` (tidy-long: one row per
-non-zero-signal trade day, 75 feature columns + `partition` + `fe_train_end_date`
-provenance), the `results/feature_redundancy.{json,csv}` map, the
+non-zero-signal trade day, 120 feature columns + `partition` + `fe_train_end_date`
+provenance), the standalone `data/macro_features_engineered.{parquet,csv}` F11
+dataset, the `results/feature_redundancy.{json,csv}` map, the
 `results/instrument_scope.json` registry, `results/feature_matrix_provenance.json`,
 and the `reports/feature-catalog.md` documentation. The build is deterministic
 (rebuild reproduces the matrix frame-for-frame; autoencoder columns within

@@ -19,6 +19,10 @@ Persisted artifacts (CONTRACT_FE Sections 3 / 4)
 ------------------------------------------------
 ``results/feature_matrix.parquet`` / ``.csv``
     The canonical tidy-long feature matrix.
+``data/macro_features_engineered.parquet`` / ``.csv``
+    The standalone F11 cross-asset macro dataset: the standardized, matrix-
+    aligned macro columns keyed by ``(date, instrument)``, row-aligned to the
+    matrix's nonzero-signal rows.
 ``results/feature_redundancy.json`` / ``.csv``
     Pairwise feature correlation (reusing
     :func:`stml.na_checks.corr_max_info`) plus a
@@ -315,6 +319,15 @@ def _build_provenance(
         for cls, bundle in pipe._latent.items()
     }
 
+    macro = None
+    if pipe._macro is not None:
+        macro = {
+            "train_index": _bounds(pipe._macro.train_index),
+            "n_macro_features": int(len(pipe._macro.feature_cols)),
+            "kept_series": sorted(pipe._macro.lag_config.get("series_classes", {})),
+            "lag_config": pipe._macro.lag_config,
+        }
+
     return {
         "fe_train_end_date": pipe.fe_train_end,
         "seed": int(seed),
@@ -332,6 +345,7 @@ def _build_provenance(
         },
         "regime_train_index": regime_train,
         "latent_train_index": latent_train,
+        "macro": macro,
     }
 
 
@@ -344,6 +358,7 @@ def _persist(
     outdir: Path,
     seed: int,
     catalog_path: Path,
+    data_dir: Path = Path("data"),
 ) -> dict[str, Path]:
     """Write every deliverable artifact and return the path map.
 
@@ -359,6 +374,9 @@ def _persist(
         The build seed (recorded in the provenance JSON).
     catalog_path : pathlib.Path
         Destination markdown path for the rendered feature catalog.
+    data_dir : pathlib.Path, default ``Path("data")``
+        Destination directory for the standalone F11 macro dataset
+        (``macro_features_engineered.{parquet,csv}``).
 
     Returns
     -------
@@ -372,6 +390,17 @@ def _persist(
     csv_path = outdir / "feature_matrix.csv"
     matrix.to_parquet(parquet_path, index=False)
     matrix.to_csv(csv_path, index=False)
+
+    # Standalone F11 macro dataset: the STANDARDIZED, matrix-aligned macro
+    # columns keyed by (date, instrument), row-aligned to the matrix's
+    # nonzero-signal rows (the ML-ready macro slice the spec asked for).
+    data_dir.mkdir(parents=True, exist_ok=True)
+    macro_cols = [c for c in matrix.columns if c.startswith("f11_")]
+    macro_frame = matrix[["date", "instrument", *macro_cols]]
+    macro_parquet = data_dir / "macro_features_engineered.parquet"
+    macro_csv = data_dir / "macro_features_engineered.csv"
+    macro_frame.to_parquet(macro_parquet, index=False)
+    macro_frame.to_csv(macro_csv, index=False)
 
     corr, clusters, partners = compute_redundancy(matrix)
     redundancy_json, redundancy_csv = _write_redundancy(
@@ -391,6 +420,8 @@ def _persist(
     return {
         "feature_matrix_parquet": parquet_path,
         "feature_matrix_csv": csv_path,
+        "macro_features_parquet": macro_parquet,
+        "macro_features_csv": macro_csv,
         "feature_redundancy_json": redundancy_json,
         "feature_redundancy_csv": redundancy_csv,
         "instrument_scope_json": scope_path,
