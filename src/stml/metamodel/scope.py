@@ -10,8 +10,8 @@ fitted model families are applied:
   ``pooled_within_class``.
 
 The key quantity is ``n_eff_gate``: the effective sample size on the
-post-embargo validation window (see :func:`stml.replication.splits.n_eff`
-and :func:`stml.replication.splits.embargoed_val`).  Instruments whose
+post-embargo validation window (see :func:`stml.metamodel.splits.n_eff`
+and :func:`stml.metamodel.splits.embargoed_val`).  Instruments whose
 ``n_eff_gate`` falls below ``FLOOR = 10`` are flagged ``low_power = True``
 and treated with extra caution downstream (class-level pooling rather than
 standalone verdicts).
@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from stml.replication.splits import (
+from stml.metamodel.splits import (
     chronological_split,
     embargoed_val,
     n_eff,
@@ -90,7 +90,7 @@ class InstrumentScope:
     embargo_p90 : int
         Per-instrument embargo width = the 90th-percentile constant-signal
         run length over the full released period
-        (:func:`stml.replication.splits.run_length_p90`).  This is the
+        (:func:`stml.metamodel.splits.run_length_p90`).  This is the
         purge/embargo a downstream cross-validation must apply at each split
         boundary so no constant-signal run straddles it; persisting it encodes
         that piece of the FE->model handoff contract (plan AC-6e).
@@ -147,7 +147,7 @@ def build_scope(
 
     This is the post-embargo effective sample size on the validation window,
     exactly as specified in CONTRACT_FE §3 and documented in
-    :func:`stml.replication.splits.embargoed_val`.
+    :func:`stml.metamodel.splits.embargoed_val`.
     """
     split = chronological_split(signals["date"])
 

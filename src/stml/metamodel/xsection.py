@@ -307,6 +307,18 @@ def xsection_features(
     pair_corr_mean = pair_corr_mean.reindex(inst_index)
 
     # ------------------------------------------------------------------
+    # F9d–f: cross-asset positioning (ported from the Harry branch).
+    # All operate on the wide 1-day log-return panel built above, strictly
+    # trailing (info <= t): a lead-lag centroid distance, the within-class
+    # return-dispersion z-score, and the EWMA implied-correlation z-score.
+    # ------------------------------------------------------------------
+    lead_lag = _f9_lead_lag_centroid(wide_ret, instrument, lag=1, window=126)
+    dispersion_z = _f9_asset_class_dispersion_z(wide_ret, instrument, window=63)
+    implied_corr_z = _f9_ewma_implied_corr_z(
+        wide_ret, instrument, halflife=20, window=252
+    )
+
+    # ------------------------------------------------------------------
     # Assemble output frame
     # ------------------------------------------------------------------
     out = pd.DataFrame(
@@ -314,8 +326,80 @@ def xsection_features(
             "f9_xsect_rank": rank_series,
             "f9_xsection_universe_size": size_series,
             "f9_pair_corr_mean": pair_corr_mean,
+            "f9_dist_lead_lag_centroid": lead_lag.reindex(inst_index),
+            "f9_asset_class_dispersion_z": dispersion_z.reindex(inst_index),
+            "f9_ewma_implied_corr_z": implied_corr_z.reindex(inst_index),
         },
         index=inst_index,
     )
     out.index.name = "date"
     return out
+
+
+# --------------------------------------------------------------------------- #
+# F9 cross-asset positioning helpers (ported from the Harry branch).          #
+# Each operates on the wide ``date x instrument`` 1-day log-return panel and  #
+# is strictly trailing (info <= t) -> truncation-invariant.                   #
+# --------------------------------------------------------------------------- #
+def _f9_lead_lag_centroid(
+    wide_ret: pd.DataFrame, instrument: str, *, lag: int = 1, window: int = 126
+) -> pd.Series:
+    """L2 distance over a trailing window between the instrument's returns and
+    the ``lag``-shifted mean of every other instrument (lead-lag centroid).
+
+    Small = the instrument tracks the lagged panel mean; large = out-of-step.
+    NaN for the first ``window + lag - 1`` rows.
+    """
+    if instrument not in wide_ret.columns:
+        return pd.Series(np.nan, index=wide_ret.index, name="f9_dist_lead_lag_centroid")
+    inst_r = wide_ret[instrument].astype("float64")
+    peers = [c for c in wide_ret.columns if c != instrument]
+    if not peers:
+        return pd.Series(np.nan, index=wide_ret.index, name="f9_dist_lead_lag_centroid")
+    centroid = wide_ret[peers].mean(axis=1).shift(lag)
+    diff_sq = (inst_r - centroid) ** 2
+    out = np.sqrt(diff_sq.rolling(window, min_periods=window).mean())
+    return out.rename("f9_dist_lead_lag_centroid")
+
+
+def _f9_asset_class_dispersion_z(
+    wide_ret: pd.DataFrame, instrument: str, *, window: int = 63
+) -> pd.Series:
+    """Z-score of the trailing cross-sectional return std within the
+    instrument's asset class (intra-class divergence spikes).
+
+    NaN if the class has fewer than two members present, or before ``window``.
+    """
+    peers = [p for p in ASSET_CLASS_PEERS.get(instrument, []) if p in wide_ret.columns]
+    if len(peers) < 2:
+        return pd.Series(np.nan, index=wide_ret.index, name="f9_asset_class_dispersion_z")
+    dispersion = wide_ret[peers].std(axis=1, ddof=0).astype("float64")
+    mu = dispersion.rolling(window, min_periods=window).mean()
+    sd = dispersion.rolling(window, min_periods=window).std(ddof=0)
+    z = (dispersion - mu) / sd.replace(0.0, np.nan)
+    return z.rename("f9_asset_class_dispersion_z")
+
+
+def _f9_ewma_implied_corr_z(
+    wide_ret: pd.DataFrame, instrument: str, *, halflife: int = 20, window: int = 252
+) -> pd.Series:
+    """Z-score of the EWMA-smoothed mean pairwise correlation between this
+    instrument and every other in the panel (a market-stress / crisis spike).
+
+    EWMA is one-pass (``adjust=False``) so it is causal. NaN before ``window``.
+    """
+    if instrument not in wide_ret.columns:
+        return pd.Series(np.nan, index=wide_ret.index, name="f9_ewma_implied_corr_z")
+    inst_r = wide_ret[instrument].astype("float64")
+    peers = [c for c in wide_ret.columns if c != instrument]
+    if not peers:
+        return pd.Series(np.nan, index=wide_ret.index, name="f9_ewma_implied_corr_z")
+    pair_corrs = [
+        inst_r.ewm(halflife=halflife, adjust=False).corr(wide_ret[p].astype("float64"))
+        for p in peers
+    ]
+    implied = pd.concat(pair_corrs, axis=1).mean(axis=1)
+    mu = implied.rolling(window, min_periods=window).mean()
+    sd = implied.rolling(window, min_periods=window).std(ddof=0)
+    z = (implied - mu) / sd.replace(0.0, np.nan)
+    return z.rename("f9_ewma_implied_corr_z")

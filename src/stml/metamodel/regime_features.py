@@ -18,9 +18,9 @@ transformed *causally* over each instrument's full per-instrument series:
   (one-sided) marginal probabilities, ``MarkovRegression(full_ret).filter(
   train_params).filtered_marginal_probabilities``, which are causal by
   construction: the filtered probability at ``t`` is a function of returns up to
-  and including ``t`` only. (The *smoothed* probabilities used by
-  :func:`stml.replication.characterize.regime` look ahead and are therefore NOT
-  used here.) In both models the high-vol regime/component -- the larger fitted
+  and including ``t`` only. (The *smoothed* Markov probabilities look ahead and
+  are therefore NOT used here.) In both models the high-vol regime/component --
+  the larger fitted
   variance (Markov) or the larger mean raw vol (GMM) -- is recorded AT FIT TIME.
 
 Leakage contract (see ``.omc/scratch/CONTRACT_FE.md`` Sections 0 and 3)
@@ -35,10 +35,9 @@ Leakage contract (see ``.omc/scratch/CONTRACT_FE.md`` Sections 0 and 3)
   is a STRUCTURAL NaN (logged via :mod:`warnings`); structural NaNs are NEVER
   forward-filled or ``fillna(0)``-ed.
 
-This module re-implements a fresh causal fit/transform path and intentionally
-does **not** import :mod:`stml.replication.characterize` (whose ``regime`` is
-smoothed, signal-era-fit and participation-only -- non-causal for features); it
-only mirrors that module's estimator *choices*.
+This module implements a fresh causal fit/transform path: it uses *filtered*
+(never smoothed) Markov probabilities, fits on FE-train only, and freezes all
+standardization stats from FE-train -- so it is leakage-safe for features.
 """
 
 from __future__ import annotations

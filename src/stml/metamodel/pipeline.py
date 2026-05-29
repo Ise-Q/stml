@@ -52,7 +52,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from stml.metamodel.drift_features import regime_alignment_score
 from stml.metamodel.features import assemble_engineered
+from stml.metamodel.features_ext import add_z_twins, assemble_engineered_ext
 from stml.metamodel.latent import LatentBundle, fit_latent, transform_latent
 from stml.metamodel.macro_features import (
     DEFAULT_MACRO_PATH,
@@ -62,10 +64,11 @@ from stml.metamodel.macro_features import (
     transform_macro,
 )
 from stml.metamodel.regime_features import RegimeBundle, fit_regime, transform_regime
+from stml.metamodel.regime_features_hmm import HmmBundle, fit_hmm, transform_hmm
 from stml.metamodel.scope import ASSET_CLASS_MAP, InstrumentScope, build_scope
 from stml.metamodel.xsection import xsection_features
+from stml.metamodel.splits import chronological_split
 from stml.na_checks import native_returns, rolling_vol
-from stml.replication.splits import chronological_split
 
 __all__ = ["FeaturePipeline"]
 
@@ -119,6 +122,7 @@ class FeaturePipeline:
 
         # Populated by fit():
         self._regime: dict[str, RegimeBundle] = {}
+        self._hmm: dict[str, HmmBundle] = {}
         self._latent: dict[str, LatentBundle] = {}
         self._macro: MacroBundle | None = None
         self._macro_raw: pd.DataFrame | None = None
@@ -239,6 +243,10 @@ class FeaturePipeline:
                 seed=self.seed,
                 instrument=inst,
                 n_eff_gate=n_eff_gate,
+            )
+            # F17: 3-state Gaussian HMM, fit on the same FE-train (ret, vol).
+            self._hmm[inst] = fit_hmm(
+                train_ret_vol, seed=self.seed, instrument=inst
             )
 
         # Frozen engineered feature-column order (shared across instruments).
@@ -367,6 +375,9 @@ class FeaturePipeline:
             # F3: causal regime posteriors over the FULL per-instrument series.
             regime = transform_regime(self._regime[inst], ret_vol)
 
+            # F17: causal filtered HMM posteriors over the FULL (ret, vol) series.
+            hmm = transform_hmm(self._hmm[inst], ret_vol)
+
             # F4: per-instrument latent transform with the class bundle.
             asset_class = ASSET_CLASS_MAP[inst]
             latent = transform_latent(
@@ -376,11 +387,30 @@ class FeaturePipeline:
             # F9: cross-sectional features over the whole-universe panel.
             xsect = xsection_features(ohlcv, inst)
 
+            # Extended E-class families (F2-RS, F5-adds, F7-adds, F12, F13, F15),
+            # computed on the instrument's own OHLCV/signal -- joined separately
+            # so the F4 latent fit keeps its stable core-feature input.
+            ohlcv_inst = ohlcv[ohlcv["instrument"] == inst]
+            ext = assemble_engineered_ext(ohlcv_inst, sig)
+
+            # F16: concept-drift / regime-alignment score (rolling discriminator
+            # of FE-train-era vs recent rows over the core engineered block).
+            drift = regime_alignment_score(
+                engineered[self._feature_cols], self.fe_train_end_ts
+            ).to_frame()
+
+            # Expanding-z standardization twins for scale-dependent E-class
+            # columns (core engineered + ext), per instrument and causal.
+            ztwins = add_z_twins(engineered.join(ext, how="outer"))
+
             # Outer-join every block on this instrument's dates. The engineered
             # frame carries the instrument's full price+signal date union; the
             # other blocks (incl. the global macro panel) align onto it
             # (structural NaN where absent).
-            joined = engineered.join([regime, latent, xsect, macro_std], how="outer")
+            joined = engineered.join(
+                [regime, hmm, latent, xsect, ext, drift, macro_std, ztwins],
+                how="outer",
+            )
             joined = joined.sort_index()
 
             # Restrict to nonzero-signal trade-days within the released window.

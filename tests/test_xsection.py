@@ -46,7 +46,14 @@ def _features(ohlcv_all: pd.DataFrame, instrument: str, **kw) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 class TestOutputShape:
-    EXPECTED_COLS = ["f9_xsect_rank", "f9_xsection_universe_size", "f9_pair_corr_mean"]
+    EXPECTED_COLS = [
+        "f9_xsect_rank",
+        "f9_xsection_universe_size",
+        "f9_pair_corr_mean",
+        "f9_dist_lead_lag_centroid",
+        "f9_asset_class_dispersion_z",
+        "f9_ewma_implied_corr_z",
+    ]
 
     @pytest.mark.parametrize("instrument", PROBE_INSTRUMENTS)
     def test_columns(self, ohlcv_all: pd.DataFrame, instrument: str) -> None:

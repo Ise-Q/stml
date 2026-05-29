@@ -20,7 +20,7 @@ from stml.metamodel.scope import (
     build_scope,
     persist_scope,
 )
-from stml.replication.splits import run_length_p90
+from stml.metamodel.splits import run_length_p90
 
 # ---------------------------------------------------------------------------
 # Verified ground-truth table (CONTRACT_FE §2, baked in per spec)

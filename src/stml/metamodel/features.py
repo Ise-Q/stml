@@ -19,12 +19,12 @@ every date ``< T``.
 
 Two families carry the highest leakage risk and so are pinned explicitly:
 
-* **F1 ``f1_mr_score_20``** mirrors :func:`stml.replication.archetypes._score_mean_reversion`
-  exactly — ``score_t = -zscore_t(close - SMA_L)`` (the C1 counter-trend prime,
-  the highest-value replicator: a close far ABOVE its average leans short).
+* **F1 ``f1_mr_score_20``** is the C1 counter-trend mean-reversion score
+  ``score_t = -zscore_t(close - SMA_L)`` (the highest-value replicator: a close
+  far ABOVE its average leans short).
 * **F5 ``f5_trailing_run_length`` / ``f5_days_since_flip``** are computed from
   ``signal_inst.iloc[:i + 1]`` ONLY (an expanding, cumulative-from-left scan),
-  **never** from :func:`stml.replication.splits.run_length_p90` (which measures
+  **never** from :func:`stml.metamodel.splits.run_length_p90` (which measures
   the full released period and therefore leaks the future into the past). The
   embargo-sizing ``run_length_p90`` and these trailing run-length features are
   deliberately distinct quantities; the catalog documents the distinction.
@@ -86,8 +86,8 @@ _LABEL_VOL_WINDOW = 20
 def _ohlcv_indexed(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
     """Date-indexed, de-duplicated, sorted OHLCV for one instrument.
 
-    Mirrors :func:`stml.replication.archetypes._close_series` but retains the
-    full OHLCV columns (open/high/low/close/volume/open_interest). The index is
+    Builds a clean per-instrument OHLCV frame retaining the full columns
+    (open/high/low/close/volume/open_interest). The index is
     this instrument's own trading calendar — no calendar grid is imposed — so
     rolling windows span real bars and never fabricate gaps.
 
@@ -118,8 +118,7 @@ def _ohlcv_indexed(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
 def _zscore(x: pd.Series, window: int) -> pd.Series:
     """Trailing z-score ``(x - rolling_mean) / rolling_std`` over ``window``.
 
-    Identical construction to :func:`stml.replication.archetypes._zscore`:
-    pandas ``rolling`` is right-aligned and trailing (info ``<= t``), and a
+    Pandas ``rolling`` is right-aligned and trailing (info ``<= t``), and a
     zero/NaN rolling std (a flat window) yields ``NaN`` for that row rather than
     a divide-by-zero blow-up.
     """
@@ -163,8 +162,7 @@ def _instrument_returns(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
 def f1_counter_trend(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
     """Counter-trend (mean-reversion) features for one instrument.
 
-    The prime column ``f1_mr_score_20`` mirrors
-    :func:`stml.replication.archetypes._score_mean_reversion` exactly:
+    The prime column ``f1_mr_score_20`` is the C1 counter-trend score
     ``-zscore_20(close - SMA_20)``. A positive score (close far below its average)
     leans LONG; a negative score (close far above) leans SHORT — the C1
     counter-trend sign, identified as the highest-value replicator.
@@ -389,7 +387,7 @@ def f5_signal_derived(
     ``signal_inst.iloc[:i + 1]`` — never of the full released period. In
     particular ``f5_trailing_run_length`` and ``f5_days_since_flip`` are
     expanding scans (MUST-FIX-2): they are deliberately distinct from
-    :func:`stml.replication.splits.run_length_p90` (a full-period statistic used
+    :func:`stml.metamodel.splits.run_length_p90` (a full-period statistic used
     only for embargo sizing, which would leak the future if used as a feature).
 
     Columns
@@ -455,11 +453,9 @@ def f5_signal_derived(
 def f6_momentum_contrast(ohlcv_inst: pd.DataFrame) -> pd.DataFrame:
     """Momentum and trend-contrast features for one instrument.
 
-    ``f6_ts_momentum_20`` mirrors
-    :func:`stml.replication.archetypes._score_ts_momentum`: the trailing
+    ``f6_ts_momentum_20`` is the trailing
     ``L``-day log return divided by a trailing return-vol scale
-    (``daily_std * sqrt(L)``). ``f6_donchian_pos_20`` mirrors
-    :func:`stml.replication.archetypes._score_breakout_donchian`: the close's
+    (``daily_std * sqrt(L)``). ``f6_donchian_pos_20`` is the close's
     position in the prior ``N``-day channel (band excludes today), in [-1, +1]
     within band and beyond on a breach.
 

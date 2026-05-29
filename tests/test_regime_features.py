@@ -21,7 +21,7 @@ Sections 0 and 3, AC-3 / AC-12) on REAL data via :func:`stml.io.load_clean_data`
   not raise; and on a forced fit-failure the bundle's ``ok`` is ``False`` and
   every column is a structural NaN that is never forward-filled.
 * **No characterize import** -- the module re-implements a fresh causal path and
-  must not import :mod:`stml.replication.characterize`.
+  must not import any smoothed, signal-era-fit ``characterize`` estimator.
 """
 
 from __future__ import annotations

@@ -19,6 +19,10 @@ Persisted artifacts (CONTRACT_FE Sections 3 / 4)
 ------------------------------------------------
 ``results/feature_matrix.parquet`` / ``.csv``
     The canonical tidy-long feature matrix.
+``results/features/<family>.csv``
+    One CSV per feature family (e.g. ``f1_counter_trend.csv`` ...
+    ``f17_hmm_regimes.csv``), each keyed by ``(date, instrument)`` and carrying
+    that family's raw columns plus their ``z_`` standardization twins.
 ``data/macro_features_engineered.parquet`` / ``.csv``
     The standalone F11 cross-asset macro dataset: the standardized, matrix-
     aligned macro columns keyed by ``(date, instrument)``, row-aligned to the
@@ -83,6 +87,67 @@ _CORR_MIN_PERIODS: int = 252
 #: correlation exceeds ``1 - threshold`` (here ``|corr| > 0.7``) merge into one
 #: redundancy cluster.
 _REDUNDANCY_DISTANCE_THRESHOLD: float = 0.30
+
+#: Per-family CSV filename slugs (under ``results/features/``). One CSV per
+#: feature family, each keyed by ``(date, instrument)`` and carrying that
+#: family's raw columns plus their ``z_`` standardization twins.
+_FAMILY_SLUGS: dict[str, str] = {
+    "F1": "f1_counter_trend",
+    "F2": "f2_volatility",
+    "F3": "f3_regime_posteriors",
+    "F4": "f4_latent",
+    "F5": "f5_signal_derived",
+    "F6": "f6_momentum",
+    "F7": "f7_microstructure",
+    "F8": "f8_calendar",
+    "F9": "f9_cross_sectional",
+    "F10": "f10_price_action",
+    "F11": "f11_macro_context",
+    "F12": "f12_path_structure",
+    "F13": "f13_wavelet",
+    "F15": "f15_conditional_risk",
+    "F16": "f16_concept_drift",
+    "F17": "f17_hmm_regimes",
+}
+
+
+def _write_family_csvs(matrix: pd.DataFrame, outdir: Path) -> dict[str, Path]:
+    """Write one CSV per feature family under ``outdir/features/``.
+
+    Each family CSV is keyed by ``(date, instrument)`` and carries that family's
+    feature columns (raw + their ``z_`` twins) in matrix-column order. The union
+    of the family files' feature columns equals the master matrix's feature
+    columns (no column lost or duplicated).
+
+    Parameters
+    ----------
+    matrix : pd.DataFrame
+        The tidy-long feature matrix.
+    outdir : pathlib.Path
+        The ``results/`` directory; the CSVs land in ``outdir/features/``.
+
+    Returns
+    -------
+    dict[str, pathlib.Path]
+        Mapping ``"family_<slug>" -> written path``.
+    """
+    from stml.metamodel.catalog import CATALOG
+
+    feat_dir = outdir / "features"
+    feat_dir.mkdir(parents=True, exist_ok=True)
+
+    feature_cols = [c for c in matrix.columns if c not in META_COLS]
+    by_family: dict[str, list[str]] = {}
+    for col in feature_cols:
+        by_family.setdefault(CATALOG[col].family, []).append(col)
+
+    written: dict[str, Path] = {}
+    for family, cols in by_family.items():
+        slug = _FAMILY_SLUGS.get(family, family.lower())
+        path = feat_dir / f"{slug}.csv"
+        matrix[["date", "instrument", *cols]].to_csv(path, index=False)
+        written[f"family_{slug}"] = path
+    return written
 
 
 # --------------------------------------------------------------------------- #
@@ -391,6 +456,9 @@ def _persist(
     matrix.to_parquet(parquet_path, index=False)
     matrix.to_csv(csv_path, index=False)
 
+    # Per-family CSVs (results/features/<slug>.csv), keyed by (date, instrument).
+    family_paths = _write_family_csvs(matrix, outdir)
+
     # Standalone F11 macro dataset: the STANDARDIZED, matrix-aligned macro
     # columns keyed by (date, instrument), row-aligned to the matrix's
     # nonzero-signal rows (the ML-ready macro slice the spec asked for).
@@ -420,6 +488,7 @@ def _persist(
     return {
         "feature_matrix_parquet": parquet_path,
         "feature_matrix_csv": csv_path,
+        **family_paths,
         "macro_features_parquet": macro_parquet,
         "macro_features_csv": macro_csv,
         "feature_redundancy_json": redundancy_json,

@@ -54,6 +54,14 @@ TOL_COLS = [
     "f4_ae_code4",
     "f4_ae_recon_err",
     "f4_cluster_dist",
+    # F17 HMM filtered posteriors: the Gaussian-HMM EM fit is seeded
+    # (random_state) but its likelihood / covariance reductions are not
+    # bit-stable across independent fits (BLAS summation order), so the
+    # posteriors reproduce to ~1e-10, not bit-exact -- same class as the AE.
+    # The integer ``f17_hmm_state_argmax`` stays in the exact-equality set.
+    "f17_hmm_state_lo",
+    "f17_hmm_state_mid",
+    "f17_hmm_state_hi",
 ]
 
 

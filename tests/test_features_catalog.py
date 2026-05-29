@@ -113,9 +113,10 @@ def test_catalog_column_set_equals_produced_features(matrix) -> None:
     assert set(CATALOG) == set(produced), (
         "CATALOG keys must match the produced feature columns exactly"
     )
-    # 120 documented feature columns (124 matrix columns minus 4 meta) after F11.
-    assert len(produced) == 120
-    assert len(CATALOG) == 120
+    # 175 documented feature columns after the curated Harry/Sreeram union:
+    # 120 base (F1-F11) + 31 new family columns + 24 expanding-z twins.
+    assert len(produced) == 175
+    assert len(CATALOG) == 175
 
 
 def test_meta_columns_have_no_spec(matrix) -> None:
@@ -154,21 +155,22 @@ def test_assert_coverage_detects_orphan_spec() -> None:
 # AC-1 — leakage-class composition (the contract's E / TF / LI split).        #
 # --------------------------------------------------------------------------- #
 def test_leakage_class_composition() -> None:
-    """F3/F4/F11 are TF; f2_vol_20 + f5_trailing_run_length are LI; rest are E."""
+    """F3/F4/F11/F16/F17 are TF; f2_vol_20 + f5_trailing_run_length are LI; rest E."""
     tf = {n for n, s in CATALOG.items() if s.leakage_class == "TF"}
     li = {n for n, s in CATALOG.items() if s.leakage_class == "LI"}
     eng = {n for n, s in CATALOG.items() if s.leakage_class == "E"}
 
-    # TF = exactly the F3 + F4 + F11 fitted families.
-    assert all(n.startswith(("f3_", "f4_", "f11_")) for n in tf)
-    assert tf == {n for n in CATALOG if n.startswith(("f3_", "f4_", "f11_"))}
-    assert len(tf) == 60  # 4 F3 + 11 F4 + 45 F11
+    # TF = exactly the fitted families: F3 + F4 + F11 + F16 + F17.
+    tf_prefixes = ("f3_", "f4_", "f11_", "f16_", "f17_")
+    assert all(n.startswith(tf_prefixes) for n in tf)
+    assert tf == {n for n in CATALOG if n.startswith(tf_prefixes)}
+    assert len(tf) == 65  # 4 F3 + 11 F4 + 45 F11 + 1 F16 + 4 F17
 
     # LI = exactly the label-interface subset.
     assert li == {"f2_vol_20", "f5_trailing_run_length"}
 
-    # The three classes partition the 120 columns.
-    assert len(eng) == 58
+    # The three classes partition the 175 columns.
+    assert len(eng) == 108
     assert tf | li | eng == set(CATALOG)
     assert not (tf & li) and not (tf & eng) and not (li & eng)
 

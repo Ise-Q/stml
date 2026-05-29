@@ -78,8 +78,13 @@ _FAMILY_TITLES: dict[str, str] = {
     "F8": "F8 — Calendar (deterministic sin/cos)",
     "F3": "F3 — Regime posteriors (filtered GMM + Markov, fitted)",
     "F4": "F4 — Latent structure (PCA / KMeans / autoencoder, fitted)",
-    "F9": "F9 — Cross-sectional (rank / pair-correlation)",
+    "F9": "F9 — Cross-sectional (rank / pair-correlation / cross-asset positioning)",
     "F11": "F11 — Cross-asset macro context (PIT publication-lagged, FE-train z-scored, fitted)",
+    "F12": "F12 — Mean-reversion / path-structure & trend-quality (from Sreeram)",
+    "F13": "F13 — Wavelet / multiscale energy (from Harry)",
+    "F15": "F15 — Conditional risk / first-passage (from Harry)",
+    "F16": "F16 — Concept-drift / regime-alignment (from Harry, fitted)",
+    "F17": "F17 — HMM regime posteriors (filtered Gaussian HMM, fitted; from Sreeram)",
 }
 
 
@@ -104,7 +109,7 @@ class FeatureSpec:
     reuse_pointer : str
         Where the column's logic comes from: a reused primitive
         (e.g. ``"na_checks.rolling_vol"``), the mirrored archetype
-        (e.g. ``"archetypes._score_mean_reversion"``), or the fit scope
+        (e.g. ``"features.f1_counter_trend"``), or the fit scope
         (e.g. ``"fit: FE-train per-instrument"``).
     """
 
@@ -151,7 +156,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "10d average leans short, far below leans long.",
             "10d",
             "E",
-            "archetypes._score_mean_reversion",
+            "features.f1_counter_trend",
         ),
         _spec(
             "f1_mr_score_20",
@@ -160,7 +165,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "highest-value mean-reversion replicator.",
             "20d",
             "E",
-            "archetypes._score_mean_reversion",
+            "features.f1_counter_trend",
         ),
         _spec(
             "f1_mr_score_40",
@@ -168,7 +173,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "Counter-trend score -zscore_40(close - SMA_40) at the slow horizon.",
             "40d",
             "E",
-            "archetypes._score_mean_reversion",
+            "features.f1_counter_trend",
         ),
         _spec(
             "f1_dist_ma_sigma_10",
@@ -364,7 +369,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "Vol-scaled trailing 20d log return (time-series momentum score).",
             "20d",
             "E",
-            "archetypes._score_ts_momentum",
+            "features.f6_momentum_contrast",
         ),
         _spec(
             "f6_ts_momentum_60",
@@ -372,7 +377,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "Vol-scaled trailing 60d log return (time-series momentum score).",
             "60d",
             "E",
-            "archetypes._score_ts_momentum",
+            "features.f6_momentum_contrast",
         ),
         _spec(
             "f6_ma_cross_20_60",
@@ -412,7 +417,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "Close position in the prior 20d Donchian channel (breakout), [-1,1].",
             "20d",
             "E",
-            "archetypes._score_breakout_donchian",
+            "features.f6_momentum_contrast",
         ),
         # ----- F7 microstructure (7); Amihud zero-volume->NaN guard ---------- #
         _spec(
@@ -757,7 +762,7 @@ CATALOG: dict[str, FeatureSpec] = dict(
             "per-day finite-score universe, normalised to [-1, 1].",
             "20d",
             "E",
-            "archetypes.generate_panel",
+            "xsection.xsection_features",
         ),
         _spec(
             "f9_xsection_universe_size",
@@ -849,6 +854,309 @@ def _macro_specs() -> list[tuple[str, FeatureSpec]]:
 
 
 CATALOG.update(dict(_macro_specs()))
+
+
+# --------------------------------------------------------------------------- #
+# Extended families folded in from the Harry / Sreeram branches.              #
+# F2-add (Rogers-Satchell), F5-adds (entropy/flip-rate), F7-adds (Roll/Kyle/  #
+# overnight), F9-adds (cross-asset positioning), F12 (path-structure), F13    #
+# (wavelet), F15 (conditional risk), F16 (drift, TF), F17 (HMM, TF). All      #
+# E-class unless noted; provenance recorded in the reuse pointer.             #
+# --------------------------------------------------------------------------- #
+def _ext_specs() -> list[tuple[str, FeatureSpec]]:
+    """Build the ``(name, FeatureSpec)`` pairs for the extended families."""
+    return [
+        # ----- F2 add — Rogers-Satchell range volatility (Sreeram) ----------- #
+        _spec(
+            "f2_rogers_satchell_20",
+            "F2",
+            "Rogers-Satchell drift-independent OHLC range volatility over 20d, "
+            "annualised (the drift-robust sibling of Parkinson / Garman-Klass).",
+            "20d",
+            "E",
+            "features_ext.f2_rogers_satchell",
+        ),
+        # ----- F5 adds — signal-trajectory entropy / flip-rate (Harry) ------- #
+        _spec(
+            "f5_signal_entropy_20",
+            "F5",
+            "Shannon entropy (nats) of the trailing 20d {-1,0,+1} signal PMF in "
+            "[0, log 3]; high = the signal is hopping across states.",
+            "20d",
+            "E",
+            "features_ext.f5_signal_trajectory",
+        ),
+        _spec(
+            "f5_flip_rate_60",
+            "F5",
+            "Fraction of consecutive-bar signal value changes over the trailing "
+            "60d, in [0, 1] (signal instability).",
+            "60d",
+            "E",
+            "features_ext.f5_signal_trajectory",
+        ),
+        # ----- F7 adds — Roll spread / Kyle's lambda / overnight gap (Harry) - #
+        _spec(
+            "f7_rolls_spread_20",
+            "F7",
+            "Roll (1984) implied bid-ask spread 2·sqrt(max(-Cov(Δp_t,Δp_{t-1}),0)) "
+            "over 20d (negative serial covariance = bounce signature).",
+            "20d",
+            "E",
+            "features_ext.f7_microstructure_ext",
+        ),
+        _spec(
+            "f7_kyles_lambda_20",
+            "F7",
+            "Hasbrouck (2009) daily-bar Kyle's lambda mean(|ret|/sqrt(volume)) "
+            "over 20d (price impact per share); zero-volume rows NaN-guarded.",
+            "20d",
+            "E",
+            "features_ext.f7_microstructure_ext",
+        ),
+        _spec(
+            "f7_overnight_gap",
+            "F7",
+            "Overnight log return log(open_t / close_{t-1}) (the gap a "
+            "close-to-close return blends away).",
+            "1d",
+            "E",
+            "features_ext.f7_microstructure_ext",
+        ),
+        # ----- F9 adds — cross-asset positioning (Harry) --------------------- #
+        _spec(
+            "f9_dist_lead_lag_centroid",
+            "F9",
+            "L2 distance over a trailing 126d window between the instrument's "
+            "returns and the 1-day-lagged mean of the rest of the panel "
+            "(small = tracks the lagged panel, large = out-of-step leader/laggard).",
+            "126d",
+            "E",
+            "xsection._f9_lead_lag_centroid",
+        ),
+        _spec(
+            "f9_asset_class_dispersion_z",
+            "F9",
+            "Z-score of the trailing 63d cross-sectional return std within the "
+            "instrument's asset class (intra-class divergence spikes).",
+            "63d",
+            "E",
+            "xsection._f9_asset_class_dispersion_z",
+        ),
+        _spec(
+            "f9_ewma_implied_corr_z",
+            "F9",
+            "Z-score of the EWMA(halflife 20) mean pairwise correlation with the "
+            "rest of the panel over 252d (a market-stress / crisis spike).",
+            "252d",
+            "E",
+            "xsection._f9_ewma_implied_corr_z",
+        ),
+        # ----- F12 mean-reversion / path-structure & trend-quality (Sreeram) - #
+        _spec(
+            "f12_autocorr_21",
+            "F12",
+            "Lag-1 autocorrelation of returns over 21d (negative = mean-reverting, "
+            "positive = trending).",
+            "21d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_efficiency_ratio_21",
+            "F12",
+            "Kaufman efficiency ratio |net move|/sum(|moves|) over 21d in [0,1] "
+            "(1 = clean directional move, 0 = pure noise).",
+            "21d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_variance_ratio_5_21",
+            "F12",
+            "Variance ratio Var(5d)/(5·Var(1d)) over 21d; >1 trending, <1 "
+            "mean-reverting, =1 random walk.",
+            "21d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_trend_tval_10",
+            "F12",
+            "t-statistic of the OLS slope of log-close on a time index over 10d "
+            "(tValLinR); high |t| = a statistically clean trend.",
+            "10d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_trend_tval_21",
+            "F12",
+            "t-statistic of the OLS slope of log-close on a time index over 21d "
+            "(tValLinR); high |t| = a statistically clean trend.",
+            "21d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_trend_tval_42",
+            "F12",
+            "t-statistic of the OLS slope of log-close on a time index over 42d "
+            "(tValLinR); high |t| = a statistically clean trend.",
+            "42d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_hurst_100",
+            "F12",
+            "Rescaled-range Hurst exponent of returns over 100d (>0.5 persistent/"
+            "trending, <0.5 anti-persistent/mean-reverting, =0.5 random walk).",
+            "100d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        _spec(
+            "f12_ma21_slope",
+            "F12",
+            "1-day log change of the 21d moving average normalised by the 1d "
+            "return std (dimensionless trend slope).",
+            "21d",
+            "E",
+            "features_ext.f12_path_structure",
+        ),
+        # ----- F13 wavelet / multiscale energy (Harry) ----------------------- #
+        *[
+            _spec(
+                f"f13_mra_energy_d{k}",
+                "F13",
+                f"Fraction of the trailing 252d return variation at wavelet detail "
+                f"level D{k} (db4 MRA; level D{k} ~ "
+                f"{['daily', 'weekly', 'bi-weekly', 'monthly', 'quarterly'][k - 1]} "
+                f"scale). Rows sum to <= 1.",
+                "1y",
+                "E",
+                "features_ext.f13_wavelet_energy",
+            )
+            for k in range(1, 6)
+        ],
+        # ----- F15 conditional risk / first-passage (Harry) ------------------ #
+        _spec(
+            "f15_expected_hit_time",
+            "F15",
+            "Bootstrap median first-passage time to symmetric ±sigma·sqrt(h) "
+            "barriers (h=10) from the trailing 252d return distribution; timeout "
+            "= h+1. Low = fast-resolving regime.",
+            "1y",
+            "E",
+            "features_ext.f15_conditional_risk",
+        ),
+        _spec(
+            "f15_prob_timeout",
+            "F15",
+            "Bootstrap probability that neither barrier is touched within h=10 "
+            "bars (high = recent vol below the barrier scale), in [0, 1].",
+            "1y",
+            "E",
+            "features_ext.f15_conditional_risk",
+        ),
+        _spec(
+            "f15_path_tortuosity_20",
+            "F15",
+            "Trailing 20d sum|r| / |sum r| (1 = monotonic path, larger = zigzag); "
+            "trend signals are more reliable on lower-tortuosity paths.",
+            "20d",
+            "E",
+            "features_ext.f15_conditional_risk",
+        ),
+        _spec(
+            "f15_realized_semi_vol_ratio_20",
+            "F15",
+            "Upside-RMS / downside-RMS of trailing 20d returns (>1 = recent "
+            "up-moves larger than down-moves; recent return asymmetry).",
+            "20d",
+            "E",
+            "features_ext.f15_conditional_risk",
+        ),
+        # ----- F16 concept-drift / regime-alignment (Harry, TF) -------------- #
+        _spec(
+            "f16_regime_alignment_score",
+            "F16",
+            "Rolling logistic-discriminator P(today looks 'recent' vs the FE-train "
+            "era) in [0,1]; an explicit regime/covariate-shift confidence channel. "
+            "Structural NaN on FE-train-era rows (before the first refit).",
+            "expanding",
+            "TF",
+            "fit: rolling FE-train-vs-recent discriminator (drift_features)",
+        ),
+        # ----- F17 HMM regime posteriors (Sreeram, TF) ----------------------- #
+        _spec(
+            "f17_hmm_state_lo",
+            "F17",
+            "Filtered (causal, forward-only) posterior of the low-vol state of a "
+            "3-state Gaussian HMM on (ret, vol); fit on FE-train, frozen.",
+            "expanding",
+            "TF",
+            "fit: FE-train per-instrument (regime_features_hmm)",
+        ),
+        _spec(
+            "f17_hmm_state_mid",
+            "F17",
+            "Filtered (causal) posterior of the mid-vol HMM state on (ret, vol).",
+            "expanding",
+            "TF",
+            "fit: FE-train per-instrument (regime_features_hmm)",
+        ),
+        _spec(
+            "f17_hmm_state_hi",
+            "F17",
+            "Filtered (causal) posterior of the high-vol HMM state on (ret, vol).",
+            "expanding",
+            "TF",
+            "fit: FE-train per-instrument (regime_features_hmm)",
+        ),
+        _spec(
+            "f17_hmm_state_argmax",
+            "F17",
+            "Most-likely HMM state at t (0=lo,1=mid,2=hi by FE-train mean vol). "
+            "NOMINAL, not ordinal — a downstream model should one-hot it.",
+            "expanding",
+            "TF",
+            "fit: FE-train per-instrument (regime_features_hmm)",
+        ),
+    ]
+
+
+CATALOG.update(dict(_ext_specs()))
+
+
+# --------------------------------------------------------------------------- #
+# Standardization twins: one expanding-z `z_<col>` spec per scale-dependent   #
+# E-class column (the SAME list features_ext.add_z_twins emits), so the 1:1   #
+# coverage guard cannot drift. Each twin inherits its base column's family.   #
+# --------------------------------------------------------------------------- #
+def _z_twin_specs() -> list[tuple[str, FeatureSpec]]:
+    """Build a ``z_<col>`` :class:`FeatureSpec` per :data:`Z_TWIN_COLUMNS`."""
+    from stml.metamodel.features_ext import Z_TWIN_COLUMNS
+
+    specs: list[tuple[str, FeatureSpec]] = []
+    for base in Z_TWIN_COLUMNS:
+        base_spec = CATALOG[base]  # base must already be registered
+        specs.append(
+            _spec(
+                f"z_{base}",
+                base_spec.family,
+                f"Per-instrument causal expanding-window z-score of `{base}` "
+                f"(split-agnostic standardization twin).",
+                "expanding",
+                "E",
+                "features_ext.expanding_zscore",
+            )
+        )
+    return specs
+
+
+CATALOG.update(dict(_z_twin_specs()))
 
 
 # --------------------------------------------------------------------------- #
@@ -953,6 +1261,37 @@ _ANNOTATIONS: list[str] = [
     "identically to all 11 "
     "instruments, so the redundancy map shows F11 internal clustering by "
     "construction.",
+    "**Provenance — this is a curated union of three branches.** F1–F11 are the "
+    "`signal-deep-dive` base. Folded in (novel-only, de-duplicated): from "
+    "**Sreeram** the F12 mean-reversion / path-structure & trend-quality family "
+    "(Hurst exponent, variance ratio, Kaufman efficiency ratio, return "
+    "autocorrelation, backward trend-scanning t-values, sigma-normalised MA "
+    "slope), the F2 Rogers-Satchell range-vol estimator, and the F17 filtered "
+    "Gaussian-HMM regime posteriors; from **Harry** the F13 wavelet multiscale "
+    "energy bands, the F15 conditional-risk / first-passage family (bootstrap "
+    "expected hit time, timeout probability, path tortuosity, semi-vol ratio), "
+    "the F16 concept-drift regime-alignment score, the F5 signal entropy / "
+    "flip-rate, the F7 Roll spread / Kyle's lambda / overnight gap, and the F9 "
+    "cross-asset positioning columns (lead-lag centroid distance, within-class "
+    "dispersion z, EWMA implied-correlation z). Duplicated columns (e.g. both "
+    "branches' rolling vol / momentum / calendar / signal run-length / GMM "
+    "clustering) were dropped in favour of the existing F1–F11 implementations.",
+    "**Two standardization regimes.** (1) The fitted TF families "
+    "(F3/F4/F11/F16/F17) are standardized at fit time on the FE-train partition "
+    "and frozen. (2) Every scale-dependent E-class column carries a parallel "
+    "`z_<col>` twin: a per-instrument *causal expanding-window z-score* "
+    "(`expanding(min_periods=60)`), which is split-agnostic — it bakes in no "
+    "train/test cutoff, so each downstream branch keeps its own split. Bounded / "
+    "already-normalized columns (ratios, probabilities, t-statistics, sin/cos, "
+    "[-1,1] / [0,1] positions, percentiles, Hurst, wavelet energy fractions) get "
+    "no twin. Modellers can use the raw column, its `z_` twin, or both.",
+    "**F15 conditional-risk uses DAILY (de-annualised) vol as the barrier "
+    "sigma.** The bootstrap first-passage barriers are `±mult·sigma·sqrt(h)` "
+    "where sigma is the trailing 20d daily-return std — never the annualised "
+    "`f2_vol_20`, which would push almost every simulated path to time out.",
+    "**No labels.** This matrix is keyed by `(date, instrument)` over the "
+    "nonzero-signal released window with NO triple-barrier (or other) label "
+    "column; each downstream branch attaches its own labels for modelling.",
 ]
 
 

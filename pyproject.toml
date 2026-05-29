@@ -50,3 +50,14 @@ calendars = [
     "exchange-calendars>=4.0",
     "holidays>=0.40",
 ]
+# Optional: third-party libraries required only by two fitted/engineered
+# feature families ported from teammate branches:
+#   * F13 wavelet multiscale energy  -> pywavelets   (Harry)
+#   * F17 HMM regime posteriors       -> hmmlearn      (Sreeram)
+# The full feature matrix build (stml.metamodel.build_features) needs these.
+# Install with:
+#   uv sync --group features-extra
+features-extra = [
+    "pywavelets>=1.4",
+    "hmmlearn>=0.3.0",
+]

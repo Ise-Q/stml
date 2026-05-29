@@ -1,4 +1,4 @@
-"""Tests for ``stml.replication.splits`` (US-002).
+"""Tests for ``stml.metamodel.splits`` (vendored chronological split helpers).
 
 Ground truth is recomputed against the real released panel
 (``stml.io.load_clean_data``): 645 trading days, 2020-01-03..2022-06-30, no NaN.
@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from stml.io import load_clean_data
-from stml.replication.splits import (
+from stml.metamodel.splits import (
     Split,
     chronological_split,
     embargoed_val,

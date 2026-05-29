@@ -40,8 +40,8 @@ import pytest
 
 from stml.io import load_clean_data
 from stml.metamodel.pipeline import FeaturePipeline
+from stml.metamodel.splits import chronological_split
 from stml.na_checks import native_returns, rolling_vol
-from stml.replication.splits import chronological_split
 
 FE_TRAIN_END = pd.Timestamp("2021-07-01")
 VOL_WINDOW = 20
