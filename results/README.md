@@ -40,11 +40,9 @@ column** — each downstream branch attaches its own.
 : The matrix split by feature family — `f1_counter_trend.csv` …
 `f17_hmm_regimes.csv`. Each is keyed by `(date, instrument)` and carries that
 family's raw columns plus their `z_` twins. The union of the family files'
-feature columns equals the master matrix's feature columns.
-
-`data/macro_features_engineered.parquet` / `.csv`
-: The standalone **F11 cross-asset macro** dataset — the standardized,
-matrix-aligned F11 columns keyed by `date`, `instrument` (`4,984 × (2 + 45)`).
+feature columns equals the master matrix's feature columns. The **F11
+cross-asset macro** dataset is `data/features/f11_macro_context.csv` (the 45
+`f11_*` columns; no separate standalone macro export).
 
 `feature_redundancy.json` / `feature_redundancy.csv`
 : The feature redundancy map: a pairwise-complete correlation matrix

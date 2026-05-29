@@ -22,11 +22,9 @@ Persisted artifacts (CONTRACT_FE Sections 3 / 4)
 ``data/features/<family>.csv``
     One CSV per feature family (e.g. ``f1_counter_trend.csv`` ...
     ``f17_hmm_regimes.csv``), each keyed by ``(date, instrument)`` and carrying
-    that family's raw columns plus their ``z_`` standardization twins.
-``data/macro_features_engineered.parquet`` / ``.csv``
-    The standalone F11 cross-asset macro dataset: the standardized, matrix-
-    aligned macro columns keyed by ``(date, instrument)``, row-aligned to the
-    matrix's nonzero-signal rows.
+    that family's raw columns plus their ``z_`` standardization twins. The F11
+    cross-asset macro dataset is ``f11_macro_context.csv`` here -- there is no
+    separate standalone macro export.
 ``results/feature_redundancy.json`` / ``.csv``
     Pairwise feature correlation (reusing
     :func:`stml.na_checks.corr_max_info`) plus a
@@ -440,8 +438,8 @@ def _persist(
     catalog_path : pathlib.Path
         Destination markdown path for the rendered feature catalog.
     data_dir : pathlib.Path, default ``Path("data")``
-        Destination directory for the standalone F11 macro dataset
-        (``macro_features_engineered.{parquet,csv}``).
+        Destination directory for the per-family feature CSVs
+        (``data_dir/features/<family>.csv``).
 
     Returns
     -------
@@ -457,19 +455,10 @@ def _persist(
     matrix.to_csv(csv_path, index=False)
 
     # Per-family CSVs (data/features/<slug>.csv), keyed by (date, instrument).
+    # The F11 macro family is written here as data/features/f11_macro_context.csv
+    # like every other family -- there is no separate standalone macro export.
     data_dir.mkdir(parents=True, exist_ok=True)
     family_paths = _write_family_csvs(matrix, data_dir)
-
-    # Standalone F11 macro dataset: the STANDARDIZED, matrix-aligned macro
-    # columns keyed by (date, instrument), row-aligned to the matrix's
-    # nonzero-signal rows (the ML-ready macro slice the spec asked for).
-    data_dir.mkdir(parents=True, exist_ok=True)
-    macro_cols = [c for c in matrix.columns if c.startswith("f11_")]
-    macro_frame = matrix[["date", "instrument", *macro_cols]]
-    macro_parquet = data_dir / "macro_features_engineered.parquet"
-    macro_csv = data_dir / "macro_features_engineered.csv"
-    macro_frame.to_parquet(macro_parquet, index=False)
-    macro_frame.to_csv(macro_csv, index=False)
 
     corr, clusters, partners = compute_redundancy(matrix)
     redundancy_json, redundancy_csv = _write_redundancy(
@@ -490,8 +479,6 @@ def _persist(
         "feature_matrix_parquet": parquet_path,
         "feature_matrix_csv": csv_path,
         **family_paths,
-        "macro_features_parquet": macro_parquet,
-        "macro_features_csv": macro_csv,
         "feature_redundancy_json": redundancy_json,
         "feature_redundancy_csv": redundancy_csv,
         "instrument_scope_json": scope_path,
