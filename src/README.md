@@ -18,7 +18,7 @@ handling, returns/vol/correlation helpers).
 `stml.metamodel.build_features`
 : Builds the leakage-safe, standardized feature matrix and writes
 `results/feature_matrix.{parquet,csv}`, one CSV per family under
-`results/features/`, `results/feature_redundancy.{json,csv}`,
+`data/features/`, `results/feature_redundancy.{json,csv}`,
 `results/instrument_scope.json`, `results/feature_matrix_provenance.json`,
 `data/macro_features_engineered.{parquet,csv}`, and `reports/feature-catalog.md`.
 
@@ -127,7 +127,7 @@ non-zero-signal released trade-days (2020 onward).
 `stml.metamodel.build_features` writes:
 
 - `results/feature_matrix.parquet` and `results/feature_matrix.csv`
-- `results/features/<family>.csv` (one CSV per family, keyed by `(date, instrument)`)
+- `data/features/<family>.csv` (one CSV per family, keyed by `(date, instrument)`)
 - `data/macro_features_engineered.parquet` and `.csv` (standalone F11 dataset)
 - `results/feature_redundancy.json` and `.csv`
 - `results/instrument_scope.json`

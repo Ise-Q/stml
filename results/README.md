@@ -5,11 +5,12 @@ This directory holds the machine-readable artifacts of the shared
 
 - **root-level files** — the feature matrix and its companion redundancy /
   scope / provenance maps;
-- [`features/`](features) — **one CSV per feature family**, each keyed by
-  `(date, instrument)` (the raw columns of that family plus their `z_`
-  standardization twins);
 - `<initials>/` — personal figures / tables / intermediate outputs (created on
   your own branch, not shared until a checkpoint).
+
+The standardized feature data split **one CSV per family** lives under
+[`../data/features/`](../data/features) (keyed by `(date, instrument)`), next to
+the raw inputs.
 
 The graded per-column documentation lives in
 [`reports/feature-catalog.md`](../reports/feature-catalog.md).
@@ -35,13 +36,13 @@ window (`2020-01-03` to `2022-06-30`): **4,984 rows** across the 11 instruments,
 **179 columns** = 4 metadata + **175 feature columns**. There is **no label
 column** — each downstream branch attaches its own.
 
-`features/<family>.csv`
+`data/features/<family>.csv` (under `data/`, not here)
 : The matrix split by feature family — `f1_counter_trend.csv` …
 `f17_hmm_regimes.csv`. Each is keyed by `(date, instrument)` and carries that
 family's raw columns plus their `z_` twins. The union of the family files'
 feature columns equals the master matrix's feature columns.
 
-`data/macro_features_engineered.parquet` / `.csv` (sibling of this dir)
+`data/macro_features_engineered.parquet` / `.csv`
 : The standalone **F11 cross-asset macro** dataset — the standardized,
 matrix-aligned F11 columns keyed by `date`, `instrument` (`4,984 × (2 + 45)`).
 

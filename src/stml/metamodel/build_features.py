@@ -19,7 +19,7 @@ Persisted artifacts (CONTRACT_FE Sections 3 / 4)
 ------------------------------------------------
 ``results/feature_matrix.parquet`` / ``.csv``
     The canonical tidy-long feature matrix.
-``results/features/<family>.csv``
+``data/features/<family>.csv``
     One CSV per feature family (e.g. ``f1_counter_trend.csv`` ...
     ``f17_hmm_regimes.csv``), each keyed by ``(date, instrument)`` and carrying
     that family's raw columns plus their ``z_`` standardization twins.
@@ -88,7 +88,7 @@ _CORR_MIN_PERIODS: int = 252
 #: redundancy cluster.
 _REDUNDANCY_DISTANCE_THRESHOLD: float = 0.30
 
-#: Per-family CSV filename slugs (under ``results/features/``). One CSV per
+#: Per-family CSV filename slugs (under ``data/features/``). One CSV per
 #: feature family, each keyed by ``(date, instrument)`` and carrying that
 #: family's raw columns plus their ``z_`` standardization twins.
 _FAMILY_SLUGS: dict[str, str] = {
@@ -111,8 +111,8 @@ _FAMILY_SLUGS: dict[str, str] = {
 }
 
 
-def _write_family_csvs(matrix: pd.DataFrame, outdir: Path) -> dict[str, Path]:
-    """Write one CSV per feature family under ``outdir/features/``.
+def _write_family_csvs(matrix: pd.DataFrame, data_dir: Path) -> dict[str, Path]:
+    """Write one CSV per feature family under ``data_dir/features/``.
 
     Each family CSV is keyed by ``(date, instrument)`` and carries that family's
     feature columns (raw + their ``z_`` twins) in matrix-column order. The union
@@ -123,8 +123,8 @@ def _write_family_csvs(matrix: pd.DataFrame, outdir: Path) -> dict[str, Path]:
     ----------
     matrix : pd.DataFrame
         The tidy-long feature matrix.
-    outdir : pathlib.Path
-        The ``results/`` directory; the CSVs land in ``outdir/features/``.
+    data_dir : pathlib.Path
+        The ``data/`` directory; the CSVs land in ``data_dir/features/``.
 
     Returns
     -------
@@ -133,7 +133,7 @@ def _write_family_csvs(matrix: pd.DataFrame, outdir: Path) -> dict[str, Path]:
     """
     from stml.metamodel.catalog import CATALOG
 
-    feat_dir = outdir / "features"
+    feat_dir = data_dir / "features"
     feat_dir.mkdir(parents=True, exist_ok=True)
 
     feature_cols = [c for c in matrix.columns if c not in META_COLS]
@@ -456,8 +456,9 @@ def _persist(
     matrix.to_parquet(parquet_path, index=False)
     matrix.to_csv(csv_path, index=False)
 
-    # Per-family CSVs (results/features/<slug>.csv), keyed by (date, instrument).
-    family_paths = _write_family_csvs(matrix, outdir)
+    # Per-family CSVs (data/features/<slug>.csv), keyed by (date, instrument).
+    data_dir.mkdir(parents=True, exist_ok=True)
+    family_paths = _write_family_csvs(matrix, data_dir)
 
     # Standalone F11 macro dataset: the STANDARDIZED, matrix-aligned macro
     # columns keyed by (date, instrument), row-aligned to the matrix's
