@@ -19,6 +19,7 @@ dependencies = [
     "torch",
     "tensorflow",
     "pyarrow",
+    "pywavelets>=1.9.0",
 ]
 
 [build-system]
