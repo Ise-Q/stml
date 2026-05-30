@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .experiment_log import log_run
 from .pipeline import PipelineConfig, run_asset_class  # importing the package pins env first
 from .seeding import set_seeds
 from .sizing import TARGET_VOL, position_weight
@@ -145,6 +146,24 @@ def main(argv=None) -> None:
         cv = {k: round(v, 4) for k, v in diag["cv_scores"].items()}
         print(f"\n[{ac}] selected={diag['best_model']}  cv_auc={cv}")
         print(diag["per_instrument"].to_string(index=False))  # per-instrument BEFORE the aggregate
+    log_path = outdir / "experiment_log.csv"
+    if log_path.exists():
+        log_path.unlink()  # fresh per emit run -> deterministic, rows in asset-class order
+    for ac, diag in diagnostics.items():
+        log_run(
+            {
+                "run_id": f"{config.predict_start.date()}_{ac}",
+                "asset_class": ac,
+                "roster": config.roster,
+                "cv_scheme": config.cv_scheme,
+                "reducer": "cluster_rep" if config.roster == "default" else "",
+                "use_macro": config.use_macro,
+                "best_model": diag["best_model"],
+                "oos_auc": round(diag["cv_scores"].get(diag["best_model"], float("nan")), 6),
+                "notes": "shipped default path",
+            },
+            log_path,
+        )
     caveat = coverage_caveat(preds)
     outdir.mkdir(parents=True, exist_ok=True)
     caveat.to_csv(outdir / "coverage_caveat.csv", index=False, lineterminator="\n")
