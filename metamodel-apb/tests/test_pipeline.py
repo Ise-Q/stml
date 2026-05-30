@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from alken_metamodel.cross_validation import CombinatorialPurgedCV, PurgedKFold
 from alken_metamodel.emit import (
@@ -250,17 +251,85 @@ def test_run_asset_class_predicts_config_window():
     signals = _synthetic_signals(ENERGY)
     res = run_asset_class(ohlcv, signals, "energy", cfg)
     preds = res.predictions
-    assert list(preds.columns) == ["date", "instrument", "prediction", "side", "ann_vol"]
+    # the calibrated column is carried alongside the raw P(act) (pass-3 S3.9)
+    assert list(preds.columns) == [
+        "date", "instrument", "prediction", "prediction_calibrated", "side", "ann_vol",
+    ]
     d = pd.to_datetime(preds["date"])
     assert (d >= cfg.predict_start).all() and (d <= cfg.predict_end).all()
     assert ((preds["prediction"] >= 0) & (preds["prediction"] <= 1)).all()
+    assert ((preds["prediction_calibrated"] >= 0) & (preds["prediction_calibrated"] <= 1)).all()
     assert res.best_model in {"elasticnet_logistic", "xgboost", "lightgbm"}
     assert res.n_modelling > 0
     assert set(preds["instrument"]).issubset(set(ENERGY))
+    # class-level OOS Brier/precision are measured for the experiment log (XT.2 backfill)
+    assert np.isfinite(res.oos_brier) and np.isfinite(res.oos_precision)
     # per-instrument OOS diagnostics: one row per instrument (§5 before-aggregate reporting)
     diag = res.diagnostics
     assert {"instrument", "n", "pos_rate", "auc", "precision"}.issubset(diag.columns)
     assert set(diag["instrument"]) == set(ENERGY)
+
+
+def test_calibration_fit_only_on_modelling_sample():
+    # Calibration is fit on purged-OOS predictions of the modelling sample (<= modelling_end), never
+    # the deliverable window. Two runs with identical modelling_end but DIFFERENT predict windows
+    # must yield an identical calibrator — proof the OOS window never leaks into the calibrator.
+    ohlcv = _synthetic_ohlcv(ENERGY)
+    signals = _synthetic_signals(ENERGY)
+    base = dict(modelling_end=pd.Timestamp("2021-12-31"), n_splits=3, use_regime=False)
+    cfg1 = PipelineConfig(predict_start=pd.Timestamp("2022-01-01"),
+                          predict_end=pd.Timestamp("2022-02-28"), **base)
+    cfg2 = PipelineConfig(predict_start=pd.Timestamp("2022-03-01"),
+                          predict_end=pd.Timestamp("2022-04-30"), **base)
+    r1 = run_asset_class(ohlcv, signals, "energy", cfg1)
+    r2 = run_asset_class(ohlcv, signals, "energy", cfg2)
+    grid = np.linspace(0.05, 0.95, 19)
+    np.testing.assert_allclose(r1.calibrator.transform(grid), r2.calibrator.transform(grid))
+
+
+def test_calibration_is_rank_preserving_auc_unchanged():
+    # Platt is monotone, so it preserves the act/skip ranking -> OOS AUC is unchanged; only the
+    # probability magnitudes (Brier/ECE) and Kelly sizing move (the S3.9 invariant).
+    from sklearn.metrics import roc_auc_score
+
+    from alken_metamodel.pipeline import fit_oos_calibrator
+
+    X, y, t1, sw = _toy_panel(160, seed=5)
+    cfg = PipelineConfig(roster="tree_linear", use_regime=False, n_splits=4)
+    make = lambda: _roster_factory(cfg)(seed=cfg.seed)["lightgbm"]  # noqa: E731
+    cal, oos, finite = fit_oos_calibrator(make, X, y, t1, sw, cfg)
+    raw = oos[finite]
+    yv = y[finite]
+    calibrated = cal.transform(raw)
+    assert ((calibrated >= 0) & (calibrated <= 1)).all()
+    assert roc_auc_score(yv, calibrated) == pytest.approx(roc_auc_score(yv, raw), abs=1e-9)
+
+
+def test_coverage_caveat_widened_threshold_flags_thin():
+    # S5.9: a <60-row threshold flags gc1s(30), ng1s(56), ho1s(2) in addition to the rest passing.
+    rows = (["gc1s"] * 30) + (["ng1s"] * 56) + (["ho1s"] * 2) + (["cl1s"] * 88)
+    preds = pd.DataFrame(
+        {"date": pd.to_datetime(["2022-01-03"] * len(rows)), "instrument": rows,
+         "prediction": [0.6] * len(rows)}
+    )
+    tab = coverage_caveat(preds, min_rows=60)
+    thin = dict(zip(tab["instrument"], tab["thin"], strict=True))
+    assert thin["gc1s"] and thin["ng1s"] and thin["ho1s"]
+    assert not thin["cl1s"]  # 88 rows >= 60
+
+
+def test_coverage_caveat_flags_undefined_ic():
+    # An instrument with an undefined IC is flagged thin even if it clears the row threshold.
+    rows = (["cl1s"] * 80) + (["ng1s"] * 80)
+    preds = pd.DataFrame(
+        {"date": pd.to_datetime(["2022-01-03"] * len(rows)), "instrument": rows,
+         "prediction": [0.6] * len(rows)}
+    )
+    tab = coverage_caveat(preds, min_rows=60, instrument_ic={"cl1s": 0.04, "ng1s": float("nan")})
+    flags = dict(zip(tab["instrument"], tab["thin"], strict=True))
+    undef = dict(zip(tab["instrument"], tab["ic_undefined"], strict=True))
+    assert undef["ng1s"] and not undef["cl1s"]
+    assert flags["ng1s"] and not flags["cl1s"]  # undefined IC -> thin despite 80 rows
 
 
 def test_run_asset_class_is_deterministic():

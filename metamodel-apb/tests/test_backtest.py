@@ -16,6 +16,7 @@ from alken_metamodel.backtest import (
     barrier_backtest,
     build_barrier_position_panel,
     build_position_panel,
+    certainty_equivalent,
     performance_metrics,
     strategy_returns,
 )
@@ -119,3 +120,41 @@ def test_barrier_backtest_net_is_below_gross_when_costs_charged():
     assert report["avg_holding_period"] == pytest.approx(6.0)
     assert report["ann_turnover"] > 0
     assert "sharpe" in report and "sortino" in report
+
+
+def test_barrier_backtest_reconciles_compounded_cost_drag():
+    # gross/net total returns are compounded (∏) but total_cost is an arithmetic Σ, so
+    # gross − cost ≠ net by the compounding interaction (the ~1–2% S6.10 gap). The reconciliation
+    # field cost_drag_compounded = gross_total − net_total closes the identity exactly and, on a
+    # compounding path, differs from the undiscounted Σ — documenting the two bases.
+    cal = pd.bdate_range("2022-01-03", periods=30)
+    returns_panel = pd.DataFrame(0.02, index=cal, columns=["cl1s"])  # +2%/day -> compounds
+    meta = pd.DataFrame(
+        {"date": [cal[0]], "instrument": ["cl1s"], "weight": [1.0], "t1": [cal[28]]}
+    )
+    _net, report = barrier_backtest(meta, returns_panel, impact_bps=50.0)
+    assert report["cost_drag_compounded"] == pytest.approx(
+        report["gross_total_return"] - report["net_total_return"]
+    )
+    assert report["total_cost"] > 0  # the undiscounted arithmetic sum is retained, just relabelled
+    assert abs(report["cost_drag_compounded"] - report["total_cost"]) > 1e-9  # bases differ
+
+
+# --- S5.8: certainty-equivalent (utility-aware evaluation) ------------------
+
+
+def test_certainty_equivalent_equals_mean_when_riskless():
+    # zero variance -> no risk penalty -> CER == mean return
+    assert certainty_equivalent(pd.Series([0.01] * 50)) == pytest.approx(0.01)
+
+
+def test_certainty_equivalent_penalises_variance():
+    rng = np.random.default_rng(1)
+    r = pd.Series(rng.normal(0.01, 0.05, 2000))
+    assert certainty_equivalent(r, risk_aversion=5) < r.mean()  # variance is penalised
+
+
+def test_certainty_equivalent_known_value():
+    r = pd.Series([0.0, 0.02])  # mean 0.01
+    expected = r.mean() - 0.5 * 4.0 * r.var(ddof=1)  # mean-variance CER
+    assert certainty_equivalent(r, risk_aversion=4) == pytest.approx(expected)

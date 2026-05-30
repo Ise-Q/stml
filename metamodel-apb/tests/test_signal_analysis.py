@@ -11,8 +11,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import norm
 
 from alken_metamodel.signal_analysis import (
+    henriksson_merton,
     information_coefficient,
     information_ratio,
     signal_hit_rate,
@@ -46,3 +48,33 @@ def test_information_ratio_is_ic_root_breadth():
 
 def test_hit_rate_nan_when_no_signal():
     assert np.isnan(signal_hit_rate(pd.Series([0, 0, 0]), pd.Series([0.1, -0.1, 0.2])))
+
+
+# --- S5.8: Henriksson–Merton market-timing test ----------------------------
+
+
+def test_henriksson_merton_perfect_timing_is_significant():
+    real = np.array([1, -1, 1, -1, 1, -1, 1, -1.0] * 10)
+    hit, z, p = henriksson_merton(real, real.copy())  # perfect directional calls
+    assert hit == pytest.approx(1.0)
+    assert p < 1e-6  # overwhelmingly significant timing
+
+
+def test_henriksson_merton_no_timing_not_significant():
+    rng = np.random.default_rng(0)
+    real = rng.choice([-1.0, 1.0], 500)
+    pred = rng.choice([-1.0, 1.0], 500)  # independent of the realised direction
+    hit, z, p = henriksson_merton(real, pred)
+    assert 0.40 < hit < 0.60
+    assert p > 0.05  # cannot reject the no-timing null
+
+
+def test_henriksson_merton_known_z_and_pvalue():
+    # 60 of 100 correct -> p_hat=0.6, z=(0.6-0.5)/sqrt(0.25/100)=2.0
+    real = np.ones(100)
+    pred = np.ones(100)
+    pred[:40] = -1.0  # 60 correct, 40 wrong
+    hit, z, p = henriksson_merton(real, pred)
+    assert hit == pytest.approx(0.6)
+    assert z == pytest.approx(2.0)
+    assert p == pytest.approx(1.0 - norm.cdf(2.0))

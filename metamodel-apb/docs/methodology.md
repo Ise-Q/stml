@@ -70,9 +70,11 @@ property test (`tests/test_features.py::test_right_edge_truncation_invariance`).
 
 ## 1. Feature engineering (§1, 20 marks) — `features.py`, `regime.py`
 
-The pooled feature matrix (**measured 111 columns on the Energy class** without the regime/macro
-blocks; ~130 with the EWMA-HMM regime block and the PIT-macro block added in the shipped path)
-layers:
+The pooled feature matrix (**measured per class, not the stale "124"** — X.8): the full shipped
+pooled panel is **Energy 140 / Equity 139 / Metals 140 columns** (core engineered ≈115 + EWMA-HMM
+regime 5 + PIT-macro 16 + instrument one-hots 3–4); the §4 clustering matrix, which drops the
+regime/macro blocks and zero-variance columns on the modelling slice, is **108 / 107 / 108**. Both
+are measured by `experiments/x8_feature_counts.py`. The layers:
 
 | Block | Columns (examples) | What it captures | Module / source |
 |---|---|---|---|
@@ -196,25 +198,37 @@ Equity's edge survives every combinatorial path; Energy's does not (6/15 ≈ coi
 corroborating the §4 cluster importance and the deflated-Sharpe / multiple-testing caveat
 (Bailey 2014; Harvey-Liu-Zhu 2016).
 
-**Calibration deep-dive (EX.4, `calibration.py`).** Because Kelly sizes on p̂ directly, a model that
-*ranks* act/skip adequately can still mis-size if p̂ is uncalibrated. On purged-OOS predictions
-**from LightGBM as a common representative across all three classes** (not the per-class *selected*
-models), the **raw probabilities are materially miscalibrated**, and a Platt / isotonic post-fit on
-an in-time 70/30 split cuts ECE sharply:
+**Calibration is now shipped (S3.9, `calibration.py`).** Because Kelly sizes on p̂ directly, a model
+that *ranks* act/skip adequately still mis-sizes if p̂ is uncalibrated. Pass 3 fits **one Platt map
+per asset class** on the *selected* model's purged-OOS modelling predictions (strictly before
+`predict_start`, so it cannot leak), and applies it to **both** the deliverable probabilities **and**
+the Kelly stake. Platt is monotone, so **AUC is unchanged** (the act/skip ranking is preserved — a
+unit-tested invariant); only Brier/ECE and the stake move. On a leakage-safe in-time 70/30 split of
+the **selected** models (not LightGBM-as-proxy as in pass-2's EX.4):
 
-| Class | ECE raw | ECE Platt | ECE isotonic |
-|---|---|---|---|
-| Energy | 0.182 | 0.077 | 0.083 |
-| Equity | 0.143 | 0.024 | 0.035 |
-| Metals | 0.155 | **0.003** | 0.041 |
+| Class | Selected model | ECE raw → Platt | Brier raw → Platt | AUC (raw = Platt) |
+|---|---|---|---|---|
+| Energy | torch-MLP | 0.140 → **0.100** | 0.254 → 0.244 | 0.541 |
+| Equity | XGBoost | 0.055 → **0.027** | 0.247 → 0.242 | 0.607 |
+| Metals | logistic | 0.210 → **0.001** | 0.313 → **0.247** | 0.532 |
 
-This is **strongly consistent with** — though, measured on LightGBM rather than the shipped models,
-not a closed proof of — the AUC≠P&L decoupling: the probabilities feeding the sizer are
-systematically off, and a one-parameter Platt recalibration would materially improve the stake.
-**Caveat:** the *selected* models' calibration is unmeasured, and since the Energy book ships a
-**torch-MLP** — and NNs typically need post-hoc calibration more than tree ensembles
-(Gramegna-Giudici 2021) — Energy's deployed miscalibration is plausibly *worse* than the 0.182
-shown. Recalibrating the selected models (train-only, to stay leakage-safe) is the clean next step.
+The raw probabilities are materially miscalibrated (Energy's torch-MLP worst at ECE 0.140 — NNs
+need post-hoc calibration more than trees, Gramegna-Giudici 2021); Platt cuts ECE 1.4–200× with the
+AUC untouched. The **deliverable ships the calibrated probabilities** (`metamodel_predictions.csv`),
+with the raw file retained (`metamodel_predictions_raw.csv`) for this before/after; the
+`experiment_log.csv` now records the calibrated class-level Brier (Equity 0.249, Energy 0.263,
+Metals 0.344) and precision. **Note:** calibration *does* change §6 — it shifts which positions clear
+the p̂≥0.55 Kelly floor, which moves the per-book Sharpes (Metals especially; see §6).
+
+**XGBoost benchmark (LR.4).** The horse-race is the NN-vs-tree benchmark itself: torch-MLP and
+torch-VSN compete directly against tuned XGBoost and LightGBM under identical CPCV. Equity and
+Metals select tree/linear; **only Energy selects a neural variant** — so the NN family is neither
+rubber-stamped nor excluded, and the comparison is reported, not assumed.
+
+**CPCV small-N variance (documented cost).** The 15 combinatorial paths give short per-path test
+folds, so a single path's AUC is noisy; selection is therefore on the **15-path mean**, and the
+path-count-above-0.5 (below) is read as the robustness signal rather than any one path. The variance
+is the price of the combinatorial check — accepted deliberately over a single train/test split.
 
 ---
 
@@ -232,22 +246,26 @@ carries the **four required bug fixes**, each visible in the diff:
 | 3 | no real SHAP in PS2/sts-ml (MDI+PFI only) | **cluster SHAP** via `TreeExplainer`, summing member \|SHAP\| (the §4 contribution) | `cluster_importance.py` |
 | 4 | Spearman distance `1−\|ρ\|` (non-metric) | **Mantegna** `√(1−\|ρ\|)` (Mantegna 1999) | vendored `compute_spearman_distance_matrix` |
 
-**Run on the real matrix (S4.7).** Clustering the real modelling matrix (median-imputed,
-zero-variance dropped) per class and scoring each cluster:
+**Run on the real matrix (S4.7/S4.8, re-executed).** Clustering each class's modelling matrix
+(median-imputed, zero-variance dropped → **Energy 108 / Equity 107 / Metals 108** feature columns)
+and scoring every cluster:
 
 | Class | clusters | top cluster MDA | top cluster SHAP | near-zero-MDA clusters |
 |---|---|---|---|---|
 | Equity | 3 | **0.031** | 0.43 | 2 / 3 |
-| Energy | 3 | 0.011 | 0.28 | 3 / 3 |
+| Energy | 3 | 0.011 | 0.40 | 3 / 3 |
 | Metals | 2 | −0.004 | 0.71 | 2 / 2 |
 
-The honest reading: **cluster permutation importance (MDA) is near-zero on real data across the
-board** — most clusters are "noise" by `|MDA| < 0.02` — which is exactly what a ≈0.5-edge problem
-should look like, and a useful negative result. **Equity carries the only materially positive
-cluster MDA (0.031)**, matching its 15/15 CPCV robustness; Energy/Metals clusters add little under
-permutation. SHAP concentrates importance into one cluster (Metals 0.71) but, unlike MDA, is not
-permutation-robust — the divergence is itself the §4 lesson that no single importance method is
-sufficient. The synthetic noise-cluster≈0 sanity test still holds.
+The honest reading (S4.8): **MDI and SHAP are in-sample attribution** — they always split 100% of a
+fitted model's importance across the clusters, so a high MDI/SHAP says only *which* features the
+model leaned on in-sample, not that those features carry OOS edge. **Cluster permutation MDA is the
+OOS reality check, and it is near-zero across the board** (every cluster `|MDA| < 0.02` bar one) —
+exactly what a ≈0.5-edge problem should look like, and a useful negative result. So the Metals SHAP
+of 0.71 concentrated in one cluster must **not** be read as edge: its MDA is −0.004 (negative). The
+**only materially positive cluster MDA is Equity's 0.031**, matching its 15/15 CPCV robustness;
+Energy/Metals clusters add nothing under permutation. The MDI/SHAP-vs-MDA divergence *is* the §4
+lesson — no single importance method is sufficient, and only the permutation (OOS) view is honest
+about edge. The synthetic noise-cluster≈0 sanity test still holds.
 
 ---
 
@@ -265,16 +283,39 @@ NaN ranking metrics rather than crashing. The baseline is **blind-primary** (act
 | Metals | logistic | hg1s 0.58 (504) · pl1s 0.50 (453) · si1s 0.50 (462) · gc1s 0.41 (138) | mixed |
 | Energy | torch-MLP | cl1s 0.55 (334) · rb1s 0.50 (504) · ho1s 0.43 (61) · ng1s 0.35 (68) | mixed |
 
-**OOS coverage caveat (S5.7).** All 11 instruments emit (no abstention), but a few rest on very
-few H1-2022 rows: **ho1s = 2 rows** (flagged thin), gc1s = 30, ng1s = 56; the rest carry 88–127.
-The per-instrument AUCs for ho1s/ng1s (≈60 *training* labels too) are therefore small-sample noise,
-not signal — `coverage_caveat()` writes these counts to `outputs/coverage_caveat.csv` so the
-deliverable's thin support is explicit rather than implied uniform.
+**OOS coverage caveat (S5.7 → widened S5.9).** All 11 instruments emit (no abstention), but the
+thin-coverage flag is now `n_oos_rows < 60` **OR** an undefined information coefficient — which
+flags **three** names, not just one: **ho1s = 2 rows** (and IC undefined — Spearman on 2 points is
+meaningless), **gc1s = 30**, **ng1s = 56** (IC defined at 0.19 but on only 56 rows); the other eight
+carry 88–127 rows. `coverage_caveat.csv` now records `n_oos_rows`, the per-instrument OOS `ic`,
+`ic_undefined`, and `thin`, so the deliverable's thin support is explicit rather than implied
+uniform. The per-instrument AUCs for ho1s/ng1s (≈60 *training* labels too) are small-sample noise.
 
 **Primary-signal context (EX.5).** Characterising the *provided* signal sets the metamodel's
 ceiling: directional hit-rates run **0.52–0.69** (gc1s strongest at 0.66, IC 0.21; rb1s weakest at
 0.53), turnover 0.02–0.23 flips/day, with several names better in the low-vol regime. The base
 signal is already decent, so the secondary act/skip filter has little headroom.
+
+**Utility-aware evaluation (S5.8 — beyond AUC).** AUC says nothing about whether *acting* adds
+economic value, so we add a **Henriksson–Merton (1981) market-timing test** on the OOS acted trades
+(does the sized directional call time the realised move over `[date, t1)`?) and the **mean-variance
+certainty-equivalent** of the strategy returns:
+
+| Book | H–M hit | H–M z (p) | CER/day (γ=5) | reading |
+|---|---|---|---|---|
+| Energy | 0.510 | 0.28 (0.39) | +0.000186 | no timing skill (≈coin-flip) |
+| Equity | 0.430 | −1.72 (0.96) | +0.000247 | **below-½** timing |
+| Metals | 0.423 | −2.63 (1.00) | −0.000033 | **no positive** timing (most negative) |
+| All-11 | 0.452 | −2.43 (0.99) | +0.000396 | no timing skill |
+
+This is the sharpest honest-negative in the build: the acted trades show **no positive directional
+timing** — hit rates sit *at or below* ½ everywhere (Metals the most negative, though on the same
+thin ~6-month OOS we caution against over-reading, so this is read as "no skill", not a tradeable
+anti-signal). The §6 barrier-exact Sharpes are therefore **not** evidence of directional skill; the
+positive P&L comes from the exit asymmetry, vol-targeting and diversification (§6), not from calling
+the move right. It substantiates
+Equity-works / Energy-fails as **expected** — Equity is the only book with both AUC ≈ 0.60 and 15/15
+CPCV robustness, yet even there H–M timing is sub-½ on the thin H1-2022 OOS, so no skill is claimed.
 
 **Honest reading.** Classification-wise the metamodel adds clear value only on Equity (all three
 names AUC ≈ 0.60, consistent with 15/15 CPCV paths); Metals and Energy are mixed and dragged by
@@ -293,34 +334,69 @@ Position weight = **fractional Kelly** `κ·f*` (κ=0.25, floor p̂≥0.55) × *
 Carver 2015, nlr-cw §7). The constraint set defaults to lit-review values behind a clearly-marked
 stub (the 20 May constraints doc is not in the repo).
 
-**Barrier-exact, cost-aware OOS backtest, Jan–Jun 2022 (S6.7).** The position now exits on the
-**actual triple-barrier first-touch `t1`** (not a fixed `max_holding`), overlapping labels are
-**netted**, and a Grinold–Kahn cost model (half-spread + impact) is charged. Net of costs:
+> **Headline (the strategy is NOT claimed to work).** The §6 Sharpe is selected from the
+> horse-race, so before it can be read at all it must be deflated for selection bias. It **does not
+> clear** the deployment gate (S6.8): the pooled net Sharpe of 1.55 carries a **Deflated Sharpe
+> Ratio of only 0.39–0.49** (≪ 0.95) and a **Minimum Backtest Length of 2.1–3.1 years** against a
+> ~0.5-year OOS window. Combined with AUC ≈ 0.5 (§3/§5) and **sub-½ Henriksson–Merton timing**
+> (§5.8), the honest conclusion is that **no deployable edge is demonstrated**; the positive Sharpe
+> is an artefact of the exit convention, vol-targeting and diversification, not act/skip skill.
+
+**Barrier-exact, cost-aware OOS backtest, Jan–Jun 2022 (S6.7, calibrated sizing).** The position
+exits on the **actual triple-barrier first-touch `t1`** (not a fixed `max_holding`), overlapping
+labels are **netted**, a Grinold–Kahn cost model (half-spread + impact) is charged, and the stake is
+sized on the **calibrated** p̂ (§3.9). Net of costs:
 
 | Book | Model | Sharpe | Sortino | Ann. vol | Max DD | Turnover/yr | Hold (d) | Gross→Net |
 |---|---|---|---|---|---|---|---|---|
-| **All 11** | — | **1.19** | 1.53 | 20.2% | −8.2% | 131 | 2.8 | +20.5% → **+11.7%** |
-| Energy | torch-MLP | 1.48 | 2.34 | 4.2% | −1.9% | 8.8 | 3.2 | +3.7% → +3.2% |
-| Equity | XGBoost | 1.39 | 2.13 | 9.0% | −2.4% | 31.7 | 2.4 | +8.3% → +6.3% |
-| Metals | logistic | 0.31 | 0.37 | 16.9% | −10.2% | 90.4 | 2.9 | +7.3% → +2.0% |
+| **All 11** | — | **1.55** | 2.35 | 7.3% | −1.9% | 51.6 | 2.8 | +9.0% → **+5.7%** |
+| Energy | torch-MLP | 1.75 | 3.01 | 2.8% | −0.9% | 8.2 | 2.9 | +3.0% → +2.5% |
+| Equity | XGBoost | 1.36 | 2.06 | 5.0% | −1.5% | 18.4 | 2.4 | +4.6% → +3.5% |
+| Metals | logistic | −0.11 | −0.15 | 3.9% | −3.1% | 25.0 | 2.9 | +1.2% → −0.3% |
 
-**Two headline methodological findings:**
+These differ from pass-2's raw-sized numbers because **calibration moved the sizing**: shrinking
+over-confident p̂ toward the base rate drops several positions below the 0.55 Kelly floor, halving
+turnover (131 → 52/yr) and vol (20% → 7%), lifting Energy (1.48 → 1.75) but pushing **Metals
+negative** (0.31 → −0.11) — an honest, reportable consequence of sizing on calibrated probabilities.
 
-1. **The holding model is load-bearing.** Within this same pass-2 run (identical positions, models,
-   features and returns — *only the exit convention differs*), the *simple* `max_holding=10` model
-   scores Sharpe Energy +1.18, **Equity −0.37**, **Metals −0.37**, while barrier-exact exits flip
-   Equity to **+1.39** and Metals to +0.31. The exit convention alone dominates the per-book sign —
-   a concrete lesson, and an apples-to-apples one. (Pass-1's analogous "best-AUC-Equity-loses"
-   inversion ran a different config, so it is contextual rather than a controlled comparison.)
+**S6.8 — deployment deflation gate (the decisive computation).** On the calibrated net returns,
+deflating against the trial universe (DSR/MinBTL: Bailey–López de Prado 2014; PBO via CSCV:
+Bailey-Borwein-LdP-Zhu 2017), reported as a **range over N ∈ [N_eff → N_raw]** because a single
+backtest cannot pin the effective trial count (N_eff from ONC-clustering the trial-return matrix):
 
-2. **Transaction costs are decisive where turnover is high.** Costs scale with turnover: Metals at
-   90×/yr loses 5.3 pp (gross +7.3% → net +2.0%), and the aggregate cost drag is 7.6 pp over the
-   half-year. Reporting gross-only would overstate the strategy materially.
+| Book | net Sharpe | DSR [N_eff→N_raw] | CSCV-PBO | MinBTL vs OOS≈0.5y | clears 0.95? |
+|---|---|---|---|---|---|
+| Energy | 1.75 | [0.85 → 0.77] (N 2→5) | 0.37 | [0.27 → 1.42]y | **no** |
+| Equity | 1.36 | [0.77 → 0.64] (N 2→5) | 0.50 | [0.27 → 1.42]y | **no** |
+| Metals | −0.11 | [0.31 → 0.15] (N 2→5) | 0.06 | [0.27 → 1.42]y | **no** |
+| All-11 | 1.55 | **[0.49 → 0.39]** (N 8→15) | 0.39 | **[2.13 → 3.14]y** | **no** |
 
-The residual edge remains modest and the positive aggregate Sharpe still owes much to vol-targeting
-and cross-book diversification; **EX.4 suggests part of the act-skill-to-P&L gap is p̂
-miscalibration** (Kelly mis-sizing), pointing at recalibration rather than a better classifier as a
-cheap next lever.
+Even the *optimistic* end of every range stays below 0.95; the pooled MinBTL (2–3 years) dwarfs the
+half-year OOS. This is the **expected, correct** honest-negative — the gate was built to report the
+truth, not tuned to clear it.
+
+**S6.9 — the holding model is load-bearing (the methodology finding).** Identical positions, models,
+features and calibration — *only the exit convention differs*:
+
+| Book | simple `max_holding=10` | barrier-exact (actual `t1`) |
+|---|---|---|
+| Energy | +2.22 | +1.75 |
+| Equity | **−0.19** | **+1.36** |
+| Metals | −0.28 | −0.11 |
+
+The exit convention alone flips **Equity's sign** (−0.19 → +1.36) and dominates the per-book
+ranking; this is attributed to the **exit mechanism** (winners ride to the profit barrier, losers
+are cut at the stop), **not** classification skill — consistent with AUC ≈ 0.5 and the sub-½ H–M
+timing. Gated by S6.8, it is a *finding about backtest construction*, not a performance claim.
+
+**S6.10 — accounting reconciliation.** `net = gross − costs` holds daily, but the report's
+`gross_total_return`/`net_total_return` are **compounded** (∏) while `total_cost` is an **arithmetic
+Σ**, so `gross − total_cost ≠ net` by the compounding interaction (pooled: gross +9.0%, Σ-cost
+3.0%, net +5.7%). The reconciliation field **`cost_drag_compounded` = gross_total − net_total**
+(pooled **3.26%**) closes the identity exactly; `total_cost` (3.04%) is retained as the undiscounted
+sum. Turnover (one-way annualised notional, 51.6) and holding (trade-based busday, 2.8d) are on
+**different bases**, so `hold ≈ 252/turnover` is not expected to hold — both are reported, not
+forced into a false identity.
 
 ---
 
@@ -337,8 +413,11 @@ cheap next lever.
 | 7 | Fractional Kelly + vol-target | `sizing.py`, `backtest.py` | §7 — Kelly 1956; MacLean et al. 1992; Carver 2015 |
 | 8 | 2-state HMM, **EWMA time-varying** | `regime.py` | §4 — Hamilton 1989; Nystrup et al. 2017; Ang-Timmermann 2012 |
 
-**Cross-cutting:** uniqueness weights (LdP Ch.4); calibration Brier/log-loss/AP (Gramegna-Giudici
-2021); single sample-weight channel for imbalance + uniqueness.
+**Cross-cutting:** uniqueness weights (LdP Ch.4); per-class Platt calibration of the deliverable +
+Kelly stake (Gramegna-Giudici 2021); single sample-weight channel for imbalance + uniqueness;
+**deflation gate** — Deflated Sharpe + MinBTL (Bailey-López de Prado 2014) + CSCV-PBO
+(Bailey-Borwein-LdP-Zhu 2017) — so §6 is reported deflated, never as "the strategy works"
+(`deflation.py`).
 
 ---
 
@@ -361,21 +440,31 @@ cheap next lever.
 
 ## Limitations (honest)
 
-- Meta-labelling carries little classification edge here (mean OOS AUC ≈ 0.5; only Equity is
-  robust at 15/15 CPCV paths); the positive aggregate Sharpe is largely diversification +
-  vol-targeting + the barrier-exact exit, not act/skip skill.
-- **Calibration is a likely actionable gap (EX.4):** raw p̂ ECE ≈ 0.14–0.18 (measured on LightGBM;
-  the *selected* models' — and especially the Energy torch-MLP's — calibration is unmeasured and
-  plausibly worse). A train-only Platt recalibration of the sizing input is the obvious next lever,
-  not yet wired into the deliverable. **Nested-CPCV real-data run** is likewise deferred.
-- ho1s (2 OOS rows) / ng1s (56) / gc1s (30) rest on thin coverage — flagged in
-  `coverage_caveat.csv`; their per-instrument numbers are small-sample noise.
+- **No deployable edge is demonstrated (the headline).** The §6 strategy **does not clear the
+  deflation gate** (S6.8): DSR 0.39–0.49 pooled (≪ 0.95), MinBTL 2.1–3.1y against a ~0.5y OOS. This
+  is consistent with mean OOS AUC ≈ 0.5, near-zero cluster MDA (§4), and **sub-½ Henriksson–Merton
+  timing** (§5.8) — the positive Sharpe is diversification + vol-targeting + the barrier exit, not
+  act/skip skill. Only Equity is even classification-robust (15/15 CPCV paths), and even it shows no
+  directional timing on the thin H1-2022 OOS.
+- **Calibration is now shipped (S3.9), not deferred:** per-class Platt fit train-only on the
+  selected models cuts held-out ECE 1.4–200× with AUC unchanged, and the deliverable ships the
+  calibrated p̂. The remaining selection-side gap is the **nested-CPCV real-data run**, still
+  deferred (a meaningful one is ~15×5×5 fits per class) alongside the S6.5 stub.
+- ho1s (2 OOS rows, IC undefined) / ng1s (56) / gc1s (30) rest on thin coverage — all three now
+  flagged (`< 60` rows or undefined IC) in `coverage_caveat.csv`; their per-instrument numbers are
+  small-sample noise.
 - The §6 **constraint set** remains a lit-review-default **stub** (the 20 May constraints doc is
-  absent); only the barrier-exact *holding model* and cost model were upgraded this pass.
+  absent); only the barrier-exact *holding model*, cost model and deflation gate were upgraded.
 - The **autoencoder reducer** was built for the EX.2 comparison only; cluster-rep is promoted.
-- **Write-up citation flags (X.7) stand:** the Ang–Bekaert regime-correlation values and Carver
-  (2015) page numbers carry `[NOTE FOR WRITEUP LEAD]` markers in `nlr-cw-v1.md` and are **not yet
-  independently verified** (the LR.5 verification pass has not run) — they must be checked before
-  academic submission; no values were invented here.
+- **Macro vintages (X.9):** the `additional_data.xlsx` series carry observation dates and are
+  **publication-lag (PIT) aligned** so no *timing* look-ahead, but the workbook ships **revised/final
+  values, not real-time vintages** — so a revision look-ahead (e.g. a later-restated TIPS10Y/BE10Y
+  print) is not excluded. A full ALFRED real-time-vintage reconciliation is the remaining macro gap;
+  the conservative publication lags (and the macro block's small, near-zero §4 MDA) bound its impact.
+- **Write-up citations (X.7), corrected per the pass-3 directive:** the Japan/UK regime correlations
+  are attributed to **Guidolin–Timmermann (St. Louis Fed WP 2005-034)**, with the **Ang–Bekaert
+  Wald-test caveat (p = 0.156)** noted; the Kelly/vol-target convention cites **Carver 2015 Ch.9
+  p.146**; the MZB fractional-Kelly figures keep ≈50%/≈75% and the unsupported "56%" is removed. The
+  one residual is confirming the Carver page against the print edition before academic submission.
 - Equity instruments start late (es1s 1997, fesx1s 1998, nq1s 1999) — thin pre-2020 history for
   fitted features.

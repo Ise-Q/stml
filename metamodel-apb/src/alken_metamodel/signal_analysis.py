@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
+from scipy.stats import norm, spearmanr
 
 
 def signal_hit_rate(signal, forward_returns) -> float:
@@ -42,3 +42,20 @@ def information_coefficient(signal, forward_returns, *, method: str = "spearman"
 def information_ratio(ic: float, breadth: float) -> float:
     """Fundamental law of active management: IR = IC·√breadth (Grinold 1989)."""
     return float(ic * np.sqrt(breadth))
+
+
+def henriksson_merton(realised_direction, predicted_direction) -> tuple[float, float, float]:
+    """Henriksson–Merton (1981) market-timing test (sign version): can the signal time direction?
+
+    Returns ``(hit_rate, z_stat, p_value)`` for the one-sided null of no timing skill: under
+    H0 the directional hit rate is ½, so ``z = (p̂ − ½) / √(¼/P)`` and ``p = 1 − Φ(z)`` (a utility-
+    relevant complement to AUC for §5 — does acting on the side add economic timing value?).
+    """
+    real = np.sign(np.asarray(realised_direction, dtype=float))
+    pred = np.sign(np.asarray(predicted_direction, dtype=float))
+    p = len(real)
+    if p == 0:
+        return float("nan"), float("nan"), float("nan")
+    hit = float((real == pred).mean())
+    z = (hit - 0.5) / np.sqrt(0.25 / p)
+    return hit, float(z), float(1.0 - norm.cdf(z))

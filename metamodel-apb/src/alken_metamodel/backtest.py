@@ -77,6 +77,19 @@ def performance_metrics(returns: pd.Series, *, ann: int = ANNUALISATION) -> dict
     }
 
 
+def certainty_equivalent(returns: pd.Series, *, risk_aversion: float = 5.0) -> float:
+    """Mean-variance certainty-equivalent return: ``E[r] − ½·γ·Var[r]`` (utility-aware §5 metric).
+
+    The risk-free return a γ-averse investor would accept in place of the risky strategy — it
+    penalises the variance that a raw Sharpe/total-return number ignores (DeMiguel et al. 2009).
+    """
+    r = np.asarray(pd.Series(returns).dropna(), dtype=float)
+    if r.size == 0:
+        return float("nan")
+    var = float(np.var(r, ddof=1)) if r.size > 1 else 0.0
+    return float(r.mean() - 0.5 * risk_aversion * var)
+
+
 def backtest_strategy(
     weights: pd.DataFrame, returns_panel: pd.DataFrame, *, max_holding: int = 10
 ) -> tuple[pd.Series, dict]:
@@ -146,11 +159,17 @@ def barrier_backtest(
 
     metrics = performance_metrics(net)
     daily_turnover = turnover(positions)
+    gross_total = float(np.prod(1.0 + gross.dropna().to_numpy()) - 1.0)
+    net_total = metrics["total_return"]
     report = {
         **metrics,
-        "gross_total_return": float(np.prod(1.0 + gross.dropna().to_numpy()) - 1.0),
-        "net_total_return": metrics["total_return"],
+        "gross_total_return": gross_total,
+        "net_total_return": net_total,
+        # ``total_cost`` is the undiscounted arithmetic Σ of per-day costs; gross/net totals are
+        # compounded (∏), so ``gross − cost ≠ net`` by the compounding interaction. The S6.10
+        # reconciliation reports the *compounded* cost drag, which closes the identity exactly.
         "total_cost": float(costs.sum()),
+        "cost_drag_compounded": float(gross_total - net_total),
         "ann_turnover": float(daily_turnover.mean() * ANNUALISATION),
         "avg_holding_period": average_holding_period(meta),
     }

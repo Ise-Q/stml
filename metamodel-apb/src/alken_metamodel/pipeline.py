@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 from stml.metamodel.scope import ASSET_CLASS_MAP
 
+from .calibration import PlattCalibrator
 from .cross_validation import CombinatorialPurgedCV, PurgedKFold, nested_cpcv
 from .evaluation import cross_val_evaluate, evaluate_predictions, oos_predictions
 from .features import (
@@ -90,11 +91,38 @@ def _roster_factory(config: PipelineConfig):
 @dataclass
 class AssetClassResult:
     asset_class: str
-    predictions: pd.DataFrame  # date, instrument, prediction, side, ann_vol
+    predictions: pd.DataFrame  # date, instrument, prediction, prediction_calibrated, side, ann_vol
     best_model: str
     cv_scores: dict[str, float]
     n_modelling: int
     diagnostics: pd.DataFrame  # per-instrument OOS metrics (printed before the aggregate)
+    calibrator: object  # per-class Platt map fit on modelling-OOS preds (pass-3 S3.9)
+    oos_brier: float  # class-level modelling-OOS Brier (XT.2 experiment-log backfill)
+    oos_precision: float  # class-level modelling-OOS precision (XT.2)
+
+
+class _IdentityCalibrator:
+    """Pass-through calibrator used when the modelling-OOS sample is too degenerate to fit Platt."""
+
+    def transform(self, proba) -> np.ndarray:
+        return np.asarray(proba, dtype=float)
+
+
+def fit_oos_calibrator(make_model, X, y, t1: pd.Series, sample_weight, config: PipelineConfig):
+    """Fit a Platt calibrator on purged-OOS predictions of the **modelling** sample (S3.9/S6.11).
+
+    The calibrator is fit only on the rows passed here — the caller restricts these to dates
+    ``<= modelling_end``, so applying the map to the deliverable (``>= predict_start``) cannot leak.
+    Falls back to an identity map when the OOS sample is single-class or too thin to calibrate.
+    Returns ``(calibrator, oos_predictions, finite_mask)`` so the caller reuses the OOS array.
+    """
+    cv = PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
+    oos = oos_predictions(make_model, X, y, cv, sample_weight=sample_weight)
+    finite = np.isfinite(oos)
+    yv = np.asarray(y)[finite]
+    if finite.sum() < 20 or len(np.unique(yv)) < 2:
+        return _IdentityCalibrator(), oos, finite
+    return PlattCalibrator().fit(oos[finite], yv), oos, finite
 
 
 def _close_of(ohlcv_inst: pd.DataFrame) -> pd.Series:
@@ -231,22 +259,32 @@ def nested_cpcv_select_and_evaluate(
 
 
 def per_instrument_diagnostics(
-    x_model, y_model, t1_model, instrument_model, sample_weight, best_name, config: PipelineConfig
+    x_model,
+    y_model,
+    t1_model,
+    instrument_model,
+    sample_weight,
+    best_name,
+    config: PipelineConfig,
+    *,
+    oos=None,
 ) -> pd.DataFrame:
     """Per-instrument purged-OOS metrics for the selected model (§5 per-instrument reporting).
 
     One purged-CV pass of the winning estimator collects OOS P(act) for every modelling row;
     metrics are then grouped by instrument so a strong pooled number can't hide a weak member.
+    The OOS array may be supplied (reused from calibration) to avoid recomputing the CV pass.
     """
-    cv = PurgedKFold(n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo)
-    factory = _roster_factory(config)
-    oos = oos_predictions(
-        lambda: factory(seed=config.seed)[best_name],
-        x_model,
-        y_model,
-        cv,
-        sample_weight=sample_weight,
-    )
+    if oos is None:
+        cv = PurgedKFold(n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo)
+        factory = _roster_factory(config)
+        oos = oos_predictions(
+            lambda: factory(seed=config.seed)[best_name],
+            x_model,
+            y_model,
+            cv,
+            sample_weight=sample_weight,
+        )
     rows = []
     for inst in sorted(set(instrument_model)):
         in_inst = instrument_model == inst
@@ -291,6 +329,18 @@ def run_asset_class(
     sw_model = balanced_sample_weight(y_model, base=uniqueness[model_mask])
     best, scores = select_model(x_model, y_model, t1[model_mask], sw_model, config)
 
+    # One purged-OOS pass of the winner over the modelling sample feeds calibration, the per-
+    # instrument diagnostics, and the class-level Brier/precision — all strictly pre-predict_start.
+    def _make_best():
+        return _roster_factory(config)(seed=config.seed)[best]
+
+    calibrator, oos_model, finite = fit_oos_calibrator(
+        _make_best, x_model, y_model, t1[model_mask], sw_model, config
+    )
+    yv = y_model[finite]
+    calibratable = finite.any() and len(np.unique(yv)) == 2
+    class_metrics = evaluate_predictions(yv, oos_model[finite]) if calibratable else {}
+
     diagnostics = per_instrument_diagnostics(
         x_model,
         y_model,
@@ -299,18 +349,21 @@ def run_asset_class(
         sw_model,
         best,
         config,
+        oos=oos_model,
     )
 
-    model = _roster_factory(config)(seed=config.seed)[best]
+    model = _make_best()
     model.fit(x_model, y_model, sample_weight=sw_model)
 
     x_pred = X[pred_mask]
     proba = model.predict_act_proba(x_pred)
+    proba_cal = np.clip(calibrator.transform(proba), 0.0, 1.0)  # calibrated p̂ feeds Kelly sizing
     predictions = pd.DataFrame(
         {
             "date": dates[pred_mask],
             "instrument": pooled["instrument"].to_numpy()[pred_mask],
             "prediction": proba,
+            "prediction_calibrated": proba_cal,
             "side": pooled["side"].to_numpy()[pred_mask],
             "ann_vol": pooled["f2_vol_20"].to_numpy()[pred_mask],
         }
@@ -322,4 +375,7 @@ def run_asset_class(
         cv_scores=scores,
         n_modelling=int(model_mask.sum()),
         diagnostics=diagnostics,
+        calibrator=calibrator,
+        oos_brier=float(class_metrics.get("brier", float("nan"))),
+        oos_precision=float(class_metrics.get("precision", float("nan"))),
     )

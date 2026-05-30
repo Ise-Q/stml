@@ -25,7 +25,9 @@ PREDICTION_COLUMNS = ["date", "instrument", "prediction"]
 WEIGHT_COLUMNS = ["date", "instrument", "weight"]
 FLOAT_FORMAT = "%.10f"
 DEFAULT_ASSET_CLASSES = ("equity", "energy", "metals")
-COVERAGE_MIN_ROWS = 30  # below this, an instrument's OOS deliverable rests on too few rows (S5.7)
+# Below this an instrument's OOS deliverable rests on too few rows to read its metrics (S5.9
+# widened the pass-2 threshold from 30 to 60 so gc1s=30 and ng1s=56 also flag, not just ho1s=2).
+COVERAGE_MIN_ROWS = 60
 
 
 def _emit(df: pd.DataFrame, path, columns: list[str], *, float_format: str = FLOAT_FORMAT):
@@ -80,16 +82,25 @@ def strategy_weights(predictions: pd.DataFrame, config: PipelineConfig) -> pd.Da
 
 
 def coverage_caveat(
-    predictions: pd.DataFrame, *, min_rows: int = COVERAGE_MIN_ROWS
+    predictions: pd.DataFrame,
+    *,
+    min_rows: int = COVERAGE_MIN_ROWS,
+    instrument_ic: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    """Per-instrument OOS row counts, flagging near-empty instruments as thin coverage (S5.7).
+    """Per-instrument OOS row counts, flagging thin-coverage instruments (S5.7 / widened S5.9).
 
     The deliverable emits all 11 instruments (no abstention), but a few rest on very few OOS rows
-    (e.g. ho1s/gc1s in H1 2022); their numbers are flagged ``thin`` so the write-up can state the
-    coverage honestly rather than imply uniform support.
+    (ho1s=2, gc1s=30, ng1s=56 in H1 2022). An instrument is flagged ``thin`` when it has fewer than
+    ``min_rows`` OOS rows **or** an undefined information coefficient (``instrument_ic`` NaN) — the
+    deliverable for those names cannot be read with confidence, and the write-up says so.
     """
     table = predictions.groupby("instrument").size().rename("n_oos_rows").reset_index()
-    table["thin"] = table["n_oos_rows"] < min_rows
+    if instrument_ic is not None:
+        table["ic"] = table["instrument"].map(instrument_ic)
+        table["ic_undefined"] = table["ic"].isna()
+    else:
+        table["ic_undefined"] = False
+    table["thin"] = (table["n_oos_rows"] < min_rows) | table["ic_undefined"]
     return table.sort_values("instrument").reset_index(drop=True)
 
 
@@ -98,19 +109,59 @@ def build_deliverables(
     signals: pd.DataFrame,
     config: PipelineConfig,
     asset_classes=DEFAULT_ASSET_CLASSES,
-) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
-    """Run each asset-class metamodel and assemble the two deliverable frames + diagnostics."""
-    preds, weights, diagnostics = [], [], {}
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
+    """Run each asset-class metamodel; assemble raw + calibrated prediction frames, the
+    calibrated-sized weight frame, and diagnostics (pass-3: Kelly is sized on the calibrated p̂)."""
+    raw, calibrated, weights, diagnostics = [], [], [], {}
     for ac in asset_classes:
         result = run_asset_class(ohlcv, signals, ac, config)
-        preds.append(result.predictions)
-        weights.append(strategy_weights(result.predictions, config))
+        preds = result.predictions
+        raw.append(preds[["date", "instrument", "prediction"]])
+        calibrated.append(
+            preds[["date", "instrument", "prediction_calibrated"]].rename(
+                columns={"prediction_calibrated": "prediction"}
+            )
+        )
+        # size Kelly on the calibrated probability (feed it in as the ``prediction`` column)
+        sized = strategy_weights(preds.assign(prediction=preds["prediction_calibrated"]), config)
+        weights.append(sized)
         diagnostics[ac] = {
             "best_model": result.best_model,
             "cv_scores": result.cv_scores,
             "per_instrument": result.diagnostics,
+            "oos_brier": result.oos_brier,
+            "oos_precision": result.oos_precision,
         }
-    return pd.concat(preds, ignore_index=True), pd.concat(weights, ignore_index=True), diagnostics
+    return (
+        pd.concat(raw, ignore_index=True),
+        pd.concat(calibrated, ignore_index=True),
+        pd.concat(weights, ignore_index=True),
+        diagnostics,
+    )
+
+
+def instrument_oos_ic(predictions: pd.DataFrame, returns_panel: pd.DataFrame) -> dict[str, float]:
+    """Per-instrument OOS information coefficient: Spearman(p̂, next-day return) on the deliverable.
+
+    Undefined (NaN) when an instrument has too few rows or a constant prediction — the S5.9
+    'undefined IC' coverage flag. Reads only released returns, never the frozen parquet.
+    """
+    from .signal_analysis import information_coefficient
+
+    ic: dict[str, float] = {}
+    for inst, group in predictions.groupby("instrument"):
+        if inst not in returns_panel.columns:
+            ic[inst] = float("nan")
+            continue
+        forward = returns_panel[inst].shift(-1)
+        series = group.set_index("date")["prediction"]
+        aligned = pd.concat([series, forward.reindex(series.index)], axis=1).dropna()
+        ic[inst] = (
+            information_coefficient(aligned.iloc[:, 0], aligned.iloc[:, 1])
+            if len(aligned) >= 3
+            else float("nan")
+        )
+    return ic
 
 
 def main(argv=None) -> None:
@@ -126,7 +177,7 @@ def main(argv=None) -> None:
     args = parser.parse_args(argv)
 
     set_seeds()
-    from stml.io import load_clean_data
+    from stml.io import load_clean_data, load_returns_panel
 
     ohlcv, signals = load_clean_data()
     config = PipelineConfig(
@@ -136,11 +187,16 @@ def main(argv=None) -> None:
         cv_scheme=args.cv_scheme,
         use_macro=not args.no_macro,
     )
-    preds, weights, diagnostics = build_deliverables(
+    raw_preds, cal_preds, weights, diagnostics = build_deliverables(
         ohlcv, signals, config, asset_classes=args.asset_classes
     )
     outdir = Path(args.outdir)
-    emit_predictions(preds, outdir / "metamodel_predictions.csv")
+    # The calibrated file is the brief deliverable (``metamodel_predictions.csv``); the raw file
+    # retains the uncalibrated p̂ for the §3 Brier/ECE-improvement story; the explicit
+    # ``_calibrated`` name is a byte-identical alias so the pass-3 contract name also resolves.
+    emit_predictions(cal_preds, outdir / "metamodel_predictions.csv")
+    emit_predictions(cal_preds, outdir / "metamodel_predictions_calibrated.csv")
+    emit_predictions(raw_preds, outdir / "metamodel_predictions_raw.csv")
     emit_weights(weights, outdir / "strategy_weights.csv")
     for ac, diag in diagnostics.items():
         cv = {k: round(v, 4) for k, v in diag["cv_scores"].items()}
@@ -160,16 +216,21 @@ def main(argv=None) -> None:
                 "use_macro": config.use_macro,
                 "best_model": diag["best_model"],
                 "oos_auc": round(diag["cv_scores"].get(diag["best_model"], float("nan")), 6),
-                "notes": "shipped default path",
+                "oos_brier": round(diag["oos_brier"], 6),  # XT.2: now measured, not blank
+                "oos_precision": round(diag["oos_precision"], 6),
+                "notes": "shipped default path; calibrated deliverable",
             },
             log_path,
         )
-    caveat = coverage_caveat(preds)
+    # S5.9 coverage caveat on the deliverable (calibrated) preds + a real per-instrument OOS IC.
+    returns_panel = load_returns_panel(kind="simple")
+    ic = instrument_oos_ic(cal_preds, returns_panel)
+    caveat = coverage_caveat(cal_preds, instrument_ic=ic)
     outdir.mkdir(parents=True, exist_ok=True)
     caveat.to_csv(outdir / "coverage_caveat.csv", index=False, lineterminator="\n")
-    print("\nOOS COVERAGE (thin instruments rest on few rows):")
+    print("\nOOS COVERAGE (thin: <60 rows or undefined IC):")
     print(caveat.to_string(index=False))
-    print(f"\nAGGREGATE: emitted {len(preds)} predictions / {len(weights)} weights to {outdir}/")
+    print(f"\nAGGREGATE: {len(cal_preds)} predictions / {len(weights)} weights -> {outdir}/")
 
 
 if __name__ == "__main__":
