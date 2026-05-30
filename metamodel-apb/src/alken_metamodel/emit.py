@@ -24,6 +24,7 @@ PREDICTION_COLUMNS = ["date", "instrument", "prediction"]
 WEIGHT_COLUMNS = ["date", "instrument", "weight"]
 FLOAT_FORMAT = "%.10f"
 DEFAULT_ASSET_CLASSES = ("equity", "energy", "metals")
+COVERAGE_MIN_ROWS = 30  # below this, an instrument's OOS deliverable rests on too few rows (S5.7)
 
 
 def _emit(df: pd.DataFrame, path, columns: list[str], *, float_format: str = FLOAT_FORMAT):
@@ -77,6 +78,20 @@ def strategy_weights(predictions: pd.DataFrame, config: PipelineConfig) -> pd.Da
     return out
 
 
+def coverage_caveat(
+    predictions: pd.DataFrame, *, min_rows: int = COVERAGE_MIN_ROWS
+) -> pd.DataFrame:
+    """Per-instrument OOS row counts, flagging near-empty instruments as thin coverage (S5.7).
+
+    The deliverable emits all 11 instruments (no abstention), but a few rest on very few OOS rows
+    (e.g. ho1s/gc1s in H1 2022); their numbers are flagged ``thin`` so the write-up can state the
+    coverage honestly rather than imply uniform support.
+    """
+    table = predictions.groupby("instrument").size().rename("n_oos_rows").reset_index()
+    table["thin"] = table["n_oos_rows"] < min_rows
+    return table.sort_values("instrument").reset_index(drop=True)
+
+
 def build_deliverables(
     ohlcv: pd.DataFrame,
     signals: pd.DataFrame,
@@ -103,6 +118,10 @@ def main(argv=None) -> None:
     parser.add_argument("--predict-start", default="2022-01-01")
     parser.add_argument("--predict-end", default="2022-06-30")
     parser.add_argument("--outdir", default="outputs")
+    # Shipped default path (pass 2): torch NN family + CPCV selection + PIT macro block.
+    parser.add_argument("--roster", default="default")
+    parser.add_argument("--cv-scheme", default="cpcv")
+    parser.add_argument("--no-macro", action="store_true")
     args = parser.parse_args(argv)
 
     set_seeds()
@@ -112,6 +131,9 @@ def main(argv=None) -> None:
     config = PipelineConfig(
         predict_start=pd.Timestamp(args.predict_start),
         predict_end=pd.Timestamp(args.predict_end),
+        roster=args.roster,
+        cv_scheme=args.cv_scheme,
+        use_macro=not args.no_macro,
     )
     preds, weights, diagnostics = build_deliverables(
         ohlcv, signals, config, asset_classes=args.asset_classes
@@ -123,6 +145,11 @@ def main(argv=None) -> None:
         cv = {k: round(v, 4) for k, v in diag["cv_scores"].items()}
         print(f"\n[{ac}] selected={diag['best_model']}  cv_auc={cv}")
         print(diag["per_instrument"].to_string(index=False))  # per-instrument BEFORE the aggregate
+    caveat = coverage_caveat(preds)
+    outdir.mkdir(parents=True, exist_ok=True)
+    caveat.to_csv(outdir / "coverage_caveat.csv", index=False, lineterminator="\n")
+    print("\nOOS COVERAGE (thin instruments rest on few rows):")
+    print(caveat.to_string(index=False))
     print(f"\nAGGREGATE: emitted {len(preds)} predictions / {len(weights)} weights to {outdir}/")
 
 

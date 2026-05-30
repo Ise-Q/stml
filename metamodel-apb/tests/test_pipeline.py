@@ -13,6 +13,7 @@ import pandas as pd
 from alken_metamodel.cross_validation import CombinatorialPurgedCV, PurgedKFold
 from alken_metamodel.emit import (
     PREDICTION_COLUMNS,
+    coverage_caveat,
     emit_predictions,
     select_window,
     strategy_weights,
@@ -151,6 +152,24 @@ def test_emit_is_byte_identical_on_reemit(tmp_path):
     emit_predictions(_toy_predictions(), tmp_path / "a.csv")
     emit_predictions(_toy_predictions(), tmp_path / "b.csv")
     assert (tmp_path / "a.csv").read_bytes() == (tmp_path / "b.csv").read_bytes()
+
+
+def test_coverage_caveat_flags_thin_instruments():
+    dates = ["2022-01-03", "2022-01-04", "2022-01-03"] + ["2022-01-03"] * 40
+    preds = pd.DataFrame(
+        {
+            "date": pd.to_datetime(dates),
+            "instrument": ["ho1s", "ho1s", "gc1s"] + ["cl1s"] * 40,
+            "prediction": [0.5] * 43,
+        }
+    )
+    tab = coverage_caveat(preds, min_rows=30)
+    counts = dict(zip(tab["instrument"], tab["n_oos_rows"], strict=True))
+    thin = dict(zip(tab["instrument"], tab["thin"], strict=True))
+    assert counts == {"cl1s": 40, "gc1s": 1, "ho1s": 2}
+    assert thin["ho1s"] and thin["gc1s"]  # near-empty -> flagged unreliable
+    assert not thin["cl1s"]
+    assert list(tab["instrument"]) == ["cl1s", "gc1s", "ho1s"]  # sorted
 
 
 def test_select_window_filters_dates():
