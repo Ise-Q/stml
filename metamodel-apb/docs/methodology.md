@@ -13,6 +13,29 @@ results section reports honestly where the metamodel **does not** beat the blind
 > kernels); the prediction window is config-driven so the grader can swap in the hidden
 > Jul–Dec 2022 half. `uv run --directory metamodel-apb pytest` → full test suite.
 
+## Scope — what the reported run executes vs. what is implemented-and-available
+
+Every number in this document (§5 per-instrument AUC, the §"CPCV diagnostic", §6 backtest) comes
+from the **default `emit` path**: per asset class, a horse-race of the **three tree/linear
+estimators** (elastic-net logistic, XGBoost, LightGBM) selected by **purged k-fold (n_splits=5) +
+embargo**, trained on the **full 124-feature matrix including the EWMA-HMM + static regime blocks**
+(`use_regime=True`), then refit and used to predict the config window. Triple-barrier labelling,
+uniqueness weights, fractional-Kelly + vol-target sizing, and the backtest are all in this path.
+
+The following are **implemented and unit-tested but NOT in the default artifact path** — flagged
+as such wherever they appear below, in keeping with the "report honestly" stance applied to
+*what executed*, not only to performance:
+
+- **The three NN variants** (torch-MLP, torch-VSN, Keras-VSN) — available via `roster="full"`,
+  validated on synthetic data only. The VSN builds one GRN *per feature*, so on the 124-feature
+  matrix × CV it is intractable; wiring them into the default horse-race (with dimensionality
+  reduction) is future work. The reported horse-race is the three tree/linear estimators.
+- **CPCV (15 paths) and nested CPCV** — `PurgedKFold` drives model *selection*; CPCV is run below
+  as a *separate OOS-distribution diagnostic* of the selected model; nested CPCV is
+  implemented/tested but not run end-to-end.
+- **Cluster feature importance (§4)** — implemented and tested (synthetic); not run on the real
+  matrix, so no real cluster numbers are claimed.
+
 ---
 
 ## 0. Architecture (one-directional data flow)
@@ -110,14 +133,17 @@ Per-instrument class balance ranges ~50–69% positive; see the §5 per-instrume
 
 ## 3. Models (§3, 30 marks) — `models.py`, `neural.py`, `cross_validation.py`, `evaluation.py`
 
-A **six-estimator horse-race** behind one uniform `MetaClassifier` interface so the comparison is
-apples-to-apples (Gu-Kelly-Xiu 2020; Krauss et al. 2017; IKM 2020 small-data restraint, nlr-cw §2):
+A horse-race behind one uniform `MetaClassifier` interface so the comparison is apples-to-apples
+(Gu-Kelly-Xiu 2020; Krauss et al. 2017; IKM 2020 small-data restraint, nlr-cw §2). **Six estimators
+are implemented; the reported run competes the three tree/linear estimators** (1–3); the three
+neural variants (4–6) are available via `roster="full"` but not in the default path (see *Scope*):
 
 1. **Elastic-net logistic** (saga; median-impute + standardise),
-2. **XGBoost** (PS5 config), **3. LightGBM**,
+2. **XGBoost** (PS5 config), **3. LightGBM** — *the reported horse-race*.
 4. **torch-MLP**, **5. torch-VSN** (byte-deterministic VSN port with softmax feature-selection
-   weights), **6. Keras-VSN** (reuses the vendored PS6 `FinalModel`; TensorFlow op-determinism is
-   best-effort — documented caveat; torch variants are byte-stable).
+   weights), **6. Keras-VSN** (reuses the vendored PS6 `FinalModel`; TF op-determinism best-effort,
+   torch variants byte-stable) — *implemented + synthetic-tested; intractable at 124 features × CV,
+   so not in the reported run*.
 
 **One weighting channel.** PS4/5/6 ship no weighting; meta-labels are both *overlapping* (need
 uniqueness weights) and *imbalanced* (~30–40% positive). Both are folded into a single
@@ -126,12 +152,32 @@ uniqueness weights) and *imbalanced* (~30–40% positive). Both are folded into 
 
 **Validation (commitment #3, nlr-cw §6 — LdP Ch.7/12; Bailey 2014; Harvey-Liu-Zhu 2016).**
 `cross_validation.py` provides **PurgedKFold + embargo ⌈0.01·T⌉**, **CPCV (N=6, k=2 → 15 paths)**,
-and **nested CPCV**. Selection is by mean purged-OOS AUC; **calibration** (Brier, log-loss,
-average-precision) is reported alongside because the downstream Kelly sizing consumes the
-probability itself (Gramegna-Giudici 2021, nlr-cw §2). The pooled feature matrix keeps the
-event-date index so concurrent **cross-instrument** labels are purged by their `t1` spans.
+and **nested CPCV** (all unit-tested). In the reported run, **model selection uses purged k-fold
+(n_splits=5) + embargo**; **CPCV is run as a separate OOS-distribution diagnostic** of the selected
+model (next subsection); nested CPCV is implemented but not run end-to-end. Selection is by mean
+purged-OOS AUC; **calibration** (Brier, log-loss, average-precision) is reported alongside because
+the downstream Kelly sizing consumes the probability itself (Gramegna-Giudici 2021, nlr-cw §2). The
+pooled feature matrix keeps the event-date index so concurrent **cross-instrument** labels are
+purged by their `t1` spans.
 
-**Selected models (real run):** Equity → XGBoost, Energy → XGBoost, Metals → elastic-net logistic.
+**Selected models (reported run, PurgedKFold selection):** Equity → XGBoost, Energy → XGBoost,
+Metals → elastic-net logistic.
+
+**CPCV diagnostic (15 paths of the selected model, real data — substantiates the OOS-distribution
+/ overfitting caveat).** Running `CombinatorialPurgedCV(N=6, k=2)` on each class's selected model
+over the modelling sample yields a 15-path OOS-AUC distribution — a far stronger statement than a
+single point estimate:
+
+| Class | Model | 15-path OOS AUC (mean ± std) | range | paths > 0.5 |
+|---|---|---|---|---|
+| Equity | XGBoost | **0.566 ± 0.029** | 0.513–0.617 | **15 / 15** |
+| Metals | logistic | 0.529 ± 0.024 | 0.471–0.554 | 13 / 15 |
+| Energy | XGBoost | 0.495 ± 0.031 | 0.445–0.546 | 6 / 15 |
+
+The fraction of paths beating 0.5 is the discriminating signal: Equity's edge is **robust** (every
+one of the 15 purged combinatorial paths beats random), Metals is marginal-but-mostly-positive
+(13/15), and Energy has **no reliable edge** (only 6/15) — corroborating the per-instrument table
+and the deflated-Sharpe / multiple-testing caveat (Bailey 2014; Harvey-Liu-Zhu 2016).
 
 ---
 
@@ -149,7 +195,9 @@ carries the **four required bug fixes**, each visible in the diff:
 | 3 | no real SHAP in PS2/sts-ml (MDI+PFI only) | **cluster SHAP** via `TreeExplainer`, summing member \|SHAP\| (the §4 contribution) | `cluster_importance.py` |
 | 4 | Spearman distance `1−\|ρ\|` (non-metric) | **Mantegna** `√(1−\|ρ\|)` (Mantegna 1999) | vendored `compute_spearman_distance_matrix` |
 
-Tests confirm a pure-noise cluster scores ≈0 and the signal cluster outranks it on all three methods.
+Tests confirm a pure-noise cluster scores ≈0 and the signal cluster outranks it on all three
+methods (synthetic). This module is a **diagnostic off the critical emit path**; it has not been
+run on the real 124-feature matrix, so no real cluster-importance numbers are claimed here.
 
 ---
 
