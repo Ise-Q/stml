@@ -73,7 +73,7 @@ winner, not a robust one.
 
 GRID
 ----
-h ∈ {5, 10, 20}, pt_mult ∈ {1.0, 1.5, 2.0}, sl_mult ∈ {1.0, 1.5, 2.0} → 27 configs.
+h ∈ {1,2,3,4,5,7,10,15,20}, pt_mult ∈ {0.5,0.75,1.0,1.25,1.5,2.0}, sl_mult ∈ {0.5,0.75,1.0,1.25,1.5,2.0} → 324 configs.
 """
 
 from __future__ import annotations
@@ -97,9 +97,9 @@ from stml.new_work.triple_barrier import (
 # Defaults
 # ──────────────────────────────────────────────────────────────────────────────
 
-H_GRID: tuple[int, ...] = (5, 10, 20)
-PT_GRID: tuple[float, ...] = (1.0, 1.5, 2.0)
-SL_GRID: tuple[float, ...] = (1.0, 1.5, 2.0)
+H_GRID: tuple[int, ...] = (1, 2, 3, 4, 5, 7, 10, 15, 20)
+PT_GRID: tuple[float, ...] = (0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
+SL_GRID: tuple[float, ...] = (0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
 IN_SAMPLE_FRAC: float = 0.70
 N_GROUPS: int = 6
 K: int = 2
@@ -626,9 +626,12 @@ def label_signals_optimised(
 
     try:
         import arch  # noqa: F401
-        method = "garch"
     except ImportError:
-        method = "ewma_fallback"
+        raise ImportError(
+            "arch is required for GARCH vol scaling. "
+            "Install with: uv add arch"
+        ) from None
+    method = "garch"
 
     parts: list[pd.DataFrame] = []
     for inst in instruments:
