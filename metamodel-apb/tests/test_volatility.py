@@ -89,10 +89,20 @@ def test_non_negative(estimator):
 def test_monotonic_in_range(estimator):
     # same C=O, strictly wider high-low range -> strictly larger vol
     narrow = pd.DataFrame(
-        {"open": [100.0], "high": [100 * np.exp(0.01)], "low": [100 * np.exp(-0.01)], "close": [100.0]}
+        {
+            "open": [100.0],
+            "high": [100 * np.exp(0.01)],
+            "low": [100 * np.exp(-0.01)],
+            "close": [100.0],
+        }
     )
     wide = pd.DataFrame(
-        {"open": [100.0], "high": [100 * np.exp(0.03)], "low": [100 * np.exp(-0.03)], "close": [100.0]}
+        {
+            "open": [100.0],
+            "high": [100 * np.exp(0.03)],
+            "low": [100 * np.exp(-0.03)],
+            "close": [100.0],
+        }
     )
     assert estimator(wide, window=None).iloc[0] > estimator(narrow, window=None).iloc[0]
 

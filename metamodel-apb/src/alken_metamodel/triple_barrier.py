@@ -88,8 +88,9 @@ def get_bins(events: pd.DataFrame, close: pd.Series) -> pd.DataFrame:
     px = close.reindex(px_idx, method="bfill")
 
     out = pd.DataFrame(index=events_.index)
-    out["ret"] = px.loc[events_["t1"].to_numpy()].to_numpy() / px.loc[events_.index].to_numpy() - 1.0
-    out["ret"] = out["ret"] * events_["side"]
+    entry = px.loc[events_.index].to_numpy()
+    exit_px = px.loc[events_["t1"].to_numpy()].to_numpy()
+    out["ret"] = (exit_px / entry - 1.0) * events_["side"]  # side-adjusted P&L
     out["bin"] = (out["ret"] > 0).astype(float)
     return out
 

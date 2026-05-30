@@ -11,7 +11,6 @@ Conventions (adapted from refs/triple_barrier_guide.md §4/§6, López de Prado 
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import pytest
 
