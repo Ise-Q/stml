@@ -169,9 +169,13 @@ uniqueness weights) and *imbalanced* (~30–40% positive). Both are folded into 
 `cross_validation.py` provides **PurgedKFold + embargo ⌈0.01·T⌉**, **CPCV (N=6, k=2 → 15 paths)**,
 and **nested CPCV**. In the shipped run, **model selection uses CPCV** (the 15-path mean OOS AUC);
 a real-data check confirmed **all five estimators yield 15/15 *finite* CPCV paths on Energy**, so
-selection is not degenerating to a couple of lucky paths. **Nested CPCV** (inner CPCV tunes, outer
-CPCV scores) is implemented as the selection-bias-aware headline evaluator. Selection is by mean
-OOS AUC; **calibration** is reported alongside because the downstream Kelly sizing consumes the
+selection is not degenerating to a couple of lucky paths. **Nested CPCV**
+(`nested_cpcv_select_and_evaluate`: inner CPCV horse-races the roster, outer CPCV scores the
+winner) is **implemented and unit-tested** as the selection-bias-aware evaluator, but a **full
+real-data nested run is not executed here** — a meaningful one runs the inner horse-race over all
+five estimators per outer fold (~15×5×5 fits) and is flagged as deferred (alongside the S6.5 stub
+and X.7). Selection is by mean OOS AUC; **calibration** is reported alongside because Kelly sizing
+consumes the
 probability itself (Gramegna-Giudici 2021, nlr-cw §2 — see the calibration subsection). The pooled
 matrix keeps the event-date index so concurrent **cross-instrument** labels are purged by `t1`.
 
@@ -192,10 +196,11 @@ Equity's edge survives every combinatorial path; Energy's does not (6/15 ≈ coi
 corroborating the §4 cluster importance and the deflated-Sharpe / multiple-testing caveat
 (Bailey 2014; Harvey-Liu-Zhu 2016).
 
-**Calibration deep-dive (EX.4, `calibration.py` — the AUC≠P&L mechanism).** Because Kelly sizes on
-p̂ directly, a model that *ranks* act/skip adequately can still mis-size if p̂ is uncalibrated. On
-purged-OOS predictions the **raw probabilities are materially miscalibrated** (expected calibration
-error ≈ 0.14–0.18), and a Platt / isotonic post-fit on an in-time 70/30 split cuts ECE sharply:
+**Calibration deep-dive (EX.4, `calibration.py`).** Because Kelly sizes on p̂ directly, a model that
+*ranks* act/skip adequately can still mis-size if p̂ is uncalibrated. On purged-OOS predictions
+**from LightGBM as a common representative across all three classes** (not the per-class *selected*
+models), the **raw probabilities are materially miscalibrated**, and a Platt / isotonic post-fit on
+an in-time 70/30 split cuts ECE sharply:
 
 | Class | ECE raw | ECE Platt | ECE isotonic |
 |---|---|---|---|
@@ -203,10 +208,13 @@ error ≈ 0.14–0.18), and a Platt / isotonic post-fit on an in-time 70/30 spli
 | Equity | 0.143 | 0.024 | 0.035 |
 | Metals | 0.155 | **0.003** | 0.041 |
 
-This is a concrete *mechanism* — not just a restatement — for why classification AUC and strategy
-P&L decouple: the probabilities feeding the sizer are systematically off, and a one-parameter Platt
-recalibration would materially improve the stake (a clean, cheap improvement left as the next step,
-since it must be fit train-only to stay leakage-safe).
+This is **strongly consistent with** — though, measured on LightGBM rather than the shipped models,
+not a closed proof of — the AUC≠P&L decoupling: the probabilities feeding the sizer are
+systematically off, and a one-parameter Platt recalibration would materially improve the stake.
+**Caveat:** the *selected* models' calibration is unmeasured, and since the Energy book ships a
+**torch-MLP** — and NNs typically need post-hoc calibration more than tree ensembles
+(Gramegna-Giudici 2021) — Energy's deployed miscalibration is plausibly *worse* than the 0.182
+shown. Recalibrating the selected models (train-only, to stay leakage-safe) is the clean next step.
 
 ---
 
@@ -298,19 +306,21 @@ stub (the 20 May constraints doc is not in the repo).
 
 **Two headline methodological findings:**
 
-1. **The holding model is load-bearing.** Under the *simple* `max_holding=10` model the same books
-   score Sharpe Energy +1.18, **Equity −0.37**, **Metals −0.37**; switching to barrier-exact exits
-   flips Equity to **+1.39** and Metals to +0.31. So pass-1's striking "AUC≠P&L inversion" (best-AUC
-   Equity losing money) was substantially an **artifact of the crude holding rule**, not an
-   intrinsic property — a concrete lesson that the exit convention can dominate the result.
+1. **The holding model is load-bearing.** Within this same pass-2 run (identical positions, models,
+   features and returns — *only the exit convention differs*), the *simple* `max_holding=10` model
+   scores Sharpe Energy +1.18, **Equity −0.37**, **Metals −0.37**, while barrier-exact exits flip
+   Equity to **+1.39** and Metals to +0.31. The exit convention alone dominates the per-book sign —
+   a concrete lesson, and an apples-to-apples one. (Pass-1's analogous "best-AUC-Equity-loses"
+   inversion ran a different config, so it is contextual rather than a controlled comparison.)
 
 2. **Transaction costs are decisive where turnover is high.** Costs scale with turnover: Metals at
    90×/yr loses 5.3 pp (gross +7.3% → net +2.0%), and the aggregate cost drag is 7.6 pp over the
    half-year. Reporting gross-only would overstate the strategy materially.
 
 The residual edge remains modest and the positive aggregate Sharpe still owes much to vol-targeting
-and cross-book diversification; **EX.4 shows part of the act/skill-to-P&L gap is p̂ miscalibration**
-(Kelly mis-sizing), pointing at recalibration rather than a better classifier as the next lever.
+and cross-book diversification; **EX.4 suggests part of the act-skill-to-P&L gap is p̂
+miscalibration** (Kelly mis-sizing), pointing at recalibration rather than a better classifier as a
+cheap next lever.
 
 ---
 
@@ -354,9 +364,10 @@ and cross-book diversification; **EX.4 shows part of the act/skill-to-P&L gap is
 - Meta-labelling carries little classification edge here (mean OOS AUC ≈ 0.5; only Equity is
   robust at 15/15 CPCV paths); the positive aggregate Sharpe is largely diversification +
   vol-targeting + the barrier-exact exit, not act/skip skill.
-- **Calibration, not classifier choice, is the most actionable gap (EX.4):** raw p̂ ECE ≈ 0.14–0.18;
-  a train-only Platt recalibration of the sizing input is the obvious next lever and is not yet
-  wired into the deliverable.
+- **Calibration is a likely actionable gap (EX.4):** raw p̂ ECE ≈ 0.14–0.18 (measured on LightGBM;
+  the *selected* models' — and especially the Energy torch-MLP's — calibration is unmeasured and
+  plausibly worse). A train-only Platt recalibration of the sizing input is the obvious next lever,
+  not yet wired into the deliverable. **Nested-CPCV real-data run** is likewise deferred.
 - ho1s (2 OOS rows) / ng1s (56) / gc1s (30) rest on thin coverage — flagged in
   `coverage_caveat.csv`; their per-instrument numbers are small-sample noise.
 - The §6 **constraint set** remains a lit-review-default **stub** (the 20 May constraints doc is
