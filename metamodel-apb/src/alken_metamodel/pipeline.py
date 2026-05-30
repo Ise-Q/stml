@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from stml.metamodel.scope import ASSET_CLASS_MAP
 
-from .cross_validation import PurgedKFold
+from .cross_validation import CombinatorialPurgedCV, PurgedKFold, nested_cpcv
 from .evaluation import cross_val_evaluate, evaluate_predictions, oos_predictions
 from .features import (
     assemble_instrument_features,
@@ -66,6 +66,9 @@ class PipelineConfig:
     seed: int = 42
     use_regime: bool = True
     roster: str = "tree_linear"  # "tree_linear" (fast default) or "full" (adds the 3 NN variants)
+    cv_scheme: str = "purged"  # "purged" (PurgedKFold) or "cpcv" (15-path selection distribution)
+    cpcv_groups: int = 6  # N for CombinatorialPurgedCV -> C(6,2)=15 paths
+    cpcv_test_groups: int = 2
 
 
 def _roster_factory(config: PipelineConfig):
@@ -145,22 +148,74 @@ def feature_columns(pooled: pd.DataFrame) -> list[str]:
     return [c for c in pooled.columns if c not in _NON_FEATURE]
 
 
-def select_model(X, y, t1, sample_weight, config: PipelineConfig) -> tuple[str, dict[str, float]]:
-    """Horse-race the tree/linear roster by mean purged-OOS AUC; return the winner + scores."""
-    cv = PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
-    factory = _roster_factory(config)
+def _make_cv(t1: pd.Series, config: PipelineConfig):
+    """The selection splitter: PurgedKFold (default) or 15-path CombinatorialPurgedCV (S3.8)."""
+    if config.cv_scheme == "cpcv":
+        return CombinatorialPurgedCV(
+            config.cpcv_groups, config.cpcv_test_groups, t1, config.pct_embargo
+        )
+    return PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
+
+
+def _horse_race(factory, X, y, cv, sample_weight, seed) -> dict[str, float]:
+    """Mean OOS AUC per roster estimator over ``cv`` (NaN folds -> ignored by nanmean)."""
     scores: dict[str, float] = {}
-    for name in factory(seed=config.seed):
+    for name in factory(seed=seed):
         res = cross_val_evaluate(
-            lambda name=name: factory(seed=config.seed)[name],
-            X,
-            y,
-            cv,
-            sample_weight=sample_weight,
+            lambda name=name: factory(seed=seed)[name], X, y, cv, sample_weight=sample_weight
         )
         scores[name] = float(np.nanmean(res["auc"].to_numpy()))
+    return scores
+
+
+def select_model(X, y, t1, sample_weight, config: PipelineConfig) -> tuple[str, dict[str, float]]:
+    """Horse-race the roster by mean OOS AUC under ``config.cv_scheme``; return winner + scores."""
+    cv = _make_cv(t1, config)
+    scores = _horse_race(_roster_factory(config), X, y, cv, sample_weight, config.seed)
     best = max(scores, key=lambda k: scores[k] if np.isfinite(scores[k]) else -np.inf)
     return best, scores
+
+
+def nested_cpcv_select_and_evaluate(
+    X, y, t1: pd.Series, sample_weight, config: PipelineConfig
+) -> pd.DataFrame:
+    """Headline nested-CPCV: inner CPCV picks the estimator, outer CPCV scores it (S3.8).
+
+    Each outer fold runs the full inner horse-race on the outer-train rows ONLY (no tuning
+    leakage — the inner splits are built from ``t1.iloc[outer_train]``), refits the winner, and
+    scores it on the held-out outer fold. The returned per-outer-fold distribution is the
+    selection-bias-aware OOS estimate reported in the §3/§6 write-up (small-N variance is the
+    documented cost). Diagnostic only — never feeds the locked deliverable config.
+    """
+    factory = _roster_factory(config)
+    y = np.asarray(y)
+    sample_weight = np.asarray(sample_weight)
+    rows = []
+    for i, (otr, ote, inner_cv) in enumerate(
+        nested_cpcv(
+            X,
+            t1,
+            outer_groups=config.cpcv_groups,
+            outer_test_groups=config.cpcv_test_groups,
+            pct_embargo=config.pct_embargo,
+        )
+    ):
+        x_tr, y_tr, sw_tr = X.iloc[otr], y[otr], sample_weight[otr]
+        scores = _horse_race(factory, x_tr, y_tr, inner_cv, sw_tr, config.seed)
+        best = max(scores, key=lambda k: scores[k] if np.isfinite(scores[k]) else -np.inf)
+        model = factory(seed=config.seed)[best]
+        model.fit(x_tr, y_tr, sample_weight=sw_tr)
+        proba = model.predict_act_proba(X.iloc[ote])
+        y_te = y[ote]
+        auc = (
+            evaluate_predictions(y_te, proba)["auc"]
+            if len(np.unique(y_te)) == 2
+            else float("nan")
+        )
+        rows.append(
+            {"outer_fold": i, "selected": best, "auc": round(float(auc), 6), "n_test": len(ote)}
+        )
+    return pd.DataFrame(rows)
 
 
 def per_instrument_diagnostics(

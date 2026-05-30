@@ -10,6 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from alken_metamodel.cross_validation import CombinatorialPurgedCV, PurgedKFold
 from alken_metamodel.emit import (
     PREDICTION_COLUMNS,
     emit_predictions,
@@ -18,13 +19,63 @@ from alken_metamodel.emit import (
 )
 from alken_metamodel.pipeline import (
     PipelineConfig,
+    _make_cv,
     _roster_factory,
     build_instrument_panel,
     class_members,
+    nested_cpcv_select_and_evaluate,
     run_asset_class,
+    select_model,
 )
 
 ENERGY = ["cl1s", "ho1s", "rb1s", "ng1s"]
+
+
+def _toy_panel(n: int = 120, seed: int = 0, pos_rate: float | None = None):
+    """Small (X, y, t1, sample_weight) modelling panel with overlapping label spans."""
+    rng = np.random.default_rng(seed)
+    idx = pd.bdate_range("2020-01-01", periods=n)
+    X = pd.DataFrame(
+        rng.normal(size=(n, 5)), columns=[f"f{i}" for i in range(5)], index=idx
+    )
+    if pos_rate is None:
+        lin = X["f0"].to_numpy() * 0.8 + rng.normal(size=n) * 0.5
+        y = (lin > np.median(lin)).astype(float)
+    else:
+        y = (rng.random(n) < pos_rate).astype(float)
+    end = np.minimum(np.arange(n) + 3, n - 1)
+    t1 = pd.Series(idx[end], index=idx)
+    return X, y, t1, np.ones(n)
+
+
+# --- S3.8: CPCV-as-selection + nested headline -----------------------------
+
+def test_make_cv_honours_scheme():
+    _, t1, _, _ = _toy_panel(40)
+    purged = _make_cv(t1, PipelineConfig(cv_scheme="purged", n_splits=5))
+    assert isinstance(purged, PurgedKFold)
+    assert purged.get_n_splits() == 5
+    cpcv = _make_cv(t1, PipelineConfig(cv_scheme="cpcv"))
+    assert isinstance(cpcv, CombinatorialPurgedCV)
+    assert cpcv.get_n_splits() == 15  # C(6,2)
+
+
+def test_select_model_cpcv_survives_single_class_folds():
+    X, y, t1, sw = _toy_panel(120, pos_rate=0.05)  # rare positives -> single-class CPCV folds
+    best, scores = select_model(X, y, t1, sw, PipelineConfig(cv_scheme="cpcv", use_regime=False))
+    assert best in scores
+    assert set(scores) == {"elasticnet_logistic", "xgboost", "lightgbm"}
+
+
+def test_nested_cpcv_select_and_evaluate_shape_and_determinism():
+    X, y, t1, sw = _toy_panel(120, seed=3)
+    cfg = PipelineConfig(roster="tree_linear", use_regime=False, seed=42)
+    a = nested_cpcv_select_and_evaluate(X, y, t1, sw, cfg)
+    assert {"outer_fold", "selected", "auc", "n_test"}.issubset(a.columns)
+    assert len(a) == 15  # C(6,2) outer folds
+    assert a["selected"].isin({"elasticnet_logistic", "xgboost", "lightgbm"}).all()
+    b = nested_cpcv_select_and_evaluate(X, y, t1, sw, cfg)
+    pd.testing.assert_frame_equal(a, b)  # deterministic
 
 
 def _synthetic_ohlcv(instruments, start="2020-01-01", periods=650, seed=0) -> pd.DataFrame:
