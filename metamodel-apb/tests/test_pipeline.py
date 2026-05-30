@@ -18,6 +18,7 @@ from alken_metamodel.emit import (
 )
 from alken_metamodel.pipeline import (
     PipelineConfig,
+    _roster_factory,
     build_instrument_panel,
     class_members,
     run_asset_class,
@@ -125,6 +126,20 @@ def test_strategy_weights_known_values_and_sign():
 
 def test_class_members_energy():
     assert class_members("energy") == ENERGY
+
+
+def test_roster_factory_resolves_tree_linear_and_full():
+    tree = _roster_factory(PipelineConfig(roster="tree_linear"))(seed=42)
+    assert set(tree) == {"elasticnet_logistic", "xgboost", "lightgbm"}
+    full = _roster_factory(PipelineConfig(roster="full"))(seed=42)
+    assert set(full) == {
+        "elasticnet_logistic",
+        "xgboost",
+        "lightgbm",
+        "torch_mlp",
+        "torch_vsn",
+        "keras_vsn",
+    }
 
 
 def test_build_instrument_panel_has_features_and_labels():

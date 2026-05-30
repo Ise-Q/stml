@@ -9,7 +9,13 @@ from __future__ import annotations
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-from alken_metamodel.neural import TorchMLP
+from alken_metamodel.neural import (
+    KerasVSN,
+    TorchMLP,
+    TorchVSN,
+    full_roster,
+    neural_roster,
+)
 
 
 def _separable(n: int = 400, seed: int = 0):
@@ -56,3 +62,53 @@ def test_torch_mlp_has_roster_interface():
     clf = TorchMLP(seed=42)
     assert clf.name == "torch_mlp"
     assert hasattr(clf, "fit") and hasattr(clf, "predict_act_proba")
+
+
+# --- torch VSN --------------------------------------------------------------
+
+def test_torch_vsn_learns_and_is_deterministic():
+    x, y = _separable(seed=4)
+    a = TorchVSN(seed=42, epochs=120)
+    a.fit(x, y)
+    pa = a.predict_act_proba(x)
+    assert pa.shape == (len(y),)
+    assert ((pa >= 0.0) & (pa <= 1.0)).all()
+    assert roc_auc_score(y, pa) > 0.85
+    b = TorchVSN(seed=42, epochs=120)
+    b.fit(x, y)
+    np.testing.assert_allclose(pa, b.predict_act_proba(x), rtol=1e-4, atol=1e-5)
+
+
+def test_torch_vsn_handles_sample_weight():
+    x, y = _separable(seed=5)
+    w = np.where(y == 1, 2.0, 1.0)
+    clf = TorchVSN(seed=42, epochs=60)
+    clf.fit(x, y, sample_weight=w)
+    p = clf.predict_act_proba(x)
+    assert np.isfinite(p).all() and ((p >= 0) & (p <= 1)).all()
+
+
+# --- Keras VSN (best-effort determinism; documented TF caveat) --------------
+
+def test_keras_vsn_learns_separable_signal():
+    x, y = _separable(seed=6)
+    clf = KerasVSN(seed=42, epochs=50)
+    clf.fit(x, y)
+    p = clf.predict_act_proba(x)
+    assert p.shape == (len(y),)
+    assert ((p >= 0.0) & (p <= 1.0)).all()
+    assert roc_auc_score(y, p) > 0.7
+
+
+# --- rosters ----------------------------------------------------------------
+
+def test_rosters_have_expected_members():
+    assert set(neural_roster()) == {"torch_mlp", "torch_vsn", "keras_vsn"}
+    assert set(full_roster()) == {
+        "elasticnet_logistic",
+        "xgboost",
+        "lightgbm",
+        "torch_mlp",
+        "torch_vsn",
+        "keras_vsn",
+    }

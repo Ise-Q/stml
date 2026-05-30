@@ -65,6 +65,16 @@ class PipelineConfig:
     pct_embargo: float = 0.01
     seed: int = 42
     use_regime: bool = True
+    roster: str = "tree_linear"  # "tree_linear" (fast default) or "full" (adds the 3 NN variants)
+
+
+def _roster_factory(config: PipelineConfig):
+    """Resolve the horse-race roster factory; ``full`` lazily pulls in the neural variants."""
+    if config.roster == "full":
+        from .neural import full_roster
+
+        return full_roster
+    return tree_linear_roster
 
 
 @dataclass
@@ -138,11 +148,11 @@ def feature_columns(pooled: pd.DataFrame) -> list[str]:
 def select_model(X, y, t1, sample_weight, config: PipelineConfig) -> tuple[str, dict[str, float]]:
     """Horse-race the tree/linear roster by mean purged-OOS AUC; return the winner + scores."""
     cv = PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
-    roster = tree_linear_roster(seed=config.seed)
+    factory = _roster_factory(config)
     scores: dict[str, float] = {}
-    for name in roster:
+    for name in factory(seed=config.seed):
         res = cross_val_evaluate(
-            lambda name=name: tree_linear_roster(seed=config.seed)[name],
+            lambda name=name: factory(seed=config.seed)[name],
             X,
             y,
             cv,
@@ -162,8 +172,9 @@ def per_instrument_diagnostics(
     metrics are then grouped by instrument so a strong pooled number can't hide a weak member.
     """
     cv = PurgedKFold(n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo)
+    factory = _roster_factory(config)
     oos = oos_predictions(
-        lambda: tree_linear_roster(seed=config.seed)[best_name],
+        lambda: factory(seed=config.seed)[best_name],
         x_model,
         y_model,
         cv,
@@ -223,7 +234,7 @@ def run_asset_class(
         config,
     )
 
-    model = tree_linear_roster(seed=config.seed)[best]
+    model = _roster_factory(config)(seed=config.seed)[best]
     model.fit(x_model, y_model, sample_weight=sw_model)
 
     x_pred = X[pred_mask]
