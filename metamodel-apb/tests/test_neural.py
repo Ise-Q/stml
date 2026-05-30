@@ -7,12 +7,16 @@ sample_weight, tolerate NaN (impute), and be deterministic (the grader re-runs).
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 from sklearn.metrics import roc_auc_score
 
+from alken_metamodel.dim_reduction import ClusterRepSelector
 from alken_metamodel.neural import (
     KerasVSN,
+    ReducedEstimator,
     TorchMLP,
     TorchVSN,
+    default_roster,
     full_roster,
     neural_roster,
 )
@@ -112,3 +116,49 @@ def test_rosters_have_expected_members():
         "torch_vsn",
         "keras_vsn",
     }
+
+
+# --- S3.7: torch default roster + cluster-rep reduction ---------------------
+
+def _corr_frame(n: int = 160, seed: int = 0):
+    """A wide DataFrame with two tight correlation blocks + noise, and a learnable label."""
+    rng = np.random.default_rng(seed)
+    a, b = rng.normal(size=n), rng.normal(size=n)
+    cols = {f"a{k}": 0.9 * a + 0.1 * rng.normal(size=n) for k in range(5)}
+    cols |= {f"b{k}": 0.9 * b + 0.1 * rng.normal(size=n) for k in range(5)}
+    cols["n0"], cols["n1"] = rng.normal(size=n), rng.normal(size=n)
+    X = pd.DataFrame(cols, index=pd.bdate_range("2020-01-01", periods=n))
+    y = (0.9 * a + 0.4 * rng.normal(size=n) > 0).astype(float)
+    return X, y
+
+
+def test_default_roster_is_torch_only_no_keras():
+    roster = default_roster(seed=42)
+    assert set(roster) == {"elasticnet_logistic", "xgboost", "lightgbm", "torch_mlp", "torch_vsn"}
+    assert "keras_vsn" not in roster  # TF non-determinism kept off the selectable path
+
+
+def test_reduced_estimator_reduces_and_predicts():
+    X, y = _corr_frame()
+    est = ReducedEstimator(
+        TorchVSN(seed=42, epochs=12), ClusterRepSelector(seed=42, max_clusters=6)
+    )
+    est.fit(X, y)
+    assert 0 < len(est.reducer.selected_) < X.shape[1]  # the VSN saw a reduced feature set
+    p = est.predict_act_proba(X)
+    assert p.shape == (len(X),)
+    assert ((p >= 0.0) & (p <= 1.0)).all()
+    assert est.name == "torch_vsn"  # roster key stays stable through the wrapper
+
+
+def test_reduced_estimator_is_deterministic():
+    X, y = _corr_frame(n=120, seed=2)
+
+    def _mk():
+        return ReducedEstimator(
+            TorchVSN(seed=42, epochs=10), ClusterRepSelector(seed=42, max_clusters=5)
+        )
+
+    a = _mk().fit(X, y).predict_act_proba(X)
+    b = _mk().fit(X, y).predict_act_proba(X)
+    np.testing.assert_allclose(a, b, rtol=1e-4, atol=1e-5)

@@ -193,6 +193,27 @@ def test_roster_factory_resolves_tree_linear_and_full():
     }
 
 
+def test_roster_factory_resolves_default():
+    r = _roster_factory(PipelineConfig(roster="default"))(seed=42)
+    assert set(r) == {"elasticnet_logistic", "xgboost", "lightgbm", "torch_mlp", "torch_vsn"}
+
+
+def test_build_instrument_panel_with_macro_adds_macro_columns():
+    cfg = PipelineConfig(
+        modelling_end=pd.Timestamp("2021-12-31"),
+        predict_end=pd.Timestamp("2022-03-31"),
+        n_splits=3,
+        use_regime=False,
+        use_macro=True,
+    )
+    ohlcv = _synthetic_ohlcv(["cl1s"])
+    signals = _synthetic_signals(["cl1s"])
+    panel = build_instrument_panel(ohlcv, signals, "cl1s", cfg)
+    macro_cols = [c for c in panel.columns if c.startswith("macro_")]
+    assert len(macro_cols) >= 5  # the PIT-lagged block is joined into the feature panel
+    assert "macro_vix_term_slope" in macro_cols
+
+
 def test_build_instrument_panel_has_features_and_labels():
     cfg = _fast_config()
     ohlcv = _synthetic_ohlcv(["cl1s"])

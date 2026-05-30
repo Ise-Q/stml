@@ -65,7 +65,10 @@ class PipelineConfig:
     pct_embargo: float = 0.01
     seed: int = 42
     use_regime: bool = True
-    roster: str = "tree_linear"  # "tree_linear" (fast default) or "full" (adds the 3 NN variants)
+    use_macro: bool = False  # join the PIT-lagged macro block (§1/§3) into the feature panel
+    #: "tree_linear" (fast default), "default" (tree/linear + reduced torch NNs, the shipped
+    #: deliverable roster), or "full" (also adds the off-path KerasVSN comparison).
+    roster: str = "tree_linear"
     cv_scheme: str = "purged"  # "purged" (PurgedKFold) or "cpcv" (15-path selection distribution)
     cpcv_groups: int = 6  # N for CombinatorialPurgedCV -> C(6,2)=15 paths
     cpcv_test_groups: int = 2
@@ -73,6 +76,10 @@ class PipelineConfig:
 
 def _roster_factory(config: PipelineConfig):
     """Resolve the horse-race roster factory; ``full`` lazily pulls in the neural variants."""
+    if config.roster == "default":
+        from .neural import default_roster
+
+        return default_roster
     if config.roster == "full":
         from .neural import full_roster
 
@@ -111,6 +118,11 @@ def build_instrument_panel(
             ohlcv_inst, fit_end=config.fe_train_end, seed=config.seed
         )
         feats = pd.concat([feats, regime.reindex(feats.index)], axis=1)
+    if config.use_macro:
+        from .macro import macro_features
+
+        macro = macro_features(feats.index)  # PIT-lagged, causal -> truncation-invariant
+        feats = pd.concat([feats, macro.reindex(feats.index)], axis=1)
 
     sigma = daily_barrier_sigma(feats)  # de-annualised daily barrier width
     labels = triple_barrier_labels(
