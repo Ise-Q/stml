@@ -14,4 +14,9 @@ nested CPCV -> a single Jan-Jun 2022 hold-out. See ``cross_validation`` and
 ``pipeline``.
 """
 
+# Importing the package pins OpenMP/BLAS threads BEFORE any heavy submodule (xgboost/
+# lightgbm/torch) loads its native runtime — Python imports this parent first, so every
+# entry point inherits the single-threaded determinism + macOS libomp stability guard.
+from . import _env  # noqa: F401
+
 __all__: list[str] = []
