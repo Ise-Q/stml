@@ -12,6 +12,9 @@ import pandas as pd
 import pytest
 
 from alken_metamodel.backtest import (
+    average_holding_period,
+    barrier_backtest,
+    build_barrier_position_panel,
     build_position_panel,
     performance_metrics,
     strategy_returns,
@@ -62,3 +65,57 @@ def test_strategy_returns_marks_to_next_day():
     returns_panel = pd.DataFrame({"cl1s": [0.0, 0.02, 0.05]}, index=cal)
     daily = strategy_returns(positions, returns_panel)
     assert daily.iloc[0] == pytest.approx(0.02)  # day-0 position earns the day-1 return
+
+
+# --- S6.7: barrier-exact backtest -------------------------------------------
+
+def _energy_cal():
+    return pd.bdate_range("2022-01-03", periods=8)
+
+
+def test_barrier_panel_holds_until_touch_and_nets_overlap():
+    cal = _energy_cal()
+    returns_panel = pd.DataFrame(0.0, index=cal, columns=["cl1s", "ho1s"])
+    meta = pd.DataFrame(
+        {
+            "date": [cal[0], cal[2]],
+            "instrument": ["cl1s", "cl1s"],
+            "weight": [0.5, 0.3],
+            "t1": [cal[4], cal[5]],  # exit on the actual first-touch, not a fixed horizon
+        }
+    )
+    pos = build_barrier_position_panel(meta, returns_panel)
+    assert pos.loc[cal[0], "cl1s"] == 0.5
+    assert pos.loc[cal[1], "cl1s"] == 0.5
+    assert pos.loc[cal[2], "cl1s"] == pytest.approx(0.8)  # overlapping labels NET (0.5 + 0.3)
+    assert pos.loc[cal[3], "cl1s"] == pytest.approx(0.8)
+    assert pos.loc[cal[4], "cl1s"] == pytest.approx(0.3)  # first label's barrier touched -> exits
+    assert pos.loc[cal[5], "cl1s"] == 0.0  # both touched -> flat
+    assert (pos["ho1s"] == 0.0).all()
+
+
+def test_average_holding_period_counts_business_days_of_real_trades():
+    cal = _energy_cal()
+    meta = pd.DataFrame(
+        {
+            "date": [cal[0], cal[2]],
+            "instrument": ["cl1s", "cl1s"],
+            "weight": [0.5, 0.0],  # the zero-weight row is not a trade -> excluded
+            "t1": [cal[4], cal[5]],
+        }
+    )
+    assert average_holding_period(meta) == pytest.approx(4.0)  # cal[0]->cal[4] = 4 business days
+
+
+def test_barrier_backtest_net_is_below_gross_when_costs_charged():
+    cal = _energy_cal()
+    returns_panel = pd.DataFrame(0.01, index=cal, columns=["cl1s"])  # steady +1%/day
+    meta = pd.DataFrame(
+        {"date": [cal[0]], "instrument": ["cl1s"], "weight": [0.5], "t1": [cal[6]]}
+    )
+    _net, report = barrier_backtest(meta, returns_panel, impact_bps=20.0)
+    assert report["gross_total_return"] > report["net_total_return"]  # costs bite
+    assert report["total_cost"] > 0
+    assert report["avg_holding_period"] == pytest.approx(6.0)
+    assert report["ann_turnover"] > 0
+    assert "sharpe" in report and "sortino" in report

@@ -15,6 +15,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .cost_model import transaction_costs, turnover
+
 ANNUALISATION = 252
 
 
@@ -82,3 +84,74 @@ def backtest_strategy(
     positions = build_position_panel(weights, returns_panel, max_holding=max_holding)
     daily = strategy_returns(positions, returns_panel)
     return daily, performance_metrics(daily)
+
+
+# --- S6.7: barrier-exact backtest with costs --------------------------------
+
+def build_barrier_position_panel(
+    meta: pd.DataFrame, returns_panel: pd.DataFrame
+) -> pd.DataFrame:
+    """Daily position panel where each label is held until its **actual** first-touch ``t1``.
+
+    ``meta`` carries one row per labelled trade (``date``, ``instrument``, ``weight``, ``t1``).
+    A position is active over ``[date, t1)`` — entered at the event date, exited when the triple
+    barrier is touched (not at a fixed ``max_holding``). Overlapping labels on the same instrument
+    are **netted** (summed), the LdP convention for concurrent bets.
+    """
+    cal = returns_panel.index
+    panel = pd.DataFrame(0.0, index=cal, columns=returns_panel.columns)
+    for row in meta.itertuples(index=False):
+        if row.instrument not in panel.columns:
+            continue
+        active = (cal >= row.date) & (cal < row.t1)
+        panel.loc[active, row.instrument] += float(row.weight)
+    return panel
+
+
+def average_holding_period(meta: pd.DataFrame) -> float:
+    """Mean business-day span ``[date, t1)`` across real trades (non-zero weight); NaN if none."""
+    trades = meta[meta["weight"] != 0.0]
+    if trades.empty:
+        return float("nan")
+    held = np.busday_count(
+        trades["date"].to_numpy().astype("datetime64[D]"),
+        trades["t1"].to_numpy().astype("datetime64[D]"),
+    )
+    return float(np.mean(held))
+
+
+def barrier_backtest(
+    meta: pd.DataFrame,
+    returns_panel: pd.DataFrame,
+    *,
+    half_spread_bps: float = 2.0,
+    impact_bps: float = 10.0,
+    impact_exponent: float = 1.0,
+) -> tuple[pd.Series, dict]:
+    """Barrier-exact, cost-aware backtest -> (net daily returns, report).
+
+    The report folds the standard performance metrics on the **net** series together with the
+    brief's missing measures — turnover (annualised) and average holding period — plus the gross
+    vs net split so the transaction-cost drag is explicit (§6.7).
+    """
+    positions = build_barrier_position_panel(meta, returns_panel)
+    gross = strategy_returns(positions, returns_panel)
+    costs = transaction_costs(
+        positions,
+        half_spread_bps=half_spread_bps,
+        impact_bps=impact_bps,
+        impact_exponent=impact_exponent,
+    ).reindex(gross.index).fillna(0.0)
+    net = gross - costs
+
+    metrics = performance_metrics(net)
+    daily_turnover = turnover(positions)
+    report = {
+        **metrics,
+        "gross_total_return": float(np.prod(1.0 + gross.dropna().to_numpy()) - 1.0),
+        "net_total_return": metrics["total_return"],
+        "total_cost": float(costs.sum()),
+        "ann_turnover": float(daily_turnover.mean() * ANNUALISATION),
+        "avg_holding_period": average_holding_period(meta),
+    }
+    return net, report
