@@ -1,0 +1,59 @@
+[project]
+name = "alken-metamodel"
+version = "0.1.0"
+description = "T3.03 Alken meta-labelling metamodel: a secondary act/skip classifier over the provided primary signal."
+# Pinned to 3.12: the version torch (CPU), TensorFlow (Keras VSN), LightGBM and
+# stml (>=3.12) all ship wheels for. uv otherwise resolves to 3.14, which has no
+# TensorFlow wheels. The metamodel has its own venv, independent of stml's.
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "stml",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "xgboost",
+    "lightgbm",
+    "hmmlearn>=0.3.0",
+    "shap",
+    "optuna",
+    "torch",
+    "tensorflow",
+    "pyarrow",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# torch from the CPU-only index (mirrors stml; no GPU on this machine).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+# stml is the shared, model-free feature base in the parent repo — imported
+# as an editable path dependency. We reuse its causal feature *functions*
+# (recomputed per CV fold), never its frozen feature_matrix.parquet.
+stml = { path = "..", editable = true }
+torch = { index = "pytorch-cpu" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+# Local ruff config: shadows the machine-global ~/.config/ruff (which sets
+# fix=true) for everything under metamodel-apb/, and excludes the verbatim
+# vendored sts-ml scripts from linting.
+[tool.ruff]
+line-length = 100
+extend-exclude = ["src/alken_metamodel/_vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
