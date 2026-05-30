@@ -17,17 +17,21 @@ from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
-from sklearn.model_selection import KFold
 from sklearn.metrics import (silhouette_score, calinski_harabasz_score,
                              davies_bouldin_score, log_loss)
 
 
 def compute_spearman_distance_matrix(X):
-    """Distance matrix d = 1 - |Spearman rho|, symmetrised with unit diagonal."""
+    """Mantegna metric distance d = sqrt(1 - |Spearman rho|), symmetrised, unit diagonal.
+
+    BUG FIX #4 (Stage 3): the source used the non-metric ``1 - |rho|``. The Mantegna (1999)
+    ultrametric ``sqrt(1 - |rho|)`` is a proper distance, which is what the downstream
+    hierarchical/feature clustering assumes (LdP 2020 Ch.4; nlr-cw §5).
+    """
     corr = spearmanr(X).correlation
     corr = (corr + corr.T) / 2
     np.fill_diagonal(corr, 1)
-    dist = 1 - np.abs(corr)
+    dist = np.sqrt(np.clip(1 - np.abs(corr), 0, None))  # BUG FIX #4: Mantegna (was 1 - |corr|)
     names = X.columns if isinstance(X, pd.DataFrame) else [f"feature_{i}" for i in range(X.shape[1])]
     return pd.DataFrame(dist, index=names, columns=names)
 
@@ -100,12 +104,18 @@ def calculate_cluster_importance_mdi(model, feature_names, clusters):
     return out
 
 
-def calculate_cluster_importance_pfi(model, X, y, clusters, cv=5, random_state=42):
-    """Cluster-level PFI: permute a whole cluster with ONE shared permutation."""
-    kf = KFold(n_splits=cv, shuffle=True, random_state=random_state)
+def calculate_cluster_importance_pfi(model, X, y, clusters, cv_splitter):
+    """Cluster-level MDA: permute a whole cluster with ONE shared permutation, scored across
+    a leakage-safe CV.
+
+    BUG FIX #2 (Stage 3): the source used ``KFold(n_splits=cv, shuffle=True)``, invalid for
+    overlapping triple-barrier labels (a shuffled split lands a label's near-duplicate in both
+    train and test). The purged splitter is now INJECTED — pass a ``PurgedKFold``/CPCV keyed on
+    the label ``t1`` spans so train/test never share a label horizon (LdP 2018 Ch.7; nlr-cw §5).
+    """
     baseline = pd.Series(dtype='float64')
     perm = pd.DataFrame(columns=clusters.keys())
-    for i, (tr, te) in enumerate(kf.split(X)):
+    for i, (tr, te) in enumerate(cv_splitter.split(X)):
         Xtr, ytr = X.iloc[tr], y.iloc[tr]
         Xte, yte = X.iloc[te], y.iloc[te]
         model.fit(Xtr, ytr)
