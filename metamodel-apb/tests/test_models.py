@@ -88,6 +88,19 @@ def test_sample_weight_is_consumed():
         assert p_ignore > 0.5, f"{name} should call x=1.5 'act' once the contradiction is muted"
 
 
+def test_logistic_handles_nan_features_via_imputation():
+    """The scaled (logistic) path imputes structural NaNs the pooled matrix will contain."""
+    x, y = _separable(seed=10)
+    x = x.copy()
+    x[::7, 0] = np.nan  # inject structural NaNs into a feature column
+    clf = make_elasticnet_logistic(seed=42)
+    clf.fit(x, y)
+    p = clf.predict_act_proba(x)
+    assert np.isfinite(p).all()
+    assert ((p >= 0.0) & (p <= 1.0)).all()
+    assert roc_auc_score(y, p) > 0.9  # still learns despite the missing values
+
+
 def test_balanced_sample_weight_equalises_class_mass():
     y = np.array([0, 0, 0, 0, 1, 1])
     w = balanced_sample_weight(y)

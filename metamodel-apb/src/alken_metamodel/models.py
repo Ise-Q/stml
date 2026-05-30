@@ -17,9 +17,9 @@ Design choices (justified against the dossier of PS4/PS5/PS6):
   grid and is fixed in Stage 3). **LightGBM** mirrors that regularised configuration.
 - **Determinism.** ``set_seeds`` at every fit; single-threaded tree building and LightGBM
   ``deterministic=True`` so a re-fit is byte-stable (the grader re-runs on the hidden half).
-- **Scaling** is applied only where it matters (logistic): a train-fitted ``StandardScaler``;
-  trees are scale-invariant and left unscaled. NaN handling is a pipeline concern — trees
-  consume NaN natively; the scaled (logistic/NN) path expects a NaN-free matrix.
+- **NaN policy is per-model.** Trees consume NaN natively (better than imputing). The scaled
+  (logistic) path imputes with a train-fitted median, then standardises — so the pooled
+  real-data matrix's structural NaNs don't break the linear model.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from lightgbm import LGBMClassifier
 from sklearn.base import BaseEstimator
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
@@ -64,20 +65,24 @@ class MetaClassifier:
     base: BaseEstimator
     scale: bool = False
     _scaler: StandardScaler | None = field(default=None, init=False, repr=False)
+    _imputer: SimpleImputer | None = field(default=None, init=False, repr=False)
 
     def fit(self, X, y, sample_weight=None) -> MetaClassifier:
         # Determinism comes from each estimator's constructor ``random_state`` plus the
         # single-threaded native kernels (conftest / entry-point env), NOT a per-fit global
         # reseed — seeding belongs once at the pipeline entry point (CLAUDE.md convention).
         x = np.asarray(X, dtype=float)
-        if self.scale:
-            self._scaler = StandardScaler().fit(x)
-            x = self._scaler.transform(x)
+        if self.scale:  # logistic: train-fitted median impute -> standardise
+            self._imputer = SimpleImputer(strategy="median").fit(x)
+            self._scaler = StandardScaler().fit(self._imputer.transform(x))
+            x = self._scaler.transform(self._imputer.transform(x))
         self.base.fit(x, np.asarray(y), sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X) -> np.ndarray:
         x = np.asarray(X, dtype=float)
+        if self._imputer is not None:
+            x = self._imputer.transform(x)
         if self._scaler is not None:
             x = self._scaler.transform(x)
         return self.base.predict_proba(x)
