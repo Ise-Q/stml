@@ -109,6 +109,25 @@ def threshold_sweep(y_true, proba, *, sample_weight=None, thresholds=None) -> pd
     return pd.DataFrame(rows)
 
 
+def oos_predictions(make_model, X, y, cv, *, sample_weight=None) -> np.ndarray:
+    """Collect purged-CV out-of-sample P(act) for every row (NaN where never in a test fold).
+
+    Refits ``make_model()`` per fold on the purged train and writes its OOS probabilities into
+    the held-out positions — the basis for per-instrument OOS diagnostics aggregated downstream.
+    """
+    y = np.asarray(y)
+    w = None if sample_weight is None else np.asarray(sample_weight, dtype=float)
+    oos = np.full(len(y), np.nan)
+    for train, test in cv.split(X):
+        model = make_model()
+        x_tr = X.iloc[train] if hasattr(X, "iloc") else np.asarray(X)[train]
+        x_te = X.iloc[test] if hasattr(X, "iloc") else np.asarray(X)[test]
+        w_tr = None if w is None else w[train]
+        model.fit(x_tr, y[train], sample_weight=w_tr)
+        oos[test] = model.predict_act_proba(x_te)
+    return oos
+
+
 def cross_val_evaluate(
     make_model,
     X,

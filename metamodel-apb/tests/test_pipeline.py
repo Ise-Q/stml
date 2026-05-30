@@ -151,6 +151,10 @@ def test_run_asset_class_predicts_config_window():
     assert res.best_model in {"elasticnet_logistic", "xgboost", "lightgbm"}
     assert res.n_modelling > 0
     assert set(preds["instrument"]).issubset(set(ENERGY))
+    # per-instrument OOS diagnostics: one row per instrument (§5 before-aggregate reporting)
+    diag = res.diagnostics
+    assert {"instrument", "n", "pos_rate", "auc", "precision"}.issubset(diag.columns)
+    assert set(diag["instrument"]) == set(ENERGY)
 
 
 def test_run_asset_class_is_deterministic():

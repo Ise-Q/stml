@@ -89,7 +89,11 @@ def build_deliverables(
         result = run_asset_class(ohlcv, signals, ac, config)
         preds.append(result.predictions)
         weights.append(strategy_weights(result.predictions, config))
-        diagnostics[ac] = {"best_model": result.best_model, "cv_scores": result.cv_scores}
+        diagnostics[ac] = {
+            "best_model": result.best_model,
+            "cv_scores": result.cv_scores,
+            "per_instrument": result.diagnostics,
+        }
     return pd.concat(preds, ignore_index=True), pd.concat(weights, ignore_index=True), diagnostics
 
 
@@ -116,8 +120,10 @@ def main(argv=None) -> None:
     emit_predictions(preds, outdir / "metamodel_predictions.csv")
     emit_weights(weights, outdir / "strategy_weights.csv")
     for ac, diag in diagnostics.items():
-        print(f"[{ac}] selected={diag['best_model']} cv_auc={diag['cv_scores']}")
-    print(f"emitted {len(preds)} predictions to {outdir}/")
+        cv = {k: round(v, 4) for k, v in diag["cv_scores"].items()}
+        print(f"\n[{ac}] selected={diag['best_model']}  cv_auc={cv}")
+        print(diag["per_instrument"].to_string(index=False))  # per-instrument BEFORE the aggregate
+    print(f"\nAGGREGATE: emitted {len(preds)} predictions / {len(weights)} weights to {outdir}/")
 
 
 if __name__ == "__main__":

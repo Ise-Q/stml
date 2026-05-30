@@ -26,7 +26,7 @@ import pandas as pd
 from stml.metamodel.scope import ASSET_CLASS_MAP
 
 from .cross_validation import PurgedKFold
-from .evaluation import cross_val_evaluate
+from .evaluation import cross_val_evaluate, evaluate_predictions, oos_predictions
 from .features import (
     assemble_instrument_features,
     attach_instrument,
@@ -74,6 +74,7 @@ class AssetClassResult:
     best_model: str
     cv_scores: dict[str, float]
     n_modelling: int
+    diagnostics: pd.DataFrame  # per-instrument OOS metrics (printed before the aggregate)
 
 
 def _close_of(ohlcv_inst: pd.DataFrame) -> pd.Series:
@@ -152,6 +153,40 @@ def select_model(X, y, t1, sample_weight, config: PipelineConfig) -> tuple[str, 
     return best, scores
 
 
+def per_instrument_diagnostics(
+    x_model, y_model, t1_model, instrument_model, sample_weight, best_name, config: PipelineConfig
+) -> pd.DataFrame:
+    """Per-instrument purged-OOS metrics for the selected model (§5 per-instrument reporting).
+
+    One purged-CV pass of the winning estimator collects OOS P(act) for every modelling row;
+    metrics are then grouped by instrument so a strong pooled number can't hide a weak member.
+    """
+    cv = PurgedKFold(n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo)
+    oos = oos_predictions(
+        lambda: tree_linear_roster(seed=config.seed)[best_name],
+        x_model,
+        y_model,
+        cv,
+        sample_weight=sample_weight,
+    )
+    rows = []
+    for inst in sorted(set(instrument_model)):
+        in_inst = instrument_model == inst
+        scored = in_inst & np.isfinite(oos)
+        yi, pi = y_model[scored], oos[scored]
+        metrics = evaluate_predictions(yi, pi) if len(yi) and len(np.unique(yi)) == 2 else {}
+        rows.append(
+            {
+                "instrument": inst,
+                "n": int(in_inst.sum()),
+                "pos_rate": round(float(y_model[in_inst].mean()), 4) if in_inst.any() else np.nan,
+                "auc": round(metrics.get("auc", float("nan")), 4),
+                "precision": round(metrics.get("precision", float("nan")), 4),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def run_asset_class(
     ohlcv: pd.DataFrame,
     signals: pd.DataFrame,
@@ -178,6 +213,16 @@ def run_asset_class(
     sw_model = balanced_sample_weight(y_model, base=uniqueness[model_mask])
     best, scores = select_model(x_model, y_model, t1[model_mask], sw_model, config)
 
+    diagnostics = per_instrument_diagnostics(
+        x_model,
+        y_model,
+        t1[model_mask],
+        pooled["instrument"].to_numpy()[model_mask],
+        sw_model,
+        best,
+        config,
+    )
+
     model = tree_linear_roster(seed=config.seed)[best]
     model.fit(x_model, y_model, sample_weight=sw_model)
 
@@ -198,4 +243,5 @@ def run_asset_class(
         best_model=best,
         cv_scores=scores,
         n_modelling=int(model_mask.sum()),
+        diagnostics=diagnostics,
     )
