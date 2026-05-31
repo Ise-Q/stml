@@ -21,12 +21,49 @@ import numpy as np
 
 KAPPA = 0.25
 CONFIDENCE_FLOOR = 0.55
+TAPER_WIDTH = 0.05  # S6.15: half-width of the smooth ramp around the confidence floor
 TARGET_VOL = 0.25
 MAX_LEVERAGE = 5.0
 
 
 def _scalarize(a: np.ndarray):
     return float(a) if a.ndim == 0 else a
+
+
+def confidence_taper(p, floor: float = CONFIDENCE_FLOOR, width: float = TAPER_WIDTH):
+    """Smooth [0, 1] ramp replacing the hard ``p ≥ floor`` cutoff (S6.15, LR-7).
+
+    A C¹-continuous smoothstep: 0 for ``p ≤ floor − width``, 1 for ``p ≥ floor + width``,
+    ``0.5`` exactly at the floor. Multiplying conviction by this taper removes the sizing
+    discontinuity at 0.55 (the hard floor jumps from 0 to κ·f*), which is the over-/under-betting
+    artefact LR-7 flags; the gentle ramp is the calibrated growth-optimal shape.
+    """
+    p = np.asarray(p, dtype=float)
+    t = np.clip((p - (floor - width)) / (2.0 * width), 0.0, 1.0)
+    return _scalarize(t * t * (3.0 - 2.0 * t))
+
+
+def kappa_baker_mchale(edge, resid_var):
+    """Per-instrument Kelly shrinkage κᵢ = eᵢ² / (eᵢ² + σᵢ²) (Baker–McHale).
+
+    ``edge`` is the instrument's signal edge (e.g. mean calibrated ``p̂ − ½``); ``resid_var`` its
+    post-calibration residual variance σᵢ². κᵢ → 1 when the edge dominates the noise and → 0 when
+    residual variance dominates, so it shrinks size hardest exactly where p̂ is least reliable.
+    Monotonically decreasing in ``resid_var``; bounded in [0, 1].
+    """
+    e2 = np.asarray(edge, dtype=float) ** 2
+    s2 = np.asarray(resid_var, dtype=float)
+    denom = e2 + s2
+    return _scalarize(np.where(denom > 0.0, e2 / denom, 0.0))
+
+
+def cer_improves(candidate: float, baseline: float, *, min_gain: float = 0.0) -> bool:
+    """The S6.15 CER gate: adopt a sizing change iff it strictly raises the OOS certainty-
+    equivalent by more than ``min_gain`` (else revert to the flat-κ baseline — the honest
+    default when more elaborate sizing buys no out-of-sample utility)."""
+    if not (np.isfinite(candidate) and np.isfinite(baseline)):
+        return False
+    return bool(candidate - baseline > min_gain)
 
 
 def kelly_fraction(p, b, d):
@@ -44,14 +81,22 @@ def fractional_kelly(
     kappa: float = KAPPA,
     floor: float = CONFIDENCE_FLOOR,
     cap: float = 1.0,
+    taper_width: float | None = None,
 ):
-    """κ·f*, zeroed below the confidence floor and clipped to [0, cap].
+    """κ·f*, gated by the confidence floor and clipped to [0, cap].
 
     Clipping to [0, cap] keeps sizing non-negative (the side is the primary's) and
-    bounds leverage when a tight stop-loss ``d`` inflates the raw Kelly fraction.
+    bounds leverage when a tight stop-loss ``d`` inflates the raw Kelly fraction. The floor is
+    applied two ways: ``taper_width is None`` (default) hard-zeros below ``floor`` — the shipped
+    behaviour; a positive ``taper_width`` (S6.15) instead multiplies by ``confidence_taper`` for a
+    continuous ramp. ``kappa`` may be a per-instrument array (Baker–McHale κᵢ).
     """
-    f = kappa * np.asarray(kelly_fraction(p, b, d), dtype=float)
-    f = np.where(np.asarray(p, dtype=float) < floor, 0.0, f)
+    f = np.asarray(kappa, dtype=float) * np.asarray(kelly_fraction(p, b, d), dtype=float)
+    p_arr = np.asarray(p, dtype=float)
+    if taper_width is None:
+        f = np.where(p_arr < floor, 0.0, f)
+    else:
+        f = f * np.asarray(confidence_taper(p_arr, floor=floor, width=taper_width), dtype=float)
     return _scalarize(np.clip(f, 0.0, cap))
 
 
@@ -82,13 +127,19 @@ def position_weight(
     floor: float = CONFIDENCE_FLOOR,
     cap: float = 1.0,
     max_leverage: float = MAX_LEVERAGE,
+    taper_width: float | None = None,
 ):
     """Signed position weight = side · fractional_kelly(p,b,d) · vol_target_leverage.
 
     The deliverable ``strategy_weights.csv`` value: positive = long, negative = short,
-    zero when p̂ is below the confidence floor.
+    zero when p̂ is below the confidence floor. ``kappa`` may be a per-instrument Baker–McHale
+    κᵢ array and ``taper_width`` switches the hard floor for the S6.15 smooth ramp — both adopted
+    only when the OOS certainty-equivalent improves (see ``cer_improves``).
     """
-    size = np.asarray(fractional_kelly(p, b, d, kappa=kappa, floor=floor, cap=cap), dtype=float)
+    size = np.asarray(
+        fractional_kelly(p, b, d, kappa=kappa, floor=floor, cap=cap, taper_width=taper_width),
+        dtype=float,
+    )
     lev = np.asarray(
         vol_target_leverage(realised_vol, target_vol=target_vol, max_leverage=max_leverage),
         dtype=float,

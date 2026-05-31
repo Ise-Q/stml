@@ -114,6 +114,63 @@ def test_expected_feature_families_present():
     assert all(pd.api.types.is_numeric_dtype(feats[c]) for c in feats.columns)
 
 
+# --- F16 concept-drift wiring (S1.8-b) --------------------------------------
+
+def _feat_frame(n: int = 400, seed: int = 0) -> pd.DataFrame:
+    """A finite synthetic feature frame (no warm-up NaN) to exercise F16 directly."""
+    rng = np.random.default_rng(seed)
+    idx = pd.bdate_range("2019-01-01", periods=n)
+    cols = [f"x{i}" for i in range(6)]
+    return pd.DataFrame(rng.normal(size=(n, 6)), index=idx, columns=cols)
+
+
+def test_f16_regime_alignment_is_truncation_invariant():
+    """F16's score at t is identical on data[:t+1] and data[:T] (right-edge causal)."""
+    from stml.metamodel.drift_features import regime_alignment_score
+
+    feats = _feat_frame(400, seed=1)
+    train_end = feats.index[120]
+    full = regime_alignment_score(feats, train_end=train_end, window=63, refit_every=21, seed=42)
+    t_iloc = 360
+    t = feats.index[t_iloc]
+    trunc = regime_alignment_score(
+        feats.iloc[: t_iloc + 1], train_end=train_end, window=63, refit_every=21, seed=42
+    )
+    assert np.isfinite(full.loc[t]) and np.isfinite(trunc.loc[t])  # actually scored, not NaN==NaN
+    np.testing.assert_allclose(float(full.loc[t]), float(trunc.loc[t]), rtol=1e-12, atol=1e-12)
+    scored = full.dropna()
+    assert ((scored >= 0.0) & (scored <= 1.0)).all()  # it is a probability
+
+
+def test_assemble_wires_f16_only_when_drift_enabled():
+    """F16 is added (exactly one column) iff a drift_train_end is supplied; off by default."""
+    ohlcv = _synthetic_ohlcv(n=320, seed=7)
+    sig = _signal(ohlcv, seed=2)
+    base = assemble_instrument_features(ohlcv, sig)
+    drifted = assemble_instrument_features(
+        ohlcv, sig, drift_train_end=pd.Timestamp(ohlcv["date"].iloc[200])
+    )
+    assert "f16_regime_alignment_score" not in base.columns
+    assert "f16_regime_alignment_score" in drifted.columns
+    assert set(base.columns).issubset(set(drifted.columns))
+    assert len(drifted.columns) == len(base.columns) + 1  # re-locked count: +1
+
+
+def test_no_metamodel_module_reads_frozen_parquet():
+    """Leakage guard: no metamodel module consumes the frozen feature_matrix.parquet."""
+    import pathlib
+
+    import alken_metamodel
+
+    src = pathlib.Path(alken_metamodel.__file__).parent
+    offenders = [
+        p.relative_to(src).as_posix()
+        for p in src.rglob("*.py")
+        if "_vendor" not in p.parts and "read_parquet" in p.read_text()
+    ]
+    assert not offenders, f"modules read parquet (frozen-matrix leak risk): {offenders}"
+
+
 # --- backward trend feature -------------------------------------------------
 
 def test_backward_trend_sign_and_cap():

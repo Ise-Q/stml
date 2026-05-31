@@ -138,4 +138,21 @@ def test_assemble_regime_features_merges_both_blocks():
     out = assemble_regime_features(ohlcv, fit_end=fit_end)
     assert "ewma_hmm_prob_highvol" in out.columns      # net-new block
     assert "f3_gmm_prob_highvol" in out.columns         # stml static block
+    assert "f17_hmm_state_hi" in out.columns            # F17 3-state HMM IS already wired
     assert isinstance(out.index, pd.DatetimeIndex)
+
+
+def test_f17_fit_uses_only_pre_fit_end_data():
+    """S1.8-b conformance: F17's HMM is fit on the ``<= fit_end`` prefix only, then causally
+    transformed — so appending post-fit_end data leaves the f17 score on a common date
+    unchanged (the discipline that keeps the OOS deliverable, fit_end < predict, leak-free)."""
+    close = _two_regime_close(n_calm=220, n_vol=220, seed=12)
+    ohlcv = _ohlcv_from_close(close)
+    fit_end = close.index[230]
+    t = close.index[300]  # a date present in both, strictly after fit_end
+    short = static_regime_features(ohlcv[ohlcv["date"] <= close.index[330]], fit_end=fit_end)
+    full = static_regime_features(ohlcv, fit_end=fit_end)
+    for col in ["f17_hmm_state_hi", "f17_hmm_state_lo", "f17_hmm_state_argmax"]:
+        np.testing.assert_allclose(
+            float(full.loc[t, col]), float(short.loc[t, col]), rtol=1e-9, atol=1e-12
+        )

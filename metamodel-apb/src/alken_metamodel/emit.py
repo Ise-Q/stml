@@ -174,6 +174,11 @@ def main(argv=None) -> None:
     parser.add_argument("--roster", default="default")
     parser.add_argument("--cv-scheme", default="cpcv")
     parser.add_argument("--no-macro", action="store_true")
+    # Pass-4 methodology, on by default: per-instrument embargo (S2.6) + F16 drift (S1.8-b).
+    parser.add_argument(
+        "--no-per-instrument-embargo", dest="per_instrument_embargo", action="store_false"
+    )
+    parser.add_argument("--no-drift", dest="use_drift", action="store_false")
     args = parser.parse_args(argv)
 
     set_seeds()
@@ -186,6 +191,8 @@ def main(argv=None) -> None:
         roster=args.roster,
         cv_scheme=args.cv_scheme,
         use_macro=not args.no_macro,
+        per_instrument_embargo=args.per_instrument_embargo,
+        use_drift=args.use_drift,
     )
     raw_preds, cal_preds, weights, diagnostics = build_deliverables(
         ohlcv, signals, config, asset_classes=args.asset_classes

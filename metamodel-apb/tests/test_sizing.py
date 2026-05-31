@@ -8,10 +8,15 @@ Closed forms (nlr-cw §7; Kelly 1956; MacLean-Ziemba-Blazenko 1992; Carver 2015)
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 from alken_metamodel.sizing import (
+    CONFIDENCE_FLOOR,
+    cer_improves,
+    confidence_taper,
     fractional_kelly,
+    kappa_baker_mchale,
     kelly_fraction,
     position_weight,
     vol_target_leverage,
@@ -74,3 +79,45 @@ def test_position_weight_signs_with_side_and_zeros_below_floor():
     assert w_short == pytest.approx(-w_long)
     # below floor -> flat regardless of side
     assert position_weight(side=1, p=0.5, b=1.0, d=1.0, realised_vol=0.25) == 0.0
+
+
+# --- S6.15: CER-gated sizing (smooth taper + per-instrument kappa) -----------
+
+
+def test_confidence_taper_endpoints_and_monotone():
+    width = 0.05
+    assert confidence_taper(CONFIDENCE_FLOOR - width, width=width) == pytest.approx(0.0)
+    assert confidence_taper(CONFIDENCE_FLOOR + width, width=width) == pytest.approx(1.0)
+    assert confidence_taper(CONFIDENCE_FLOOR, width=width) == pytest.approx(0.5)  # smoothstep mid
+    grid = np.linspace(0.45, 0.65, 50)
+    t = confidence_taper(grid, width=width)
+    assert np.all(np.diff(t) >= -1e-12)  # monotone non-decreasing
+    assert np.all((t >= 0.0) & (t <= 1.0))
+
+
+def test_taper_is_continuous_where_hard_floor_jumps():
+    eps = 1e-4
+    hard_jump = abs(fractional_kelly(0.55 + eps, 1.0, 1.0) - fractional_kelly(0.55 - eps, 1.0, 1.0))
+    taper_jump = abs(
+        fractional_kelly(0.55 + eps, 1.0, 1.0, taper_width=0.05)
+        - fractional_kelly(0.55 - eps, 1.0, 1.0, taper_width=0.05)
+    )
+    assert hard_jump > 0.02  # hard floor discontinuously jumps to ~κ·f*(0.55)
+    assert taper_jump < 1e-3  # the taper is continuous at the old floor
+
+
+def test_kappa_baker_mchale_formula_and_monotone():
+    assert kappa_baker_mchale(0.1, 0.0) == pytest.approx(1.0)  # no residual var -> full conviction
+    assert kappa_baker_mchale(0.0, 0.1) == pytest.approx(0.0)  # no edge -> no bet
+    assert kappa_baker_mchale(0.1, 0.01) == pytest.approx(0.5)  # e²=σ²=0.01 -> ½
+    resid_var = np.array([0.001, 0.01, 0.1, 1.0])
+    k = kappa_baker_mchale(0.1, resid_var)
+    assert np.all(np.diff(k) < 0)  # strictly decreasing in residual variance
+    assert np.all((k >= 0.0) & (k <= 1.0))
+
+
+def test_cer_gate_adopts_only_on_strict_gain():
+    assert cer_improves(0.50, 0.40) is True
+    assert cer_improves(0.40, 0.50) is False
+    assert cer_improves(0.40, 0.40) is False  # tie -> revert to flat kappa
+    assert cer_improves(0.401, 0.40, min_gain=0.005) is False  # below margin -> revert

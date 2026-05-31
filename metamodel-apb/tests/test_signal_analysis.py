@@ -17,8 +17,10 @@ from alken_metamodel.signal_analysis import (
     henriksson_merton,
     information_coefficient,
     information_ratio,
+    pesaran_timmermann,
     signal_hit_rate,
     signal_turnover,
+    treynor_mazuy,
 )
 
 
@@ -78,3 +80,57 @@ def test_henriksson_merton_known_z_and_pvalue():
     assert hit == pytest.approx(0.6)
     assert z == pytest.approx(2.0)
     assert p == pytest.approx(1.0 - norm.cdf(2.0))
+
+
+# --- S5.10: Pesaran–Timmermann (primary, base-rate-aware) -------------------
+
+
+def test_pesaran_timmermann_known_statistic():
+    # 5 up / 5 down actual; 6 correctly signed; predicted-up = 5 -> P=0.6, P*=0.5,
+    # var(P)=0.025, var(P*)=0.0025 -> PT = 0.1/sqrt(0.0225) = 0.6667 (PT 1992 closed form).
+    real = np.array([1, 1, 1, 1, 1, -1, -1, -1, -1, -1.0])
+    pred = np.array([1, 1, 1, -1, -1, 1, 1, -1, -1, -1.0])
+    stat, pval = pesaran_timmermann(real, pred)
+    assert stat == pytest.approx(2.0 / 3.0, rel=1e-9)
+    assert pval == pytest.approx(1.0 - norm.cdf(2.0 / 3.0))
+
+
+def test_pesaran_timmermann_perfect_timer_is_significant():
+    rng = np.random.default_rng(0)
+    real = rng.choice([-1.0, 1.0], 300)  # balanced market
+    stat, pval = pesaran_timmermann(real, real.copy())  # perfect calls
+    assert stat > 5.0
+    assert pval < 1e-6
+
+
+def test_pesaran_timmermann_discriminates_base_rate_from_skill():
+    """The crux: an always-long call in an UP market fools the hit-rate proxy (H–M z>0) but
+    Pesaran–Timmermann, which conditions on the base rates, correctly reports no skill."""
+    real = np.ones(200)
+    real[:60] = -1.0  # 70% up market (base-rate imbalance)
+    pred = np.ones(200)  # always long — zero directional information
+    hit, z, _ = henriksson_merton(real, pred)
+    stat, _ = pesaran_timmermann(real, pred)
+    assert hit == pytest.approx(0.7)
+    assert z > 2.0  # the proxy shows SPURIOUS skill from the base rate
+    assert stat == pytest.approx(0.0)  # PT correctly finds no directional skill
+
+
+# --- S5.10: Treynor–Mazuy convexity (corroboration) ------------------------
+
+
+def test_treynor_mazuy_recovers_known_gamma():
+    rng = np.random.default_rng(1)
+    m = rng.normal(0.0, 0.02, 400)
+    port = 0.5 + 1.0 * m + 2.0 * m * m + rng.normal(0.0, 1e-6, 400)  # explicit +convexity
+    gamma, t, _ = treynor_mazuy(m, port)
+    assert gamma == pytest.approx(2.0, rel=0.05)
+    assert t > 3.0  # significantly positive timing convexity
+
+
+def test_treynor_mazuy_zero_gamma_for_linear_payoff():
+    rng = np.random.default_rng(2)
+    m = rng.normal(0.0, 0.02, 400)
+    port = 0.3 + 0.8 * m + rng.normal(0.0, 1e-4, 400)  # constant-beta, no timing
+    gamma, _, _ = treynor_mazuy(m, port)
+    assert abs(gamma) < 0.5  # no systematic convexity

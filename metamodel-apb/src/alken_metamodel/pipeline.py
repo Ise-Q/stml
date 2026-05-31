@@ -19,10 +19,14 @@ Leakage discipline enforced here:
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from stml.io import _find_repo_root
 from stml.metamodel.scope import ASSET_CLASS_MAP
 
 from .calibration import PlattCalibrator
@@ -52,6 +56,26 @@ def class_members(asset_class: str) -> list[str]:
     return [inst for inst, c in ASSET_CLASS_MAP.items() if c == code]
 
 
+@lru_cache(maxsize=1)
+def load_embargo_days() -> dict[str, int]:
+    """Per-instrument ``embargo_p90`` (trading days) from released ``instrument_scope.json``.
+
+    Located via stml's repo-root resolver (same mechanism as ``load_clean_data``). The file is
+    released *metadata* (purge lengths / scope), not features, so reading it introduces no
+    leakage; it only lets the CV purge a per-instrument forward window instead of a flat 1%.
+    """
+    path = _find_repo_root(Path.cwd().resolve()) / "results" / "instrument_scope.json"
+    scope = json.loads(path.read_text())
+    return {tk: int(v["embargo_p90"]) for tk, v in scope.items()}
+
+
+def _embargo_kwargs(config: PipelineConfig, instruments) -> dict:
+    """CV embargo kwargs: per-instrument (S2.6) when enabled, else the uniform-pct default."""
+    if not config.per_instrument_embargo:
+        return {}
+    return {"instruments": instruments, "embargo_days": load_embargo_days()}
+
+
 @dataclass(frozen=True)
 class PipelineConfig:
     """Dates, barrier, CV and sizing settings. The prediction window is config-driven."""
@@ -63,10 +87,12 @@ class PipelineConfig:
     pt_sl: tuple[float, float] = (1.0, 1.0)
     max_holding: int = 10
     n_splits: int = 5
-    pct_embargo: float = 0.01
+    pct_embargo: float = 0.01  # uniform fallback embargo (⌈pct·T⌉ bars) when not per-instrument
+    per_instrument_embargo: bool = False  # S2.6: purge each instrument's own embargo_p90 (days)
     seed: int = 42
     use_regime: bool = True
     use_macro: bool = False  # join the PIT-lagged macro block (§1/§3) into the feature panel
+    use_drift: bool = False  # S1.8-b: append the F16 concept-drift column (causal, fe_train_end)
     #: "tree_linear" (fast default), "default" (tree/linear + reduced torch NNs, the shipped
     #: deliverable roster), or "full" (also adds the off-path KerasVSN comparison).
     roster: str = "tree_linear"
@@ -108,7 +134,9 @@ class _IdentityCalibrator:
         return np.asarray(proba, dtype=float)
 
 
-def fit_oos_calibrator(make_model, X, y, t1: pd.Series, sample_weight, config: PipelineConfig):
+def fit_oos_calibrator(
+    make_model, X, y, t1: pd.Series, sample_weight, config: PipelineConfig, instruments=None
+):
     """Fit a Platt calibrator on purged-OOS predictions of the **modelling** sample (S3.9/S6.11).
 
     The calibrator is fit only on the rows passed here — the caller restricts these to dates
@@ -116,7 +144,10 @@ def fit_oos_calibrator(make_model, X, y, t1: pd.Series, sample_weight, config: P
     Falls back to an identity map when the OOS sample is single-class or too thin to calibrate.
     Returns ``(calibrator, oos_predictions, finite_mask)`` so the caller reuses the OOS array.
     """
-    cv = PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
+    cv = PurgedKFold(
+        n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo,
+        **_embargo_kwargs(config, instruments),
+    )
     oos = oos_predictions(make_model, X, y, cv, sample_weight=sample_weight)
     finite = np.isfinite(oos)
     yv = np.asarray(y)[finite]
@@ -140,7 +171,12 @@ def build_instrument_panel(
     signal = signals.set_index("date")[instrument].sort_index()
     signal.index = pd.DatetimeIndex(signal.index)
 
-    feats = assemble_instrument_features(ohlcv_inst, signal)
+    feats = assemble_instrument_features(
+        ohlcv_inst,
+        signal,
+        drift_train_end=config.fe_train_end if config.use_drift else None,
+        drift_seed=config.seed,
+    )
     if config.use_regime:
         regime = assemble_regime_features(
             ohlcv_inst, fit_end=config.fe_train_end, seed=config.seed
@@ -188,13 +224,18 @@ def feature_columns(pooled: pd.DataFrame) -> list[str]:
     return [c for c in pooled.columns if c not in _NON_FEATURE]
 
 
-def _make_cv(t1: pd.Series, config: PipelineConfig):
-    """The selection splitter: PurgedKFold (default) or 15-path CombinatorialPurgedCV (S3.8)."""
+def _make_cv(t1: pd.Series, config: PipelineConfig, instruments=None):
+    """The selection splitter: PurgedKFold (default) or 15-path CombinatorialPurgedCV (S3.8).
+
+    With ``config.per_instrument_embargo`` (S2.6) and an aligned ``instruments`` Series, the
+    forward embargo is each instrument's own ``embargo_p90`` (trading days) rather than uniform 1%.
+    """
+    kw = _embargo_kwargs(config, instruments)
     if config.cv_scheme == "cpcv":
         return CombinatorialPurgedCV(
-            config.cpcv_groups, config.cpcv_test_groups, t1, config.pct_embargo
+            config.cpcv_groups, config.cpcv_test_groups, t1, config.pct_embargo, **kw
         )
-    return PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo)
+    return PurgedKFold(n_splits=config.n_splits, t1=t1, pct_embargo=config.pct_embargo, **kw)
 
 
 def _horse_race(factory, X, y, cv, sample_weight, seed) -> dict[str, float]:
@@ -208,16 +249,18 @@ def _horse_race(factory, X, y, cv, sample_weight, seed) -> dict[str, float]:
     return scores
 
 
-def select_model(X, y, t1, sample_weight, config: PipelineConfig) -> tuple[str, dict[str, float]]:
+def select_model(
+    X, y, t1, sample_weight, config: PipelineConfig, instruments=None
+) -> tuple[str, dict[str, float]]:
     """Horse-race the roster by mean OOS AUC under ``config.cv_scheme``; return winner + scores."""
-    cv = _make_cv(t1, config)
+    cv = _make_cv(t1, config, instruments=instruments)
     scores = _horse_race(_roster_factory(config), X, y, cv, sample_weight, config.seed)
     best = max(scores, key=lambda k: scores[k] if np.isfinite(scores[k]) else -np.inf)
     return best, scores
 
 
 def nested_cpcv_select_and_evaluate(
-    X, y, t1: pd.Series, sample_weight, config: PipelineConfig
+    X, y, t1: pd.Series, sample_weight, config: PipelineConfig, instruments=None
 ) -> pd.DataFrame:
     """Headline nested-CPCV: inner CPCV picks the estimator, outer CPCV scores it (S3.8).
 
@@ -238,6 +281,7 @@ def nested_cpcv_select_and_evaluate(
             outer_groups=config.cpcv_groups,
             outer_test_groups=config.cpcv_test_groups,
             pct_embargo=config.pct_embargo,
+            **_embargo_kwargs(config, instruments),
         )
     ):
         x_tr, y_tr, sw_tr = X.iloc[otr], y[otr], sample_weight[otr]
@@ -268,6 +312,7 @@ def per_instrument_diagnostics(
     config: PipelineConfig,
     *,
     oos=None,
+    instruments=None,
 ) -> pd.DataFrame:
     """Per-instrument purged-OOS metrics for the selected model (§5 per-instrument reporting).
 
@@ -276,7 +321,10 @@ def per_instrument_diagnostics(
     The OOS array may be supplied (reused from calibration) to avoid recomputing the CV pass.
     """
     if oos is None:
-        cv = PurgedKFold(n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo)
+        cv = PurgedKFold(
+            n_splits=config.n_splits, t1=t1_model, pct_embargo=config.pct_embargo,
+            **_embargo_kwargs(config, instruments),
+        )
         factory = _roster_factory(config)
         oos = oos_predictions(
             lambda: factory(seed=config.seed)[best_name],
@@ -319,6 +367,7 @@ def run_asset_class(
     X = pooled[cols]
     y = pooled["bin"].to_numpy()
     t1 = pooled["t1"]
+    inst_col = pd.Series(pooled["instrument"].to_numpy(), index=X.index)  # per-event ticker (S2.6)
     uniqueness = pooled["weight"].to_numpy()
     dates = pd.DatetimeIndex(pooled["date"])
 
@@ -326,8 +375,11 @@ def run_asset_class(
     pred_mask = np.asarray((dates >= config.predict_start) & (dates <= config.predict_end))
 
     x_model, y_model = X[model_mask], y[model_mask]
+    inst_model = inst_col[model_mask]
     sw_model = balanced_sample_weight(y_model, base=uniqueness[model_mask])
-    best, scores = select_model(x_model, y_model, t1[model_mask], sw_model, config)
+    best, scores = select_model(
+        x_model, y_model, t1[model_mask], sw_model, config, instruments=inst_model
+    )
 
     # One purged-OOS pass of the winner over the modelling sample feeds calibration, the per-
     # instrument diagnostics, and the class-level Brier/precision — all strictly pre-predict_start.
@@ -335,7 +387,7 @@ def run_asset_class(
         return _roster_factory(config)(seed=config.seed)[best]
 
     calibrator, oos_model, finite = fit_oos_calibrator(
-        _make_best, x_model, y_model, t1[model_mask], sw_model, config
+        _make_best, x_model, y_model, t1[model_mask], sw_model, config, instruments=inst_model
     )
     yv = y_model[finite]
     calibratable = finite.any() and len(np.unique(yv)) == 2
@@ -350,6 +402,7 @@ def run_asset_class(
         best,
         config,
         oos=oos_model,
+        instruments=inst_model,
     )
 
     model = _make_best()

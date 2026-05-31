@@ -26,22 +26,26 @@ from alken_metamodel.pipeline import (  # noqa: E402
 
 
 def run() -> None:
-    cfg = PipelineConfig(roster="default", cv_scheme="cpcv", use_macro=True)
+    # pass-4 shipped path: + per-instrument embargo (no count effect) + F16 concept-drift (+1)
+    cfg = PipelineConfig(roster="default", cv_scheme="cpcv", use_macro=True,
+                         per_instrument_embargo=True, use_drift=True)
     ohlcv, signals = load_clean_data()
-    out = ["# X.8 — measured per-class feature counts (shipped path: features + regime + macro)\n"]
+    out = ["# X.8 — measured per-class feature counts (pass-4: features + F16 + regime + macro)\n"]
     for cls in CLASSES:
         pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg)
         cols = feature_columns(pooled)
         n_macro = sum(c.startswith("macro_") for c in cols)
         n_regime = sum(c.startswith(("regime_", "ewma", "hmm")) for c in cols)
+        n_drift = sum(c.startswith("f16_") for c in cols)
         n_inst = sum(c.startswith("inst_") for c in cols)
-        n_core = len(cols) - n_macro - n_regime - n_inst
+        n_core = len(cols) - n_macro - n_regime - n_inst - n_drift
         line = (
             f"## {cls}: {len(cols)} feature columns\n"
-            f"- core={n_core}  macro={n_macro}  regime={n_regime}  inst_onehot={n_inst}\n"
+            f"- core={n_core}  F16_drift={n_drift}  macro={n_macro}  regime={n_regime}  "
+            f"inst_onehot={n_inst}\n"
         )
         out.append(line)
-        print(f"{cls}: total={len(cols)} core={n_core} macro={n_macro} "
+        print(f"{cls}: total={len(cols)} core={n_core} f16={n_drift} macro={n_macro} "
               f"regime={n_regime} inst={n_inst}")
     (results_dir() / "x8_feature_counts.md").write_text("\n".join(out))
     print("wrote results/x8_feature_counts.md")

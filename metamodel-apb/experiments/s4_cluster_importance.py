@@ -21,8 +21,8 @@ from alken_metamodel.seeding import set_seeds  # noqa: E402
 
 def run() -> None:
     set_seeds(42)
-    cfg = PipelineConfig(use_regime=False)
-    out = ["# S4.7 — Cluster feature importance on the real matrix\n"]
+    cfg = PipelineConfig(use_regime=False, use_drift=True)  # S4.8: re-check on the F16 matrix
+    out = ["# S4.7 — Cluster feature importance on the real matrix (pass-4: + F16)\n"]
     for cls in CLASSES:
         pooled, cols, mask = modelling_panel(cls, cfg)
         X, y, t1 = imputed_modelling_X(pooled, cols, mask)

@@ -20,6 +20,7 @@ dependencies = [
     "tensorflow",
     "pyarrow",
     "pywavelets>=1.9.0",
+    "arch>=8.0.0",
 ]
 
 [build-system]

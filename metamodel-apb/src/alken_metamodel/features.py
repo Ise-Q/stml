@@ -118,6 +118,8 @@ def assemble_instrument_features(
     signal_inst: pd.Series,
     *,
     trend_span: tuple[int, int] = DEFAULT_TREND_SPAN,
+    drift_train_end: pd.Timestamp | None = None,
+    drift_seed: int = 42,
 ) -> pd.DataFrame:
     """Assemble the full causal feature stack for ONE instrument over its full history.
 
@@ -126,18 +128,29 @@ def assemble_instrument_features(
     ohlcv_inst : long OHLCV for one instrument (cols ``date, instrument, open, high, low,
         close, volume`` (+optional ``open_interest``)); pass the FULL fixed-start history.
     signal_inst : date-indexed primary signal Series in {-1, 0, +1}.
+    drift_train_end : when supplied (S1.8-b), append the **F16 concept-drift** column
+        (``f16_regime_alignment_score``) — stml's causal covariate-shift discriminator that
+        scores how "recent" each row looks vs the pre-``drift_train_end`` FE-train era. It is a
+        *causal* rolling refit (per-refit seed keyed on the positional refit index, so it is
+        right-edge truncation-invariant); ``None`` (default) omits it, leaving the locked set.
 
     Returns a per-instrument ``DatetimeIndex`` float frame = stml core (F1/F2/F5/F6/F7/F8/F10)
-    + ext (F2-RS/F7-adds/F12/F13/F15/F5-adds) + z-twins + backward trend feature. UNFILTERED
-    (includes zero-signal days) and unkeyed — use ``filter_signal_days`` / ``attach_instrument``
-    downstream, and ``right_slice`` to enforce the fold boundary.
+    + ext (F2-RS/F7-adds/F12/F13/F15/F5-adds) + z-twins + backward trend feature (+ F16 when
+    ``drift_train_end`` is set). UNFILTERED (includes zero-signal days) and unkeyed — use
+    ``filter_signal_days`` / ``attach_instrument`` downstream, and ``right_slice`` to enforce
+    the fold boundary.
     """
     core = assemble_engineered(ohlcv_inst, signal_inst)
     ext = assemble_engineered_ext(ohlcv_inst, signal_inst)
     stack = pd.concat([core, ext], axis=1)
     z = add_z_twins(stack)
     trend = backward_trend_feature(_close_series(ohlcv_inst), span=trend_span)
-    feats = pd.concat([stack, z, trend.reindex(stack.index)], axis=1)
+    feats = pd.concat([stack, z, trend.reindex(stack.index)], axis=1).astype(float)
+    if drift_train_end is not None:
+        from stml.metamodel.drift_features import regime_alignment_score
+
+        drift = regime_alignment_score(feats, train_end=drift_train_end, seed=drift_seed)
+        feats = pd.concat([feats, drift.reindex(feats.index)], axis=1)
     return feats.astype(float)
 
 
