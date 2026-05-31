@@ -60,8 +60,9 @@ def performance_metrics(returns: pd.Series, *, ann: int = ANNUALISATION) -> dict
     sd = r.std(ddof=1) if n > 1 else 0.0
     ann_vol = float(sd * np.sqrt(ann)) if n > 1 else float("nan")
     sharpe = float(r.mean() / sd * np.sqrt(ann)) if sd > 0 else float("nan")
-    downside = r[r < 0]
-    dsd = downside.std(ddof=1) if len(downside) > 1 else 0.0
+    # Sortino–Price (1994) downside deviation: FULL-T denominator with target 0 (positive returns
+    # contribute 0), not the common std()-over-negatives-only mis-implementation.
+    dsd = float(np.sqrt(np.mean(np.minimum(r, 0.0) ** 2)))
     sortino = float(r.mean() / dsd * np.sqrt(ann)) if dsd > 0 else float("nan")
     peak = np.maximum.accumulate(equity)
     max_dd = float((equity / peak - 1.0).min())

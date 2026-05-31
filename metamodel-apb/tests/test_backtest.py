@@ -39,6 +39,21 @@ def test_sharpe_and_vol_closed_form():
     assert m["total_return"] == pytest.approx(np.prod(1 + arr) - 1)
 
 
+def test_sortino_uses_full_t_downside_deviation():
+    """Sortino–Price (1994): the downside deviation has a FULL-T denominator with target 0 (positive
+    returns contribute 0), NOT the common mis-implementation of std() over the negatives only."""
+    r = pd.Series([0.02, -0.01, 0.03, -0.02, 0.01])
+    m = performance_metrics(r)
+    arr = r.to_numpy()
+    dd_full_t = np.sqrt(np.mean(np.minimum(arr, 0.0) ** 2))  # target=0, divide by T (Sortino–Price)
+    expected = arr.mean() / dd_full_t * np.sqrt(252)
+    assert m["sortino"] == pytest.approx(expected)
+    # and it must differ from the std-of-negatives-only mis-implementation
+    neg = arr[arr < 0]
+    mis = arr.mean() / neg.std(ddof=1) * np.sqrt(252)
+    assert not np.isclose(m["sortino"], mis)
+
+
 def test_flat_strategy_is_zero_return_no_drawdown():
     m = performance_metrics(pd.Series([0.0, 0.0, 0.0]))
     assert m["total_return"] == 0.0
