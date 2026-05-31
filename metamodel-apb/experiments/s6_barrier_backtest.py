@@ -49,6 +49,7 @@ from alken_metamodel.significance import (  # noqa: E402
     ljung_box_test,
     min_track_record_length,
     sharpe_ci_analytic,
+    stationary_bootstrap_cer_diff_ci,
     stationary_bootstrap_sharpe_ci,
     t_statistic,
 )
@@ -65,7 +66,9 @@ ANN = 252
 
 
 def class_oos_meta(cls: str, cfg: PipelineConfig, ohlcv, signals):
-    """(best_model, meta) where meta = OOS [date, instrument, weight, t1] for the class."""
+    """(best, meta, preds, model_oof). meta = OOS [date, instrument, weight, t1]; model_oof =
+    the calibrated MODELLING-sample OOF preds (dates <= modelling_end), the leakage-safe κᵢ inputs
+    for EX.6 (already computed for calibration here, previously discarded)."""
     set_seeds(cfg.seed)
     pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg)
     cols = feature_columns(pooled)
@@ -81,7 +84,7 @@ def class_oos_meta(cls: str, cfg: PipelineConfig, ohlcv, signals):
     model = _roster_factory(cfg)(seed=cfg.seed)[best]
     model.fit(X[mmask], y[mmask], sample_weight=sw)
     # size on the CALIBRATED p̂ (matches the shipped deliverable; pass-3 S6.11)
-    cal, _, _ = fit_oos_calibrator(
+    cal, oos_model, finite = fit_oos_calibrator(
         lambda: _roster_factory(cfg)(seed=cfg.seed)[best], X[mmask], y[mmask], t1[mmask], sw, cfg,
         instruments=inst[mmask],
     )
@@ -98,7 +101,17 @@ def class_oos_meta(cls: str, cfg: PipelineConfig, ohlcv, signals):
     meta = strategy_weights(preds, cfg)  # date, instrument, weight (row-aligned to preds)
     meta["t1"] = pd.DatetimeIndex(t1[pmask].to_numpy())
     preds = preds.assign(t1=pd.DatetimeIndex(t1[pmask].to_numpy()))
-    return best, meta, preds
+    # EX.6: calibrated modelling-sample OOF preds (purged-OOS, dates <= modelling_end, i.e.
+    # < predict_start → non-circular). Same edge/variance formula as the circular diagnostic.
+    model_oof = pd.DataFrame(
+        {
+            "date": dates[mmask][finite],
+            "instrument": pooled["instrument"].to_numpy()[mmask][finite],
+            "p_hat": np.clip(cal.transform(oos_model[finite]), 0.0, 1.0),
+            "y": y[mmask][finite],
+        }
+    )
+    return best, meta, preds, model_oof
 
 
 def _fmt(d: dict, keys) -> str:
@@ -131,6 +144,38 @@ def directional_calls(meta: pd.DataFrame, returns_panel: pd.DataFrame):
         np.asarray(mkt, dtype=float),
         np.asarray(pnl, dtype=float),
     )
+
+
+def standardise_then_repool_tm(sleeves, *, _return_debug: bool = False):
+    """S5.12 (LR-9 rec #5) — vol-target each sleeve to a COMMON scale by dividing BOTH its market
+    return and its signed PnL by that sleeve's market return-std (the SAME factor, so the
+    ``pnl = side·mkt`` identity is preserved), then pool and re-estimate the Treynor–Mazuy γ.
+
+    Standardising the regressor rescales TM's γ by the sleeve's σ, so large-scale sleeves stop
+    dominating the pooled quadratic — the mechanism behind the +1.18 Simpson's-paradox artefact.
+    The diagnostic is the **sign collapse** of the positive raw-pooled γ toward the (negative)
+    trade-count-weighted average of the per-sleeve γ. Diagnostic-only: writes nothing.
+    ``sleeves`` = list of ``(label, mkt, pnl, gamma_sleeve, n)``. Returns
+    ``(gamma_std, t_std, p_std, gamma_weighted_avg)`` (+ a debug dict if requested).
+    """
+    mkts, pnls, gammas, ns, dbg = [], [], [], [], []
+    for _label, mkt, pnl, g_sleeve, n in sleeves:
+        m = np.asarray(mkt, dtype=float)
+        p = np.asarray(pnl, dtype=float)
+        s = float(np.std(m, ddof=1)) if m.size > 1 else 0.0
+        if not np.isfinite(s) or s == 0.0 or m.size < 4:
+            continue
+        m_std, p_std_sleeve = m / s, p / s  # divide both by the SAME factor → preserves identity
+        mkts.append(m_std)
+        pnls.append(p_std_sleeve)
+        gammas.append(float(g_sleeve))
+        ns.append(int(n))
+        dbg.append((m_std, p_std_sleeve))
+    gamma_std, t_std, p_std = treynor_mazuy(np.concatenate(mkts), np.concatenate(pnls))
+    gamma_wavg = float(np.average(gammas, weights=np.asarray(ns, dtype=float)))
+    if _return_debug:
+        return gamma_std, t_std, p_std, gamma_wavg, {"per_sleeve": dbg}
+    return gamma_std, t_std, p_std, gamma_wavg
 
 
 def utility_line(label: str, net: pd.Series, meta: pd.DataFrame, returns: pd.DataFrame) -> str:
@@ -189,37 +234,93 @@ def significance_block(net: pd.Series) -> str:
     )
 
 
+def resize(all_preds: pd.DataFrame, cfg: PipelineConfig, rets, kappa_map: dict | None) -> pd.Series:
+    """Re-size every OOS bet with an optional per-instrument κ map → barrier-exact net returns.
+    NON-deliverable (writes nothing); shared by the S6.15 taper gate and the EX.6 κᵢ gate."""
+    pt, sl = cfg.pt_sl
+    w = []
+    for row in all_preds.itertuples(index=False):
+        if not (pd.notna(row.ann_vol) and pd.notna(row.side)):
+            w.append(0.0)
+            continue
+        k = kappa_map.get(row.instrument, KAPPA) if kappa_map else KAPPA
+        w.append(
+            position_weight(
+                side=row.side, p=row.prediction, b=pt, d=sl, realised_vol=row.ann_vol,
+                target_vol=TARGET_VOL, kappa=k, taper_width=TAPER_WIDTH,
+            )
+        )
+    alt = all_preds[["date", "instrument"]].copy()
+    alt["weight"] = w
+    alt["t1"] = all_preds["t1"].to_numpy()
+    return barrier_backtest(alt, rets)[0]
+
+
+def leakage_safe_kappa(model_oof: pd.DataFrame, predict_start) -> dict:
+    """Per-instrument Baker–McHale κᵢ from MODELLING-sample OOF preds only (EX.6, non-circular).
+
+    Identical edge/variance formula to the circular OOS diagnostic in ``cer_gate_block`` — only the
+    estimation window moves (dates strictly < predict_start). The window check is the leakage guard
+    the pass-4 OOS-estimated κᵢ failed."""
+    if not (pd.DatetimeIndex(model_oof["date"]) < pd.Timestamp(predict_start)).all():
+        raise AssertionError("EX.6 κᵢ estimation window leaks into the OOS deliverable window")
+    return {
+        inst: float(
+            kappa_baker_mchale(abs(float(np.mean(g["p_hat"])) - 0.5), float(np.var(g["p_hat"])))
+        )
+        for inst, g in model_oof.groupby("instrument")
+    }
+
+
+def ex6_gate_block(model_oof_all, all_preds, cfg, rets, net_base) -> tuple[str, bool]:
+    """EX.6 — leakage-safe per-instrument κᵢ, gated on (i) a >5% relative OOS-CER gain AND (ii) a
+    paired studentised CER-difference bootstrap CI excluding 0. Returns ``(markdown, adopt)``; the
+    decision is surfaced either way and adoption HALTs before any re-emit (expected: revert)."""
+    kap_ls = leakage_safe_kappa(model_oof_all, cfg.predict_start)
+    net_kappa_ls = resize(all_preds, cfg, rets, kap_ls)
+    cer_base = certainty_equivalent(net_base)
+    cer_ls = certainty_equivalent(net_kappa_ls)
+    rel_gain = (cer_ls - cer_base) / abs(cer_base) if cer_base else float("nan")
+    ci_lo, ci_hi = stationary_bootstrap_cer_diff_ci(
+        net_kappa_ls.to_numpy(), net_base.to_numpy(), risk_aversion=5.0, seed=cfg.seed
+    )
+    adopt = bool(rel_gain > 0.05 and ci_lo > 0)
+    decision = (
+        "ADOPT leakage-safe κᵢ"
+        if adopt
+        else "REVERT to flat κ=0.25 (leakage-safe κᵢ gain immaterial / CI contains 0)"
+    )
+    print(
+        f"EX.6 GATE: base CER={cer_base:.6f} | κᵢ(leak-safe) CER={cer_ls:.6f} "
+        f"(rel {rel_gain:+.1%}) | CER-diff 95% CI=[{ci_lo:.6f},{ci_hi:.6f}] -> {decision}"
+    )
+    md = (
+        "## EX.6 — leakage-safe per-instrument κᵢ (sizing follow-up)\n"
+        f"- flat κ=0.25 (deliverable): OOS CER(daily, γ=5)={cer_base:.6f}\n"
+        f"- **leakage-safe κᵢ** (modelling-sample OOF, dates < predict_start; "
+        f"κᵢ∈[{min(kap_ls.values()):.3f},{max(kap_ls.values()):.3f}]): OOS CER={cer_ls:.6f} "
+        f"(rel {rel_gain:+.1%})\n"
+        f"- paired studentised CER-difference 95% CI = [{ci_lo:.6f}, {ci_hi:.6f}] "
+        f"({'EXCLUDES 0' if ci_lo > 0 else 'contains 0'})\n"
+        f"- **Decision: {decision}.** Adoption requires BOTH a +5% relative gain and a CI "
+        f"excluding 0; contrast the **circular OOS κᵢ** (look-ahead) reported in S6.15.\n"
+    )
+    return md, adopt
+
+
 def cer_gate_block(all_preds: pd.DataFrame, cfg: PipelineConfig, rets, net_base: pd.Series) -> str:
     """S6.15 CER gate. The DECISION is made only on the **leakage-safe** smooth taper (a fixed
     function of p̂, no estimation): adopt iff it strictly raises the OOS certainty-equivalent over
     the flat-κ / hard-floor deliverable. The per-instrument Baker–McHale κᵢ variant is reported as
     a **circular diagnostic only** — its κᵢ is estimated on the OOS window itself, so any CER gain
-    is look-ahead, not a valid out-of-sample improvement (a leakage-safe κᵢ needs modelling-sample
-    residuals — future work)."""
-    pt, sl = cfg.pt_sl
-
-    def resize(kappa_map: dict | None) -> pd.Series:
-        w = []
-        for row in all_preds.itertuples(index=False):
-            if not (pd.notna(row.ann_vol) and pd.notna(row.side)):
-                w.append(0.0)
-                continue
-            k = kappa_map.get(row.instrument, KAPPA) if kappa_map else KAPPA
-            w.append(position_weight(side=row.side, p=row.prediction, b=pt, d=sl,
-                                     realised_vol=row.ann_vol, target_vol=TARGET_VOL,
-                                     kappa=k, taper_width=TAPER_WIDTH))
-        alt = all_preds[["date", "instrument"]].copy()
-        alt["weight"] = w
-        alt["t1"] = all_preds["t1"].to_numpy()
-        return barrier_backtest(alt, rets)[0]
-
+    is look-ahead, not a valid out-of-sample improvement (a leakage-safe κᵢ is EX.6 below)."""
     kap = {  # OOS-estimated κᵢ — CIRCULAR, diagnostic only
         inst: float(kappa_baker_mchale(abs(float(np.mean(g["prediction"])) - 0.5),
                                        float(np.var(g["prediction"]))))
         for inst, g in all_preds.groupby("instrument")
     }
-    net_taper = resize(None)        # leakage-safe: flat κ + smooth taper
-    net_kappa = resize(kap)         # circular diagnostic: + OOS-fit κᵢ
+    net_taper = resize(all_preds, cfg, rets, None)   # leakage-safe: flat κ + smooth taper
+    net_kappa = resize(all_preds, cfg, rets, kap)    # circular diagnostic: + OOS-fit κᵢ
     cer_base = certainty_equivalent(net_base)
     cer_taper = certainty_equivalent(net_taper)
     cer_kappa = certainty_equivalent(net_kappa)
@@ -254,14 +355,20 @@ def run() -> None:
     out = ["# S6 — barrier-exact + cost-aware backtest (real OOS, pass-4 path)\n"]
     metas = []
     all_preds = []
+    model_oofs = []  # EX.6: leakage-safe modelling-sample OOF preds per class
+    sleeves = []  # S5.12: per-sleeve (mkt, pnl, γ, n) for the standardise-then-repool TM
     for cls in CLASSES:
-        best, meta, preds = class_oos_meta(cls, cfg, ohlcv, signals)
+        best, meta, preds, model_oof = class_oos_meta(cls, cfg, ohlcv, signals)
         metas.append(meta)
         all_preds.append(preds)
+        model_oofs.append(model_oof)
         sub = rets[[c for c in class_members(cls) if c in rets.columns]]
         _, simple = backtest_strategy(meta[["date", "instrument", "weight"]], sub,
                                       max_holding=cfg.max_holding)
         net_bex, bex = barrier_backtest(meta, sub)
+        mkt_c, pnl_c = directional_calls(meta, sub)[2:]  # S5.12: acted-trade timing series
+        g_c = float(treynor_mazuy(mkt_c, pnl_c)[0]) if mkt_c.size else float("nan")
+        sleeves.append((cls, mkt_c, pnl_c, g_c, int(mkt_c.size)))
         out.append(
             f"## {cls} — model `{best}` (calibrated sizing)\n"
             f"- simple (max_holding={cfg.max_holding}): "
@@ -297,6 +404,41 @@ def run() -> None:
     pooled_preds = pd.concat(all_preds, ignore_index=True)
     out.append(significance_block(net_all))
     out.append(cer_gate_block(pooled_preds, cfg, rets, net_all))
+
+    # EX.6 — leakage-safe per-instrument κᵢ (non-circular), gated on the two-part meaningful bar.
+    model_oof_all = pd.concat(model_oofs, ignore_index=True)
+    ex6_md, ex6_adopt = ex6_gate_block(model_oof_all, pooled_preds, cfg, rets, net_all)
+    out.append(ex6_md)
+    if ex6_adopt:
+        print("HALT: EX.6 cleared the meaningful-gain bar — do NOT re-emit; surface for approval.")
+        (results_dir() / "EX6_ADOPT_HALT.txt").write_text(ex6_md)
+
+    # S5.12 — standardise-then-repool TM (in-data aggregation-artefact proof). Diagnostic-only.
+    g_std, t_std, p_std, g_wavg = standardise_then_repool_tm(sleeves)
+    raw_pool_g = float(treynor_mazuy(*directional_calls(allmeta, rets)[2:])[0])
+    collapsed = bool(
+        np.sign(g_std) == np.sign(g_wavg) or abs(g_std - g_wavg) < abs(raw_pool_g - g_wavg)
+    )
+    verdict = (
+        "COLLAPSES toward the negative sleeve average → artefact confirmed in our own data"
+        if collapsed
+        else "DOES NOT collapse — HALT (contradicts the S5.11 resolution)"
+    )
+    out.append(
+        "## S5.12 — standardise-then-repool TM (in-data aggregation-artefact proof, LR-9 rec #5)\n"
+        f"- raw pooled γ (unstandardised) = {raw_pool_g:+.4f} (the apparent 'timing' artefact)\n"
+        f"- **standardised-pooled γ = {g_std:+.4f}** (t={t_std:.2f}, p={p_std:.3f})\n"
+        f"- trade-count-weighted average of per-sleeve γ = {g_wavg:+.4f}\n"
+        f"- **{verdict}**\n"
+    )
+    print(
+        f"S5.12: raw pooled γ={raw_pool_g:+.4f} -> standardised-pooled γ={g_std:+.4f} "
+        f"(weighted avg {g_wavg:+.4f}) | {'COLLAPSE' if collapsed else 'NO-COLLAPSE (HALT)'}"
+    )
+    if not collapsed:
+        print("HALT: S5.12 γ did not collapse — surface; contradicts the S5.11 resolution.")
+        (results_dir() / "S512_NO_COLLAPSE_HALT.txt").write_text(out[-1])
+
     # persist the pooled net return series so §6 inference is reproducible from an artifact
     net_all.rename("net_return").to_frame().to_csv(results_dir() / "s6_net_returns.csv")
     (results_dir() / "s6_barrier_backtest.md").write_text("\n".join(out))
