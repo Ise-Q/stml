@@ -337,10 +337,11 @@ certainty-equivalent:
 TM:** the *pooled* Treynor–Mazuy γ is positive and nominally significant (+1.18, t=2.55) — but with
 PT negative and the Sharpe insignificant, convexity *without* directional accuracy is the signature
 of **the stop/barrier exit asymmetry (winners ride, losers are cut), not market timing**; it is not a
-tradeable signal. (Two honesty notes: our TM regresses signed-PnL on each trade's *own* realised
-return rather than an external market benchmark, so it is a convexity diagnostic, not canonical TM;
-and the pooled γ is partly an aggregation effect — the Equity sleeve's γ is significantly *negative*,
-−4.51.) Cite Henriksson–Merton 1981 (pp. 513–533), Treynor–Mazuy 1966, Pesaran–Timmermann 1992.
+tradeable signal. (A measurement note: our TM regresses signed-PnL on each trade's *own* realised
+return rather than an external market benchmark, so it is a convexity diagnostic, not canonical TM.)
+The **full resolution** — a scale-aggregation artefact compounded by mechanical exit convexity, with
+PT as the scale-invariant primary — is S5.11, and its in-data proof is S5.12. Cite Henriksson–Merton
+1981 (pp. 513–533), Treynor–Mazuy 1966, Pesaran–Timmermann 1992.
 
 **S5.11 — the pooled-TM convexity is an aggregation artefact, not timing (LR-9).** The positive
 pooled Treynor–Mazuy coefficient (γ = +1.18, t = 2.55) is not evidence of market-timing skill but an
@@ -595,10 +596,10 @@ Kelly stake (Gramegna-Giudici 2021); single sample-weight channel for imbalance 
   (S6.14). The deflation gate *corroborates* (pooled DSR [0.61 → 0.20], PBO 0.35, MinBTL up to 3.1y
   vs ~0.5y OOS), and so do AUC ≈ 0.5, near-zero cluster MDA (§4), and **no positive directional
   timing** (Pesaran–Timmermann negative everywhere, §5). The positive Sharpe is diversification +
-  vol-targeting + the barrier exit, not act/skip skill. **One honest wrinkle:** the *pooled*
-  Treynor–Mazuy γ is positive-significant (+1.18, t=2.55), but it is an aggregation artefact (the
-  Equity sleeve γ is significantly negative) reflecting convex big-move capture from the exit
-  mechanism — PT, the directional test, shows no skill. The pass-4 re-open (F16 + per-instrument
+  vol-targeting + the barrier exit, not act/skip skill. **One honest wrinkle (resolved — S5.11/S5.12):**
+  the *pooled* Treynor–Mazuy γ is positive-significant (+1.18, t=2.55) but is a scale-aggregation
+  artefact, not timing skill; PT, the scale-invariant directional test, shows none. The pass-4 re-open
+  (F16 + per-instrument
   embargo) left this unchanged: more features, IC still ≈ 0, which strengthens the Fundamental-Law
   null rather than weakening it.
 - **Calibration is now shipped (S3.9), not deferred:** per-class Platt fit train-only on the
