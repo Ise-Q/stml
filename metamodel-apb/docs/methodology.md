@@ -342,6 +342,39 @@ return rather than an external market benchmark, so it is a convexity diagnostic
 and the pooled γ is partly an aggregation effect — the Equity sleeve's γ is significantly *negative*,
 −4.51.) Cite Henriksson–Merton 1981 (pp. 513–533), Treynor–Mazuy 1966, Pesaran–Timmermann 1992.
 
+**S5.11 — the pooled-TM convexity is an aggregation artefact, not timing (LR-9).** The positive
+pooled Treynor–Mazuy coefficient (γ = +1.18, t = 2.55) is not evidence of market-timing skill but an
+aggregation artefact compounded by mechanical convexity. First, pooling sub-portfolios of
+heterogeneous return scale, volatility and beta into one quadratic-timing regression is known to
+yield inconsistent, sign-reversing coefficients — a regression instance of Simpson's paradox /
+aggregation bias (Blyth 1972; Robinson 1950; Pesaran & Smith 1995; Zellner 1962) — and here the
+per-sleeve coefficients (Equity γ = −4.51, significant; Energy +0.81 and Metals −2.05, both
+insignificant) reject coefficient homogeneity and confirm the reversal. Second, the convexity the
+pooled regression detects is the mechanical, option-like convexity of the barrier-exact exit, not
+directional forecasting: **Jagannathan & Korajczyk (1986)** show that holding option-like or levered
+payoffs produces *artificial* market-timing ability where none exists, and a protective,
+big-move-capturing stop/barrier rule is exactly such a convex, option-isomorphic payoff
+(Henriksson & Merton 1981; Glosten & Jagannathan 1994; Fung & Hsieh 2001). Market-timing skill is
+therefore assessed primarily by the **Pesaran & Timmermann (1992, pp. 461–465)** directional-accuracy
+test, which — being a sign / contingency-table statistic rather than a magnitude regression — is
+invariant to the scale heterogeneity that drives the pooled-γ artefact; its result (pooled −2.31,
+p ≈ 0.99) confirms the absence of timing skill, consistent with the disaggregated TM evidence.
+(Treynor & Mazuy 1966 is a practitioner *HBR* article cited only for the quadratic specification, not
+as authority on the artefact; and PT is undefined when all directional calls coincide — its power
+depends on the up/down balance of the realised series.)
+
+**S5.12 — the artefact reproduced in our own data (standardise-then-repool, LR-9 rec #5).** LR-9's
+cheap in-data check converts the cited theory into direct evidence. Re-estimating the pooled TM
+regression after **vol-targeting each sleeve to a common scale** — dividing each sleeve's realised
+market return *and* its signed PnL by that sleeve's return-standard-deviation (the *same* factor, so
+the per-trade `pnl = side · return` identity is preserved) — **collapses the pooled γ from +1.18 to
+−0.0031 (t = −0.14, p = 0.89)**, against a trade-count-weighted average of the per-sleeve γ of
+**−1.835**. Once the sleeves share a common scale the manufactured convexity disappears and the
+pooled coefficient reverts into the (insignificant) negative regime of its members — direct
+in-sample proof that the +1.18 was scale-aggregation, not timing. (Diagnostic only —
+`experiments/s6_barrier_backtest.py`, written to the gitignored `experiments/results/`; the
+deliverable CSVs are untouched.)
+
 **Honest reading.** Classification-wise the metamodel adds clear value only on Equity (all three
 names AUC ≈ 0.60, consistent with 15/15 CPCV paths); Metals and Energy are mixed and dragged by
 small-sample names (gc1s 138, ho1s 61, ng1s 68 labels). A pooled AUC would have hidden both. Mean
@@ -379,10 +412,16 @@ sized on the **calibrated** p̂ (§3.9). Net of costs:
 
 | Book | Model | Sharpe | Sortino | Ann. vol | Max DD | Turnover/yr | Hold (d) | Gross→Net |
 |---|---|---|---|---|---|---|---|---|
-| **All 11** | — | **1.31** | 1.81 | 7.5% | −2.6% | 53.7 | 2.8 | +8.3% → **+4.9%** |
-| Energy | torch-MLP | 1.86 | 3.15 | 2.9% | −1.0% | 7.8 | 3.0 | +3.2% → +2.7% |
-| Equity | XGBoost | 0.86 | 1.19 | 5.2% | −2.0% | 22.6 | 2.4 | +3.6% → +2.2% |
+| **All 11** | — | **1.31** | 1.99 | 7.5% | −2.6% | 53.7 | 2.8 | +8.3% → **+4.9%** |
+| Energy | torch-MLP | 1.86 | 3.22 | 2.9% | −1.0% | 7.8 | 3.0 | +3.2% → +2.7% |
+| Equity | XGBoost | 0.86 | 1.37 | 5.2% | −2.0% | 22.6 | 2.4 | +3.6% → +2.2% |
 | Metals | logistic | 0.00 | 0.01 | 3.8% | −2.8% | 23.3 | 3.0 | +1.3% → −0.0% |
+
+> **Sortino convention.** The downside deviation uses the **full-T denominator with target 0**
+> (Sortino & Price 1994) — positive returns contribute zero to the semivariance and the divisor is
+> the *whole* sample length, not the count of negative observations. We deliberately avoid the
+> common mis-implementation that takes `std()` over the negative returns only (a smaller, biased
+> divisor that inflates Sortino); a known-value test (`tests/test_backtest.py`) pins the full-T form.
 
 These are the **pass-4** numbers (per-instrument embargo + the F16 re-open + calibrated sizing).
 Versus pass-3 the pooled Sharpe eased 1.55 → 1.31 and Equity 1.36 → 0.86 while Metals rose from
@@ -541,6 +580,12 @@ Kelly stake (Gramegna-Giudici 2021); single sample-weight channel for imbalance 
   `feature_matrix.parquet` is never consumed — asserted by `test_no_metamodel_module_reads_frozen_parquet`.
 - **Config-driven window:** the prediction window is a `PipelineConfig` field, never hardcoded to
   Jan–Jun 2022 — the grader swaps in the hidden Jul–Dec 2022 half by changing one config value.
+- **Data loading conforms to the base (X.11):** both the deliverable (`emit.py` `main()`) and the §6
+  barrier backtest ingest OHLCV + signals through the base's **`stml.io.load_clean_data()`** — i.e.
+  the authoritative `missing-data-report.md` policy: **keep the 765 zero-volume settle rows, drop
+  only the 3 Sunday 2005-05-08 rows, and never forward-fill structural NaNs**. No bespoke zero-volume
+  drop or ffill is introduced, so the metamodel sees byte-for-byte the shared base's cleaned panel —
+  ruling out a silent data-cleaning inconsistency with the rest of the cohort.
 
 ## Limitations (honest)
 
@@ -575,6 +620,11 @@ Kelly stake (Gramegna-Giudici 2021); single sample-weight channel for imbalance 
   are attributed to **Guidolin–Timmermann (St. Louis Fed WP 2005-034)**, with the **Ang–Bekaert
   Wald-test caveat (p = 0.156)** noted; the Kelly/vol-target convention cites **Carver 2015 Ch.9
   p.146**; the MZB fractional-Kelly figures keep ≈50%/≈75% and the unsupported "56%" is removed. The
-  one residual is confirming the Carver page against the print edition before academic submission.
+  two literature-note flags are resolved honestly: the **Ang–Bekaert Table-2 correlation *values* are
+  not quoted** here (the Japan/UK figures are sourced to Guidolin–Timmermann; Ang–Bekaert is cited
+  only for the p = 0.156 Wald caveat), and the **Carver 2015 Ch.9 page is marked pending print-edition
+  confirmation** rather than asserted precisely. The non-existent **"Kang & Kim (2025)"** anchor (a
+  conflation of Fu, Kang, Hong & Kim 2024 — a GA/pairs-trading study, not meta-labelling) has been
+  removed from the LR-1 citation set; it never appeared in this methodology.
 - Equity instruments start late (es1s 1997, fesx1s 1998, nq1s 1999) — thin pre-2020 history for
   fitted features.
