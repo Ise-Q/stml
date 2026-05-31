@@ -1,0 +1,7 @@
+{
+  // MD013 (line-length) disabled: these reports contain wide data tables
+  // (rows up to ~800 chars) that cannot be hard-wrapped, plus dense prose
+  // with inline citations. An 80-char limit is impractical here. All other
+  // default rules remain enabled.
+  "MD013": false
+}
