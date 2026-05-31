@@ -19,6 +19,7 @@ from alken_metamodel.significance import (
     ljung_box_test,
     min_track_record_length,
     sharpe_ci_analytic,
+    stationary_bootstrap_cer_diff_ci,
     stationary_bootstrap_sharpe_ci,
     t_statistic,
 )
@@ -84,3 +85,44 @@ def test_bootstrap_ci_is_deterministic():
     a = stationary_bootstrap_sharpe_ci(r, seed=42, reps=800)
     b = stationary_bootstrap_sharpe_ci(r, seed=42, reps=800)
     assert a == b
+
+
+# --- EX.6: paired studentised CER-difference bootstrap -----------------------
+
+
+def test_cer_diff_identical_series_contains_zero():
+    """Identical paired series → CER difference is exactly 0; the CI is the point {0}."""
+    rng = np.random.default_rng(0)
+    r = rng.normal(0.0, 0.01, size=200)
+    lo, hi = stationary_bootstrap_cer_diff_ci(r, r, risk_aversion=5.0, seed=42)
+    assert lo <= 0.0 <= hi
+    assert lo == pytest.approx(0.0, abs=1e-12)
+    assert hi == pytest.approx(0.0, abs=1e-12)
+
+
+def test_cer_diff_constant_shift_is_deterministic_and_excludes_zero():
+    """A constant +c level shift raises the mean by c, leaves variance unchanged → CER diff = c
+    exactly; the paired difference has zero sampling variance so the CI collapses to {c} > 0."""
+    rng = np.random.default_rng(1)
+    base = rng.normal(0.0, 0.01, size=200)
+    alt = base + 0.005
+    lo, hi = stationary_bootstrap_cer_diff_ci(alt, base, risk_aversion=5.0, seed=42)
+    assert lo == pytest.approx(0.005, abs=1e-9)
+    assert hi == pytest.approx(0.005, abs=1e-9)
+    assert lo > 0.0
+
+
+def test_cer_diff_is_paired_and_deterministic():
+    """A genuine (non-degenerate) difference yields a finite CI, deterministic under a fixed seed,
+    and bracketing the plug-in CER difference."""
+    rng = np.random.default_rng(5)
+    base = rng.normal(0.0005, 0.01, size=300)
+    alt = 0.5 * base  # a rescaled sibling: lower mean and lower variance, correlated with base
+    a = stationary_bootstrap_cer_diff_ci(alt, base, risk_aversion=5.0, seed=42, reps=1000)
+    b = stationary_bootstrap_cer_diff_ci(alt, base, risk_aversion=5.0, seed=42, reps=1000)
+    assert a == b  # seeded → byte-stable
+    lo, hi = a
+    point = (alt.mean() - 0.5 * 5.0 * alt.var(ddof=1)) - (
+        base.mean() - 0.5 * 5.0 * base.var(ddof=1)
+    )
+    assert np.isfinite(lo) and np.isfinite(hi) and lo < point < hi

@@ -102,6 +102,67 @@ def stationary_bootstrap_sharpe_ci(
     return float(ci[0]), float(ci[1])
 
 
+def stationary_bootstrap_cer_diff_ci(
+    r_alt,
+    r_base,
+    *,
+    risk_aversion: float = 5.0,
+    alpha: float = 0.05,
+    reps: int = 2000,
+    seed: int = 42,
+) -> tuple[float, float]:
+    """Paired, studentised stationary block-bootstrap CI for CER(r_alt) − CER(r_base) (EX.6 gate).
+
+    ``r_alt`` and ``r_base`` are the SAME strategy rescaled (e.g. flat-κ vs per-instrument κᵢ
+    weights), so they are highly correlated: a single block-index draw is applied to BOTH series
+    (resampling them independently would inflate the band and bias the adopt/revert call toward
+    "revert"). The functional is the mean-variance certainty-equivalent CER(r) = E[r] − ½·λ·Var[r];
+    each replicate is studentised by the delta-method (influence-function) SE of the paired
+    difference, ψ(r) = (r−μ) − ½·λ·[(r−μ)² − σ²], so arch never falls back to a nested bootstrap
+    (cf. ``stationary_bootstrap_sharpe_ci``). When the paired difference is deterministic (a pure
+    level shift → zero influence variance) the CI collapses to the point estimate. Seeded →
+    byte-stable. Returns ``(lo, hi)`` on the difference; ``lo > 0`` ⇒ a bootstrap-confident gain.
+    Cite Politis–Romano (1994); Ledoit–Wolf (2008).
+    """
+    from arch.bootstrap import StationaryBootstrap, optimal_block_length
+
+    a = np.asarray(r_alt, dtype=float)
+    b = np.asarray(r_base, dtype=float)
+    mask = np.isfinite(a) & np.isfinite(b)
+    a, b = a[mask], b[mask]
+    if a.size < 8:
+        return float("nan"), float("nan")
+    data = np.column_stack([a, b])
+
+    def _cer_diff(d) -> np.ndarray:
+        d = np.asarray(d)
+        c = d.mean(axis=0) - 0.5 * risk_aversion * d.var(axis=0, ddof=1)
+        return np.array([c[0] - c[1]])
+
+    def _se(theta, d) -> np.ndarray:  # noqa: ARG001 — arch calls (theta, data)
+        d = np.asarray(d)
+
+        def psi(x: np.ndarray) -> np.ndarray:
+            xc = x - x.mean()
+            return xc - 0.5 * risk_aversion * (xc**2 - x.var(ddof=0))
+
+        infl = psi(d[:, 0]) - psi(d[:, 1])
+        return np.array([float(np.std(infl, ddof=1)) / np.sqrt(d.shape[0])])
+
+    theta = float(_cer_diff(data)[0])
+    se0 = float(_se(None, data)[0])
+    if not np.isfinite(se0) or se0 < 1e-15:
+        # deterministic difference (identical series or a pure level shift): CI is the point {θ}
+        return theta, theta
+
+    block = float(optimal_block_length(a - b)["stationary"].iloc[0])
+    bs = StationaryBootstrap(block, data, seed=seed)
+    ci = np.asarray(
+        bs.conf_int(_cer_diff, reps=reps, method="studentized", size=1.0 - alpha, std_err_func=_se)
+    ).ravel()
+    return float(ci[0]), float(ci[1])
+
+
 def min_track_record_length(
     sr: float,
     sr_benchmark: float = 0.0,
