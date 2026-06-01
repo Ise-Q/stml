@@ -1,0 +1,81 @@
+=== Findings note: rb1s ===
+Champion: energy_all / XGB
+Signal context: marginal signal, lower CI just clears 0.5 — interpret with caution
+CPCV: 15 valid folds, AUC=0.629±0.121
+
+--- Cluster-level MDA (mean ± std, sorted) ---
+  * F5_signal                                 +0.1130 ± 0.0821
+    C11_f11                                   +0.0292 ± 0.0504
+    C5_f2                                     +0.0132 ± 0.0328
+    C9_f11                                    +0.0098 ± 0.0597
+    F8_calendar                               +0.0032 ± 0.0120
+    F4_latent                                 +0.0031 ± 0.0077
+    C14_f11                                   +0.0016 ± 0.0141
+    C3_f13                                    +0.0013 ± 0.0042
+    C13_f11_lowfreq_macro                     +0.0005 ± 0.0119
+    C6_f7                                     +0.0002 ± 0.0013
+    F_instrument                              -0.0001 ± 0.0004
+    C12_f11_lowfreq_macro                     -0.0002 ± 0.0014
+    C7_f7                                     -0.0003 ± 0.0054
+    C15_f11_lowfreq_macro                     -0.0013 ± 0.0044
+    C2_f1                                     -0.0028 ± 0.0225
+    C1_f1                                     -0.0031 ± 0.0070
+    C10_f11                                   -0.0037 ± 0.0110
+    C8_f2                                     -0.0092 ± 0.0165
+    C4_f6                                     -0.0099 ± 0.0269
+
+Significant clusters (mean > 1σ): ['F5_signal']
+Inconclusive clusters (|mean| ≤ 1σ): ['C1_f1', 'C2_f1', 'C3_f13', 'C4_f6', 'C5_f2', 'C6_f7', 'C7_f7', 'C8_f2', 'C9_f11', 'C10_f11', 'C11_f11', 'C12_f11_lowfreq_macro', 'C13_f11_lowfreq_macro', 'C14_f11', 'C15_f11_lowfreq_macro', 'F4_latent', 'F8_calendar', 'F_instrument']
+
+--- Cross-method rank agreement (Kendall τ) ---
+  MDA-MDI: τ=+0.08  [DISAGREE]
+  MDA-SHAP: τ=+0.17  [DISAGREE]
+  MDI-SHAP: τ=+0.77  [AGREE]
+
+--- Semantic F-group recovery ---
+  C1_f1: dominant=f1 purity=73% (mixed)
+  C2_f1: dominant=f1 purity=56% (mixed)
+  C3_f13: dominant=f13 purity=67% (mixed)
+  C4_f6: dominant=f6 purity=33% (mixed)
+  C5_f2: dominant=f2 purity=50% (mixed)
+  C6_f7: dominant=f7 purity=100% (pure)
+  C7_f7: dominant=f7 purity=100% (pure)
+  C8_f2: dominant=f2 purity=100% (pure)
+  C9_f11: dominant=f11 purity=80% (pure)
+  C10_f11: dominant=f11 purity=27% (mixed)
+  C11_f11: dominant=f11 purity=67% (mixed)
+  C12_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C13_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C14_f11: dominant=f11 purity=80% (pure)
+  C15_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  F4_latent: dominant=f4 purity=100% (pure)
+  F5_signal: dominant=f5 purity=100% (pure)
+  F8_calendar: dominant=f8 purity=100% (pure)
+  F_instrument: dominant=inst purity=100% (pure)
+
+--- Within-cluster breakdown (top clusters) ---
+  F5_signal (PC1 explains 39.5%):
+    mean|SHAP|=0.2374  f5_signal
+    mean|SHAP|=0.0144  f5_long_bias_20
+    mean|SHAP|=0.0090  f5_trailing_run_length
+    mean|SHAP|=0.0030  f5_participation_20
+    mean|SHAP|=0.0002  f5_sign_agree_mr
+    PC1 top loadings: f5_long_bias_20 (+0.62), f5_signal (+0.58), f5_trailing_run_length (+0.42)
+  C11_f11 (PC1 explains 32.5%):
+    mean|SHAP|=0.0786  f11_gasoline_stock_surprise
+    mean|SHAP|=0.0160  f11_dist_stock_surprise
+    mean|SHAP|=0.0138  f11_real_yield_10y
+    mean|SHAP|=0.0075  f11_skew_z
+    mean|SHAP|=0.0024  f12_mra_energy_D1
+    PC1 top loadings: f12_mra_energy_D2 (+0.58), f12_mra_energy_D1 (-0.50), f11_real_yield_10y (-0.49)
+  C5_f2 (PC1 explains 55.0%):
+    mean|SHAP|=0.1380  f2_vol_60
+    mean|SHAP|=0.0272  f2_vol_of_vol_20
+    mean|SHAP|=0.0146  f11_us_2s10s_slope
+    mean|SHAP|=0.0138  f11_ism_pmi_level
+    mean|SHAP|=0.0077  f2_vol_10
+    PC1 top loadings: f2_vol_20 (+0.35), f2_parkinson_20 (+0.34), f2_vol_60 (+0.33)
+
+Note: MDI is a train-set statistic (upward-biased for high-cardinality features).
+SHAP uses tree_path_dependent perturbation (corrects for correlated features).
+Clustered MDA uses a shared row permutation across all cluster members.
