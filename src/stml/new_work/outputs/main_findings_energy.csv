@@ -1,0 +1,5 @@
+instrument,full_AUC,reduced_AUC,n_clusters,top_cluster,MDA_mean,MDA_std,MDI_top,SHAP_top,dominant_Fg,print_day
+cl1s,0.593,0.587,18,C4_f2,0.0373,0.0257,0.1436,0.0,f2,
+ho1s,0.5,0.5,17,C1_f11_lowfreq_macro,0.0,0.0,0.0,0.0,f11,⚠
+rb1s,0.53,0.642,18,F5_signal,0.0551,0.0352,0.0879,0.0,mixed,
+ng1s,0.531,0.597,18,C9_f7,0.0883,0.0831,0.0998,0.0,f7,

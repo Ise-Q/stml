@@ -1,0 +1,4 @@
+instrument,full_mean_auc,n_clusters,reduced_auc,top_cluster,top_mda_mean,top_mda_std,dominant_F_group,dominant_frac,bottom_cluster,bottom_mda_mean,print_day_note
+es1s,0.557,14,0.577,F5_signal,0.066,0.0422,mixed,0.0,C2_f1,-0.0206,
+nq1s,0.442,15,0.39,C12_f1,0.0354,0.0432,f1,0.69,C6_f7,-0.0218,
+fesx1s,0.509,18,0.488,C13_f11_lowfreq_macro,0.0204,0.0178,f11,1.0,C10_f12,-0.0097,⚠ print-day signal

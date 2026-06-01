@@ -1,0 +1,12 @@
+instrument,best_group,best_model,best_auc,best_logloss,best_brier,n_events,runner_up_group,runner_up_model,runner_up_auc
+es1s,es1s,rf,0.5726,0.686,0.2462,2735,es1s,logistic,0.5457
+nq1s,nq1s,xgb,0.5126,0.6959,0.2514,2880,nq1s,mlp,0.4898
+fesx1s,fesx1s,xgb,0.4947,0.6975,0.2521,3040,fesx1s,logistic,0.4946
+cl1s,cl1s,xgb,0.6645,0.6318,0.2177,2025,energy_all,mlp,0.6507
+ho1s,energy_all,logistic,0.7347,0.6667,0.2018,305,energy_cl_ho,logistic,0.7319
+rb1s,rb1s,logistic,0.6063,0.7907,0.2634,3000,energy_all,logistic,0.5984
+ng1s,ng1s,rf,0.6054,0.6815,0.2434,600,ng1s,logistic,0.5741
+gc1s,precious,xgb,0.484,0.689,0.2479,810,precious,rf,0.4797
+si1s,precious,xgb,0.4906,0.6919,0.2494,2755,si1s,xgb,0.4881
+pl1s,pl1s,mlp,0.5295,0.9099,0.3095,2670,pl1s,rf,0.5182
+hg1s,hg1s,mlp,0.5191,0.8768,0.3021,3000,hg1s,rf,0.5161

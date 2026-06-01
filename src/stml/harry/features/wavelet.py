@@ -75,7 +75,9 @@ def _energy_fractions(values: np.ndarray, wavelet: str, levels: int) -> np.ndarr
     ``values`` must be a 1-D finite array of length ``>= 2^levels``.
     """
     # ``wavedec`` returns [cA_n, cD_n, cD_{n-1}, ..., cD_1].
-    coeffs = pywt.wavedec(values, wavelet, level=levels, mode="periodization")
+    # np.array() ensures a writable copy — pywt raises ValueError on read-only buffers
+    # produced by NumPy array slices in newer NumPy/pywt versions.
+    coeffs = pywt.wavedec(np.array(values, dtype=np.float64), wavelet, level=levels, mode="periodization")
     # Energy of each detail level. The output order from wavedec is
     # [cA_n, cD_n, cD_{n-1}, ..., cD_1]; we want cD_1, cD_2, ..., cD_n.
     detail_energies = [

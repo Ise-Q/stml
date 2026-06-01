@@ -1,0 +1,12 @@
+instrument,signal_flag,chosen_group,chosen_model,auc_mean,auc_std,lower_ci,brier_raw,brier_calibrated,logloss_calibrated,calibration_method,runner_up_group,runner_up_model,runner_up_auc,tie_notes
+cl1s,True,cl1s,xgb,0.7065,0.1299,0.5766,0.21772,0.19564,0.69597,none,cl1s,rf,0.6439,11 candidates within 1σ
+es1s,True,es1s,rf,0.6047,0.0691,0.5357,0.24619,0.24324,0.69083,none,es1s,xgb,0.5829,4 candidates within 1σ
+fesx1s,False,,,0.4978,0.0475,0.4503,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+gc1s,False,,,0.5433,0.1208,0.4225,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+hg1s,False,,,0.5302,0.0636,0.4666,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+ho1s,True,energy_cl_ho,rf,0.6338,0.1552,0.6198,0.21356,0.20157,0.59026,none,energy_all,mlp,0.775,6 candidates within 1σ
+ng1s,False,,,0.5901,0.1425,0.4476,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+nq1s,False,,,0.542,0.1082,0.4337,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+pl1s,False,,,0.5408,0.0516,0.4892,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+rb1s,True,energy_all,xgb,0.6291,0.1183,0.5142,0.24886,0.24685,0.69867,none,rb1s,xgb,0.5572,6 candidates within 1σ
+si1s,False,,,0.4989,0.0669,0.432,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
