@@ -78,6 +78,7 @@ from stml.harry.features.cross_asset import (
 # Constants
 # ---------------------------------------------------------------------------
 RANDOM_SEED = 42
+N_PERM_REPEATS = 10   # independent permutations averaged per unit per fold (MDA variance reduction)
 N_GROUPS = 6
 K_CPCV = 2
 EMBARGO = 0.01
@@ -824,15 +825,14 @@ def _pfi_fold(
     y_te: np.ndarray,
     feat_names: list[str],
     auc_base: float,
-    n_repeats: int = 1,
-    rng: np.random.Generator | None = None,
+    n_repeats: int = N_PERM_REPEATS,
+    fold_i: int = 0,
 ) -> dict[str, float]:
-    if rng is None:
-        rng = np.random.default_rng(RANDOM_SEED)
     pfi: dict[str, float] = {}
     for j, name in enumerate(feat_names):
         drops = []
-        for _ in range(n_repeats):
+        for p in range(n_repeats):
+            rng = np.random.default_rng([RANDOM_SEED, fold_i, j, p])
             X_p = X_te.copy()
             X_p[:, j] = rng.permutation(X_p[:, j])
             prob = rf.predict_proba(X_p)[:, 1]
@@ -851,26 +851,29 @@ def _clustered_mda_fold(
     feat_names: list[str],
     cluster_map: dict[str, list[str]],
     auc_base: float,
-    rng: np.random.Generator | None = None,
+    n_repeats: int = N_PERM_REPEATS,
+    fold_i: int = 0,
 ) -> dict[str, float]:
-    if rng is None:
-        rng = np.random.default_rng(RANDOM_SEED)
     col_idx = {name: j for j, name in enumerate(feat_names)}
     cmda: dict[str, float] = {}
-    for cluster_name, cols in cluster_map.items():
+    for cluster_i, (cluster_name, cols) in enumerate(cluster_map.items()):
         cluster_cols = [c for c in cols if c in col_idx]
         if not cluster_cols:
             cmda[cluster_name] = 0.0
             continue
-        X_p = X_te.copy()
-        perm = rng.permutation(len(X_p))
-        for c in cluster_cols:
-            X_p[:, col_idx[c]] = X_p[perm, col_idx[c]]
-        prob = rf.predict_proba(X_p)[:, 1]
-        try:
-            cmda[cluster_name] = auc_base - roc_auc_score(y_te, prob)
-        except Exception:
-            cmda[cluster_name] = 0.0
+        drops = []
+        for p in range(n_repeats):
+            rng = np.random.default_rng([RANDOM_SEED, fold_i, cluster_i, p])
+            X_p = X_te.copy()
+            perm = rng.permutation(len(X_p))
+            for c in cluster_cols:
+                X_p[:, col_idx[c]] = X_p[perm, col_idx[c]]
+            prob = rf.predict_proba(X_p)[:, 1]
+            try:
+                drops.append(auc_base - roc_auc_score(y_te, prob))
+            except Exception:
+                drops.append(0.0)
+        cmda[cluster_name] = float(np.mean(drops))
     return cmda
 
 
@@ -974,9 +977,8 @@ def run_cpcv_importance(
     shap_mag_all: list[dict] = []
     cmda_all: list[dict] = []
     aucs: list[float] = []
-    rng = np.random.default_rng(RANDOM_SEED)
 
-    for tr_idx, te_idx in cpcv.split(ev):
+    for fold_i, (tr_idx, te_idx) in enumerate(cpcv.split(ev)):
         X_tr, y_tr = X[tr_idx], y[tr_idx]
         X_te, y_te = X[te_idx], y[te_idx]
 
@@ -996,8 +998,8 @@ def run_cpcv_importance(
         # MDI (flagged for train-set bias)
         mdi_all.append(rf.feature_importances_)
 
-        # PFI
-        pfi_fold = _pfi_fold(rf, X_te, y_te, feat_names, auc_base, rng=rng)
+        # PFI — N_PERM_REPEATS permutations averaged per feature per fold
+        pfi_fold = _pfi_fold(rf, X_te, y_te, feat_names, auc_base, fold_i=fold_i)
         pfi_all.append(pfi_fold)
 
         # SHAP
@@ -1005,8 +1007,8 @@ def run_cpcv_importance(
         shap_signed_all.append(s_signed)
         shap_mag_all.append(s_mag)
 
-        # Clustered MDA
-        cm = _clustered_mda_fold(rf, X_te, y_te, feat_names, cluster_map, auc_base, rng=rng)
+        # Clustered MDA — N_PERM_REPEATS permutations averaged per cluster per fold
+        cm = _clustered_mda_fold(rf, X_te, y_te, feat_names, cluster_map, auc_base, fold_i=fold_i)
         cmda_all.append(cm)
 
     def _mean_std(lst_of_dicts: list[dict]) -> tuple[pd.Series, pd.Series]:

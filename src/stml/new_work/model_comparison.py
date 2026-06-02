@@ -74,6 +74,7 @@ from stml.new_work.feature_importance import (
     _feature_cols as _fi_feature_cols,
 )
 from stml.na_checks import native_returns, wide_returns
+from stml.new_work import split_config
 
 
 # ── Configuration ─────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ INSTRUMENT_REGIMES: dict[str, list[str]] = {
     "cl1s":   ["cl1s", "energy_all", "energy_cl_ho"],
     "ho1s":   ["energy_all", "energy_cl_ho"],
     "rb1s":   ["rb1s", "energy_all"],
-    "ng1s":   ["ng1s", "energy_all"],
+    "ng1s":   ["energy_all"],
     "gc1s":   ["gc1s", "precious"],
     "si1s":   ["si1s", "precious"],
     "pl1s":   ["pl1s", "precious"],
@@ -114,6 +115,8 @@ CPCV_K: int = 2
 CPCV_EMBARGO: float = 0.01
 SEED: int = 42
 MODEL_NAMES: list[str] = ["logistic", "rf", "xgb", "mlp"]
+SKIP_INDIVIDUAL_GROUPS: frozenset[str] = frozenset({"ng1s"})
+NO_MLP_GROUPS: frozenset[str] = frozenset({"cl1s", "gc1s"})
 OUTPUTS: Path = _HERE / "outputs" / "model_comparison"
 
 # Metadata columns (never used as features)
@@ -174,6 +177,8 @@ def assemble_group(
         .sort_values("date")
         .reset_index(drop=True)
     )
+    stacked = split_config.apply_train_mask(stacked)
+    print(f"  {group_name}: {len(stacked)} events in train window after purge")
     # For hygiene, pass a placeholder daily_df (apply_hygiene doesn't use it).
     hygiene_log: list[str] = []
     stacked, hygiene_log = apply_hygiene(stacked, pd.DataFrame(), hygiene_log)
@@ -215,6 +220,89 @@ def _safe_auc(y_true: np.ndarray, y_score: np.ndarray) -> float:
         return -1.0
 
 
+class _PurgedKFold:
+    """Sequential purged k-fold for inner hyperparameter tuning.
+
+    Splits events (sorted by date) into k consecutive groups and yields
+    (train_idx, val_idx) integer-position arrays with the same purge +
+    embargo logic as CombinatorialPurgedKFold.  Each group is used as the
+    validation fold once; all other groups form the candidate train set,
+    subject to purge (drop train events whose t1 crosses into val) and
+    embargo (drop train events starting within embargo_td after val end).
+    """
+
+    def __init__(self, k: int = 4, embargo: float = CPCV_EMBARGO):
+        self.k = k
+        self.embargo = embargo
+
+    def split(self, events: pd.DataFrame):
+        """Yield (train_idx, val_idx) integer-position arrays."""
+        n = len(events)
+        if n == 0:
+            return
+
+        dates  = pd.to_datetime(events["date"].values)
+        t1_arr = pd.to_datetime(events["t1"].values)
+
+        gs = n // self.k
+        groups = np.full(n, self.k - 1, dtype=int)
+        for g in range(self.k - 1):
+            groups[g * gs : (g + 1) * gs] = g
+
+        total_days = max((dates[-1] - dates[0]) / np.timedelta64(1, "D"), 1.0)
+        embargo_td = np.timedelta64(max(1, int(self.embargo * total_days)), "D")
+
+        for val_g in range(self.k):
+            val_mask = groups == val_g
+            val_idx  = np.where(val_mask)[0]
+            if len(val_idx) == 0:
+                continue
+
+            train_mask = ~val_mask
+            val_start  = dates[val_mask][0]
+            val_end    = dates[val_mask][-1]
+
+            # Purge: train events whose label window crosses into val
+            purge = (dates < val_start) & (t1_arr >= val_start)
+            train_mask &= ~purge
+
+            # Embargo: train events starting just after val end
+            emb_end = val_end + embargo_td
+            emb = (dates > val_end) & (dates <= emb_end)
+            train_mask &= ~emb
+
+            train_idx = np.where(train_mask)[0]
+            if len(train_idx) < 5 or len(val_idx) < 2:
+                continue
+
+            yield train_idx, val_idx
+
+
+def _select_1se(
+    config_scores: list[dict],
+    regularisation_key,
+) -> dict | None:
+    """1SE rule: return the most-regularised config within 1SE of the best mean.
+
+    SE is the standard error of the max-AUC config's inner-fold AUCs.
+    regularisation_key(cfg_dict) → sortable key, ascending = more regularised.
+    Returns None when no config produced any valid inner-fold AUC.
+    """
+    valid = [c for c in config_scores if c.get("aucs")]
+    if not valid:
+        return None
+
+    for item in valid:
+        aucs = item["aucs"]
+        item["mean"] = float(np.mean(aucs))
+        item["se"]   = float(np.std(aucs, ddof=0) / np.sqrt(len(aucs)))
+
+    best_item  = max(valid, key=lambda c: c["mean"])
+    threshold  = best_item["mean"] - best_item["se"]
+    candidates = [c for c in valid if c["mean"] >= threshold]
+    return min(candidates, key=lambda c: regularisation_key(c["config"]))
+
+
 # ── Model fitting: Logistic ───────────────────────────────────────────────────
 
 def _tune_fit_logistic(
@@ -222,7 +310,7 @@ def _tune_fit_logistic(
     y_tr: np.ndarray,
     events_tr: pd.DataFrame,
 ) -> tuple[StandardScaler, LogisticRegression, dict]:
-    """Elastic-net logistic with nested inner time-split tuning.
+    """Elastic-net logistic with inner purged k-fold tuning and 1SE selection.
 
     Standardises inputs within the training fold (scaler fitted here, applied
     to test data by the caller). Class weights computed from training labels.
@@ -230,26 +318,32 @@ def _tune_fit_logistic(
     scaler = StandardScaler()
     X_sc = scaler.fit_transform(X_tr)
 
-    inner_tr, inner_val = _inner_split(len(X_sc), frac=0.75)
-    best_C, best_l1 = 0.1, 0.5
+    inner_cv = _PurgedKFold(k=4, embargo=CPCV_EMBARGO)
+    config_scores: list[dict] = []
 
-    if len(inner_val) >= 5:
-        X_in, X_val = X_sc[inner_tr], X_sc[inner_val]
-        y_in, y_val = y_tr[inner_tr], y_tr[inner_val]
-        best_auc = -1.0
-        for C in [0.01, 0.1, 1.0]:
-            for l1 in [0.0, 0.5, 1.0]:
+    for C in [0.01, 0.1, 1.0]:
+        for l1 in [0.0, 0.5, 1.0]:
+            fold_aucs: list[float] = []
+            for in_idx, val_idx in inner_cv.split(events_tr):
+                if len(np.unique(y_tr[in_idx])) < 2 or len(np.unique(y_tr[val_idx])) < 2:
+                    continue
                 try:
                     m = LogisticRegression(
                         C=C, l1_ratio=l1, penalty="elasticnet", solver="saga",
                         max_iter=500, class_weight="balanced", random_state=SEED,
                     )
-                    m.fit(X_in, y_in)
-                    auc = _safe_auc(y_val, m.predict_proba(X_val)[:, 1])
-                    if auc > best_auc:
-                        best_auc, best_C, best_l1 = auc, C, l1
+                    m.fit(X_sc[in_idx], y_tr[in_idx])
+                    auc = _safe_auc(y_tr[val_idx], m.predict_proba(X_sc[val_idx])[:, 1])
+                    if auc >= 0:
+                        fold_aucs.append(auc)
                 except Exception:
                     pass
+            config_scores.append({"config": {"C": C, "l1_ratio": l1}, "aucs": fold_aucs})
+
+    # 1SE: smallest C (strongest penalty), tie-break highest l1_ratio (sparsest)
+    best = _select_1se(config_scores, lambda cfg: (cfg["C"], -cfg["l1_ratio"]))
+    best_C  = best["config"]["C"]        if best is not None else 0.01
+    best_l1 = best["config"]["l1_ratio"] if best is not None else 0.5
 
     n_pos = max(int(y_tr.sum()), 1)
     n_neg = max(len(y_tr) - n_pos, 1)
@@ -270,33 +364,39 @@ def _tune_fit_rf(
     y_tr: np.ndarray,
     events_tr: pd.DataFrame,
 ) -> tuple[RandomForestClassifier, dict]:
-    """Regularised RF with shallow trees + nested inner tuning for depth/leaf size.
+    """Regularised RF with inner purged k-fold tuning and 1SE selection.
 
     Uses avg_uniqueness sample weights on the final fit (AFML Ch. 4 convention).
     """
-    inner_tr, inner_val = _inner_split(len(X_tr), frac=0.75)
-    best_depth, best_msl = 4, 20
+    inner_cv = _PurgedKFold(k=4, embargo=CPCV_EMBARGO)
+    config_scores: list[dict] = []
 
-    if len(inner_val) >= 5:
-        X_in, X_val = X_tr[inner_tr], X_tr[inner_val]
-        y_in, y_val = y_tr[inner_tr], y_tr[inner_val]
-        best_auc = -1.0
-        for depth in [2, 4, 6]:
-            for msl in [10, 20]:
+    for depth in [2, 4, 6]:
+        for msl in [10, 20]:
+            fold_aucs: list[float] = []
+            for in_idx, val_idx in inner_cv.split(events_tr):
+                if len(np.unique(y_tr[in_idx])) < 2 or len(np.unique(y_tr[val_idx])) < 2:
+                    continue
                 try:
                     m = RandomForestClassifier(
                         n_estimators=100, max_depth=depth, min_samples_leaf=msl,
                         max_features="sqrt", class_weight="balanced",
                         random_state=SEED, n_jobs=-1,
                     )
-                    w_in = events_tr.iloc[inner_tr]["avg_uniqueness"].to_numpy(dtype=float)
+                    w_in = events_tr.iloc[in_idx]["avg_uniqueness"].to_numpy(dtype=float)
                     w_in = w_in / w_in.mean() if w_in.mean() > 0 else np.ones(len(w_in))
-                    m.fit(X_in, y_in, sample_weight=w_in)
-                    auc = _safe_auc(y_val, m.predict_proba(X_val)[:, 1])
-                    if auc > best_auc:
-                        best_auc, best_depth, best_msl = auc, depth, msl
+                    m.fit(X_tr[in_idx], y_tr[in_idx], sample_weight=w_in)
+                    auc = _safe_auc(y_tr[val_idx], m.predict_proba(X_tr[val_idx])[:, 1])
+                    if auc >= 0:
+                        fold_aucs.append(auc)
                 except Exception:
                     pass
+            config_scores.append({"config": {"max_depth": depth, "min_samples_leaf": msl}, "aucs": fold_aucs})
+
+    # 1SE: shallowest depth, tie-break largest min_samples_leaf (most regularised)
+    best = _select_1se(config_scores, lambda cfg: (cfg["max_depth"], -cfg["min_samples_leaf"]))
+    best_depth = best["config"]["max_depth"]        if best is not None else 2
+    best_msl   = best["config"]["min_samples_leaf"] if best is not None else 20
 
     n_pos = max(int(y_tr.sum()), 1)
     n_neg = max(len(y_tr) - n_pos, 1)
@@ -319,19 +419,12 @@ def _tune_fit_xgb(
     y_tr: np.ndarray,
     events_tr: pd.DataFrame,
 ) -> tuple[xgb.XGBClassifier, dict]:
-    """XGBoost with strong regularisation; n_estimators via early stopping.
-
-    Nested grid over (max_depth, learning_rate); early stopping on last 20%
-    of the OUTER training fold determines the final model (no refit on full
-    training needed — the 20% holdout is inside the outer train fold and
-    never overlaps the CPCV test block).
+    """XGBoost with strong regularisation; grid tuned via inner purged k-fold
+    with 1SE selection; n_estimators via early stopping on outer-train holdout.
     """
     n_pos = max(int(y_tr.sum()), 1)
     n_neg = max(len(y_tr) - n_pos, 1)
-    spw = n_neg / n_pos  # scale_pos_weight for imbalance
-
-    inner_tr, inner_val = _inner_split(len(X_tr), frac=0.80)
-    best_depth, best_lr, best_n = 3, 0.05, 100
+    spw = n_neg / n_pos
 
     def _xgb_params(depth: int, lr: float) -> dict:
         return dict(
@@ -343,40 +436,52 @@ def _tune_fit_xgb(
             verbosity=0, n_jobs=-1,
         )
 
-    if len(inner_val) >= 5 and len(np.unique(y_tr[inner_val])) > 1:
-        X_in, X_val = X_tr[inner_tr], X_tr[inner_val]
-        y_in, y_val = y_tr[inner_tr], y_tr[inner_val]
-        best_auc = -1.0
-        for depth in [3, 4]:
-            for lr in [0.01, 0.05]:
+    inner_cv = _PurgedKFold(k=4, embargo=CPCV_EMBARGO)
+    config_scores: list[dict] = []
+
+    for depth in [3, 4]:
+        for lr in [0.01, 0.05]:
+            fold_aucs: list[float] = []
+            for in_idx, val_idx in inner_cv.split(events_tr):
+                if len(np.unique(y_tr[in_idx])) < 2 or len(np.unique(y_tr[val_idx])) < 2:
+                    continue
                 try:
                     m = xgb.XGBClassifier(**_xgb_params(depth, lr))
-                    m.fit(X_in, y_in, eval_set=[(X_val, y_val)], verbose=False)
-                    auc = _safe_auc(y_val, m.predict_proba(X_val)[:, 1])
-                    if auc > best_auc:
-                        best_auc, best_depth, best_lr = auc, depth, lr
-                        best_n = max(int(getattr(m, "best_iteration", 50)) + 1, 10)
+                    m.fit(
+                        X_tr[in_idx], y_tr[in_idx],
+                        eval_set=[(X_tr[val_idx], y_tr[val_idx])],
+                        verbose=False,
+                    )
+                    auc = _safe_auc(y_tr[val_idx], m.predict_proba(X_tr[val_idx])[:, 1])
+                    if auc >= 0:
+                        fold_aucs.append(auc)
                 except Exception:
                     pass
+            config_scores.append({"config": {"max_depth": depth, "learning_rate": lr}, "aucs": fold_aucs})
 
-    # Final model on outer training fold with early stopping on inner 20%
-    X_in2, X_val2 = X_tr[inner_tr], X_tr[inner_val]
-    y_in2, y_val2 = y_tr[inner_tr], y_tr[inner_val]
+    # 1SE: shallowest depth, tie-break lower learning_rate (most regularised)
+    best = _select_1se(config_scores, lambda cfg: (cfg["max_depth"], cfg["learning_rate"]))
+    best_depth = best["config"]["max_depth"]    if best is not None else 3
+    best_lr    = best["config"]["learning_rate"] if best is not None else 0.01
 
+    # Final model on outer-train fold with early stopping on last 20%
+    inner_tr, inner_val = _inner_split(len(X_tr), frac=0.80)
     params = _xgb_params(best_depth, best_lr)
 
-    if len(inner_val) >= 5 and len(np.unique(y_val2)) > 1:
+    if len(inner_val) >= 5 and len(np.unique(y_tr[inner_val])) > 1:
         model = xgb.XGBClassifier(**params)
-        model.fit(X_in2, y_in2, eval_set=[(X_val2, y_val2)], verbose=False)
+        model.fit(
+            X_tr[inner_tr], y_tr[inner_tr],
+            eval_set=[(X_tr[inner_val], y_tr[inner_val])],
+            verbose=False,
+        )
     else:
-        # Degenerate: fit on full training with fixed n_estimators
-        params_fixed = {k: v for k, v in params.items()
-                        if k not in ("early_stopping_rounds",)}
-        params_fixed["n_estimators"] = best_n
+        params_fixed = {k: v for k, v in params.items() if k != "early_stopping_rounds"}
+        params_fixed["n_estimators"] = 100
         model = xgb.XGBClassifier(**params_fixed)
         model.fit(X_tr, y_tr)
 
-    actual_n = max(int(getattr(model, "best_iteration", best_n - 1)) + 1, 1)
+    actual_n = max(int(getattr(model, "best_iteration", 99)) + 1, 1)
     return model, {"max_depth": best_depth, "learning_rate": best_lr, "n_estimators": actual_n}
 
 
@@ -385,26 +490,25 @@ def _tune_fit_xgb(
 def _tune_fit_mlp(
     X_tr: np.ndarray,
     y_tr: np.ndarray,
+    events_tr: pd.DataFrame,
 ) -> tuple[StandardScaler, MLPClassifier, dict]:
-    """Small MLP (sklearn) with L2 regularisation and early stopping.
+    """Small MLP with inner purged k-fold tuning and 1SE selection.
 
-    Dropout is not supported in sklearn's MLPClassifier; L2 weight decay via
-    alpha and early_stopping=True provide the required regularisation for this
-    'completeness' family. Inputs are standardised within the training fold.
+    L2 weight decay via alpha and early_stopping=True provide regularisation.
+    Inputs are standardised within the training fold.
     """
     scaler = StandardScaler()
     X_sc = scaler.fit_transform(X_tr)
 
-    inner_tr, inner_val = _inner_split(len(X_sc), frac=0.75)
-    best_hidden: tuple = (64,)
-    best_alpha = 0.001
+    inner_cv = _PurgedKFold(k=4, embargo=CPCV_EMBARGO)
+    config_scores: list[dict] = []
 
-    if len(inner_val) >= 5:
-        X_in, X_val = X_sc[inner_tr], X_sc[inner_val]
-        y_in, y_val = y_tr[inner_tr], y_tr[inner_val]
-        best_auc = -1.0
-        for hidden in [(64,), (64, 32)]:
-            for alpha in [0.001, 0.01]:
+    for hidden in [(64,), (64, 32)]:
+        for alpha in [0.001, 0.01]:
+            fold_aucs: list[float] = []
+            for in_idx, val_idx in inner_cv.split(events_tr):
+                if len(np.unique(y_tr[in_idx])) < 2 or len(np.unique(y_tr[val_idx])) < 2:
+                    continue
                 try:
                     m = MLPClassifier(
                         hidden_layer_sizes=hidden, alpha=alpha,
@@ -412,14 +516,19 @@ def _tune_fit_mlp(
                         learning_rate_init=1e-3, max_iter=200,
                         early_stopping=False, random_state=SEED,
                     )
-                    m.fit(X_in, y_in)
-                    auc = _safe_auc(y_val, m.predict_proba(X_val)[:, 1])
-                    if auc > best_auc:
-                        best_auc, best_hidden, best_alpha = auc, hidden, alpha
+                    m.fit(X_sc[in_idx], y_tr[in_idx])
+                    auc = _safe_auc(y_tr[val_idx], m.predict_proba(X_sc[val_idx])[:, 1])
+                    if auc >= 0:
+                        fold_aucs.append(auc)
                 except Exception:
                     pass
+            config_scores.append({"config": {"hidden_layer_sizes": hidden, "alpha": alpha}, "aucs": fold_aucs})
 
-    # Final model with early stopping on 20% holdout (sklearn handles it internally)
+    # 1SE: fewer layers (smaller hidden), tie-break higher alpha (stronger L2)
+    best = _select_1se(config_scores, lambda cfg: (len(cfg["hidden_layer_sizes"]), -cfg["alpha"]))
+    best_hidden = best["config"]["hidden_layer_sizes"] if best is not None else (64,)
+    best_alpha  = best["config"]["alpha"]              if best is not None else 0.01
+
     model = MLPClassifier(
         hidden_layer_sizes=best_hidden, alpha=best_alpha,
         activation="relu", solver="adam", learning_rate_init=1e-3,
@@ -475,7 +584,7 @@ def run_cpcv_model(
                 model, params = _tune_fit_xgb(X_tr, y_tr, events_tr)
                 prob = model.predict_proba(X_te)[:, 1]
             elif model_name == "mlp":
-                scaler, model, params = _tune_fit_mlp(X_tr, y_tr)
+                scaler, model, params = _tune_fit_mlp(X_tr, y_tr, events_tr)
                 prob = model.predict_proba(scaler.transform(X_te))[:, 1]
             else:
                 raise ValueError(f"Unknown model: {model_name}")
@@ -655,7 +764,8 @@ def run_group_all_models(
     print(f"Group: {group_name}  |  {n_events} events  |  {len(feat_cols)} features")
     print("=" * 62)
 
-    for model_name in MODEL_NAMES:
+    models_to_run = [m for m in MODEL_NAMES if not (group_name in NO_MLP_GROUPS and m == "mlp")]
+    for model_name in models_to_run:
         oos_path = out_dir / group_name / model_name / "oos_predictions.csv"
         if oos_path.exists() and not force:
             print(f"  [{model_name}] already done — skipping (use --force to redo)")
@@ -742,6 +852,7 @@ def build_selection_table(master: pd.DataFrame) -> pd.DataFrame:
             continue
         candidates = candidates.sort_values("auc_mean", ascending=False).reset_index(drop=True)
         best = candidates.iloc[0]
+        lower_ci = float(best["auc_mean"]) - (float(best["auc_std"]) if pd.notna(best.get("auc_std")) else 0.0)
         row: dict = {
             "instrument":    inst,
             "best_group":    best["group"],
@@ -750,6 +861,8 @@ def build_selection_table(master: pd.DataFrame) -> pd.DataFrame:
             "best_logloss":  best["logloss"],
             "best_brier":    best["brier"],
             "n_events":      best["n_events"],
+            "lower_ci":      round(lower_ci, 4),
+            "signal":        lower_ci > 0.5,
         }
         if len(candidates) > 1:
             runner = candidates.iloc[1]
@@ -792,6 +905,7 @@ def run_all(
     if invalid:
         print(f"Warning: unknown groups {invalid}; skipping")
         target_groups = [g for g in target_groups if g in GROUPS]
+    target_groups = [g for g in target_groups if g not in SKIP_INDIVIDUAL_GROUPS]
 
     print("Loading data ...")
     data = load_all_data()

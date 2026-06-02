@@ -4,31 +4,31 @@ Signal context: strong signal, lower CI >> 0.5
 CPCV: 15 valid folds, AUC=0.707±0.130
 
 --- Cluster-level MDA (mean ± std, sorted) ---
-  * C4_f2                                     +0.1332 ± 0.1221
-  * C12_f11                                   +0.0848 ± 0.0742
-    C3_f6                                     +0.0066 ± 0.0158
-    C10_f11_lowfreq_macro                     +0.0022 ± 0.0073
-    C5_f11_lowfreq_macro                      +0.0012 ± 0.0084
-    C7_f11                                    +0.0011 ± 0.0081
-    F4_latent                                 +0.0010 ± 0.0080
-    C6_f2                                     +0.0006 ± 0.0174
-    C9_f11_lowfreq_macro                      +0.0002 ± 0.0026
-    C8_f7                                     +0.0002 ± 0.0027
-    C2_f1                                     -0.0004 ± 0.0023
-    F8_calendar                               -0.0006 ± 0.0025
-    C11_f7                                    -0.0006 ± 0.0019
-    C14_f12                                   -0.0007 ± 0.0020
-    C15_f11                                   -0.0018 ± 0.0088
-    F5_signal                                 -0.0019 ± 0.0084
-    C1_f1                                     -0.0046 ± 0.0185
-    C13_f11                                   -0.0099 ± 0.0277
+  * C4_f2                                     +0.1358 ± 0.1049
+  * C12_f11                                   +0.0811 ± 0.0592
+    C3_f6                                     +0.0074 ± 0.0152
+    F4_latent                                 +0.0032 ± 0.0124
+    C6_f2                                     +0.0028 ± 0.0127
+    C10_f11_lowfreq_macro                     +0.0028 ± 0.0069
+    C5_f11_lowfreq_macro                      +0.0025 ± 0.0091
+    C9_f11_lowfreq_macro                      +0.0007 ± 0.0023
+    C8_f7                                     +0.0004 ± 0.0018
+    C14_f12                                   -0.0003 ± 0.0016
+    F8_calendar                               -0.0003 ± 0.0010
+    F5_signal                                 -0.0005 ± 0.0033
+    C11_f7                                    -0.0006 ± 0.0021
+    C2_f1                                     -0.0006 ± 0.0028
+    C7_f11                                    -0.0010 ± 0.0064
+    C15_f11                                   -0.0019 ± 0.0043
+    C1_f1                                     -0.0067 ± 0.0240
+    C13_f11                                   -0.0111 ± 0.0272
 
 Significant clusters (mean > 1σ): ['C4_f2', 'C12_f11']
 Inconclusive clusters (|mean| ≤ 1σ): ['C1_f1', 'C2_f1', 'C3_f6', 'C5_f11_lowfreq_macro', 'C6_f2', 'C7_f11', 'C8_f7', 'C9_f11_lowfreq_macro', 'C10_f11_lowfreq_macro', 'C11_f7', 'C13_f11', 'C14_f12', 'C15_f11', 'F4_latent', 'F5_signal', 'F8_calendar']
 
 --- Cross-method rank agreement (Kendall τ) ---
-  MDA-MDI: τ=+0.35  [DISAGREE]
-  MDA-SHAP: τ=+0.25  [DISAGREE]
+  MDA-MDI: τ=+0.25  [DISAGREE]
+  MDA-SHAP: τ=+0.16  [DISAGREE]
   MDI-SHAP: τ=+0.80  [AGREE]
 
 --- Semantic F-group recovery ---

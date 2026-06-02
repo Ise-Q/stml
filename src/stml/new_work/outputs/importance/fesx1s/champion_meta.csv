@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+fesx1s,equity,fesx1s,logistic,logistic,0.5791,0.0605,0.5186,True,15,1

@@ -4,29 +4,29 @@ Signal context: strong signal but thin; single-class folds dropped; treat as ind
 CPCV: 15 valid folds, AUC=0.634±0.227
 
 --- Cluster-level MDA (mean ± std, sorted) ---
-    C13_f11                                   +0.0662 ± 0.2475
-    F4_latent                                 +0.0230 ± 0.0869
-    C10_f11_lowfreq_macro                     +0.0215 ± 0.0773
-    F5_signal                                 +0.0214 ± 0.0373
-    C12_f12                                   +0.0205 ± 0.0968
-    C6_f11_lowfreq_macro                      +0.0179 ± 0.0586
-    C4_f2                                     +0.0109 ± 0.1024
-    F8_calendar                               +0.0095 ± 0.0213
-    C2_f1                                     +0.0055 ± 0.0734
-    C11_f7                                    +0.0033 ± 0.0188
+    C13_f11                                   +0.0895 ± 0.1534
+    C12_f12                                   +0.0336 ± 0.0751
+    F5_signal                                 +0.0252 ± 0.0368
+    C6_f11_lowfreq_macro                      +0.0199 ± 0.0603
+    F4_latent                                 +0.0154 ± 0.0710
+    C2_f1                                     +0.0136 ± 0.0509
+    C3_f11_lowfreq_macro                      +0.0058 ± 0.0198
+    F8_calendar                               +0.0045 ± 0.0162
+    C11_f7                                    +0.0023 ± 0.0159
     F_instrument                              +0.0000 ± 0.0000
-    C8_f7                                     -0.0009 ± 0.0165
-    C3_f11_lowfreq_macro                      -0.0017 ± 0.0358
-    C9_f11_lowfreq_macro                      -0.0071 ± 0.0148
-    C7_f11                                    -0.0114 ± 0.0816
-    C1_f1                                     -0.0312 ± 0.0524
-    C5_f2                                     -0.0817 ± 0.1275
+    C10_f11_lowfreq_macro                     -0.0009 ± 0.0457
+    C8_f7                                     -0.0009 ± 0.0089
+    C9_f11_lowfreq_macro                      -0.0028 ± 0.0127
+    C4_f2                                     -0.0160 ± 0.0560
+    C7_f11                                    -0.0189 ± 0.0689
+    C1_f1                                     -0.0364 ± 0.0667
+    C5_f2                                     -0.0863 ± 0.1491
 
 Significant clusters (mean > 1σ): none
 Inconclusive clusters (|mean| ≤ 1σ): ['C1_f1', 'C2_f1', 'C3_f11_lowfreq_macro', 'C4_f2', 'C5_f2', 'C6_f11_lowfreq_macro', 'C7_f11', 'C8_f7', 'C9_f11_lowfreq_macro', 'C10_f11_lowfreq_macro', 'C11_f7', 'C12_f12', 'C13_f11', 'F4_latent', 'F5_signal', 'F8_calendar', 'F_instrument']
 
 --- Cross-method rank agreement (Kendall τ) ---
-  MDA-MDI: τ=+0.25  [DISAGREE]
+  MDA-MDI: τ=+0.22  [DISAGREE]
   MDA-SHAP: τ=+0.24  [DISAGREE]
   MDI-SHAP: τ=+0.99  [AGREE]
 
@@ -57,19 +57,20 @@ Inconclusive clusters (|mean| ≤ 1σ): ['C1_f1', 'C2_f1', 'C3_f11_lowfreq_macro
     mean|SHAP|=0.0077  f11_baltic_5d_change
     mean|SHAP|=0.0076  f11_baltic_dry_z
     PC1 top loadings: f11_ng_stock_surprise (+0.54), f6_adx_14 (-0.45), f11_baltic_dry_z (+0.44)
-  F4_latent (PC1 explains 61.4%):
-    mean|SHAP|=0.0092  f4_pc4
-    mean|SHAP|=0.0076  f4_pc2
-    mean|SHAP|=0.0025  f4_pc1
-    mean|SHAP|=0.0023  f4_pc3
-    PC1 top loadings: f4_pc2 (+0.57), f4_pc3 (+0.57), f4_pc1 (-0.45)
-  C10_f11_lowfreq_macro (PC1 explains 44.2%):
-    mean|SHAP|=0.0075  f11_vix_term_slope
-    mean|SHAP|=0.0049  f11_vix_level_z
-    mean|SHAP|=0.0035  f11_ust_10y_5d_change
-    mean|SHAP|=0.0020  f11_bund_10y_5d_change
-    mean|SHAP|=0.0012  f11_hy_oas_5d_change
-    PC1 top loadings: f11_vix_level_z (+0.45), f11_vix_5d_change (+0.43), f11_vix_term_slope (-0.38)
+  C12_f12 (PC1 explains 27.5%):
+    mean|SHAP|=0.0105  f11_real_yield_10y
+    mean|SHAP|=0.0073  f11_ism_pmi_3m_change
+    mean|SHAP|=0.0070  f12_mra_energy_D1
+    mean|SHAP|=0.0033  f12_mra_energy_D2
+    mean|SHAP|=0.0026  f11_dist_stock_surprise
+    PC1 top loadings: f11_real_yield_10y (+0.49), f12_mra_energy_D2 (-0.46), f11_skew_z (-0.37)
+  F5_signal (PC1 explains 53.2%):
+    mean|SHAP|=0.0041  f5_signal
+    mean|SHAP|=0.0034  f5_long_bias_20
+    mean|SHAP|=0.0025  f5_participation_20
+    mean|SHAP|=0.0022  f5_sign_agree_mr
+    mean|SHAP|=0.0011  f5_trailing_run_length
+    PC1 top loadings: f5_long_bias_20 (+0.57), f5_participation_20 (+0.53), f5_trailing_run_length (+0.46)
 
 Note: MDI is a train-set statistic (upward-biased for high-cardinality features).
 SHAP uses tree_path_dependent perturbation (corrects for correlated features).

@@ -1,34 +1,54 @@
-"""champion_importance.py — Feature importance for the four signal-bearing champions.
+"""champion_importance.py — Feature importance for all champions (train-only, clean split).
 
-Champions (from selection_table_v2.csv):
-  cl1s  → individual cl1s,        XGB
-  es1s  → individual es1s,        RF
-  ho1s  → pooled energy_cl_ho,    RF   (score on ho1s test slice only)
-  rb1s  → pooled energy_all,      XGB  (score on rb1s test slice only)
+Champions (selection_table.csv, purged inner k-fold + 1SE, global cut 2021-10-06):
 
-Pipeline per champion
----------------------
-1. Load pre-built events from model_comparison cache (same hygiene / feature set).
-2. Cluster features: reuse feature_importance.py clustering unchanged.
-   Extended hand-assigned groups: F4 latent, F5 signal, F8 calendar, F_instrument dummies.
+EQUITY:
+  es1s   → es1s        / RF       (NO SIGNAL  lower_ci=0.40)
+  nq1s   → nq1s        / XGB      (signal     lower_ci=0.62)
+  fesx1s → fesx1s      / logistic (signal     lower_ci=0.52)
+
+ENERGY:
+  cl1s   → cl1s        / XGB      (signal     lower_ci=0.54)
+  ho1s   → energy_all  / logistic (NO SIGNAL  lower_ci=0.50)
+  rb1s   → energy_all  / logistic (NO SIGNAL  lower_ci=0.46)
+  ng1s   → energy_all  / RF       (NO SIGNAL  lower_ci=0.22)
+
+METALS:
+  gc1s   → precious    / XGB      (NO SIGNAL  lower_ci=0.38)
+  si1s   → si1s        / XGB      (NO SIGNAL  lower_ci=0.44)
+  pl1s   → pl1s        / logistic (signal     lower_ci=0.53)
+  hg1s   → hg1s        / RF       (signal     lower_ci=0.56)
+
+Pipeline per instrument
+-----------------------
+1. Load pre-built events from model_comparison cache (train-only, post split_config purge).
+2. Cluster features: Spearman distance sqrt(1-|rho|) -> Ward -> silhouette K,
+   plus hand-assigned groups (F4 latent, F5 signal, F8 calendar, F_instrument dummies).
 3. CPCV (n_groups=6, k=2, embargo=0.01) with champion estimator:
-   - Clustered MDA : jointly permute entire cluster per fold; score on target
-                     instrument slice for pooled champions.
-   - Clustered MDI : sum feature_importances_ within cluster (train-set statistic;
-                     flagged as such).
-   - Group SHAP    : sum mean|SHAP| within cluster (TreeSHAP, tree_path_dependent).
-   Aggregate mean ± std across CPCV paths.
-4. Flag: clusters within 1σ of zero → inconclusive.
-         rank disagreement across methods → inconsistent.
-5. Within-cluster breakdown for top-3 significant clusters:
-   - Rank members by mean|SHAP| (primary).
-   - PCA on cluster submatrix: PC1 variance explained + top loadings.
-6. Global per-feature SHAP summary + MDI (correlation-problem demonstration).
-7. Outputs under outputs/importance/{instrument}/.
+   TREE (RF / XGB):
+     Clustered MDA  — joint permutation, N=10 repeats, score on target slice.
+     Clustered MDI  — sum feature_importances_ within cluster (train; flagged).
+     Group SHAP     — sum mean|SHAP| within cluster (TreeSHAP, tree_path_dependent).
+     Rank agreement — Kendall tau across MDA / MDI / SHAP rankings.
+   LOGISTIC (elastic-net):
+     Clustered MDA  — same joint permutation (model-agnostic; applied to scaled data).
+     Cluster Coef   — sum |standardised coef| within cluster; averaged across folds.
+     Rank agreement — Kendall tau between MDA and Coef rankings.
+4. Within-cluster breakdown for top-3 clusters by MDA:
+   Tree:     members ranked by mean|SHAP|; PCA PC1–PC3 on train submatrix.
+   Logistic: members ranked by mean|coef|; PCA PC1–PC3 on train submatrix.
+5. Global per-feature view:
+   Tree:     global_shap_summary.csv + chart.
+   Logistic: global_coef_summary.csv + chart.
+6. Outputs under outputs/importance/{instrument}/.
+
+NO-SIGNAL instruments (es1s, ho1s, rb1s, ng1s, gc1s, si1s) are run in full;
+  importance reflects model noise — run for completeness and contrast only.
 
 Usage
 -----
     python -m stml.new_work.champion_importance
+    python -m stml.new_work.champion_importance --asset-class equity
     python -m stml.new_work.champion_importance --instruments cl1s ho1s
     python -m stml.new_work.champion_importance --force
 """
@@ -64,6 +84,7 @@ from stml.new_work.cpcv_search import CombinatorialPurgedKFold
 from stml.new_work.feature_importance import (
     CORR_CLUSTER_PREFIXES,
     HAND_ASSIGNED_PREFIXES,
+    N_PERM_REPEATS,
     RANDOM_SEED,
     build_cluster_map,
     cluster_representatives,
@@ -75,6 +96,7 @@ from stml.new_work.model_comparison import (
     CPCV_EMBARGO,
     CPCV_K,
     CPCV_N_GROUPS,
+    _tune_fit_logistic,
     _tune_fit_rf,
     _tune_fit_xgb,
 )
@@ -83,51 +105,155 @@ from stml.new_work.model_comparison import (
 # Constants
 # ---------------------------------------------------------------------------
 
-OUTPUTS = _HERE / "outputs" / "importance"
+OUTPUTS   = _HERE / "outputs" / "importance"
 CACHE_DIR = _HERE / "outputs" / "model_comparison" / "_cache"
 
 SHAP_MAX_SAMPLES = 200
-TOP_CLUSTERS_N = 3      # within-cluster breakdown depth
+TOP_CLUSTERS_N   = 3
 
 _META = frozenset({
     "date", "instrument", "side", "t1", "ret", "bin",
     "trgt", "h", "pt_mult", "sl_mult", "sigma_method", "avg_uniqueness",
 })
 
-# Instrument-dummy prefix for pooled models (one-hot added by assemble_group)
 _INST_PREFIX = "inst_"
 
-# Extended hand-assigned groups; inst_ dummies measured as a group cluster
 _HAND_ASSIGNED_EXT = {
-    **HAND_ASSIGNED_PREFIXES,       # f4_, f5_, f8_
+    **HAND_ASSIGNED_PREFIXES,
     _INST_PREFIX: "F_instrument",
 }
 
 CHAMPIONS: dict[str, dict] = {
-    "cl1s": {
-        "group":       "cl1s",
-        "model_type":  "xgb",
-        "target_inst": "cl1s",
-        "notes":       "strong signal, lower CI >> 0.5",
-    },
+    # ── Equity ────────────────────────────────────────────────────────────────
     "es1s": {
+        "asset_class": "equity",
         "group":       "es1s",
+        "family":      "tree",
         "model_type":  "rf",
         "target_inst": "es1s",
-        "notes":       "marginal signal, lower CI just clears 0.5 — interpret with caution",
+        "auc_mean":    0.5163,
+        "auc_std":     0.1125,
+        "lower_ci":    0.4038,
+        "signal":      False,
+    },
+    "nq1s": {
+        "asset_class": "equity",
+        "group":       "nq1s",
+        "family":      "tree",
+        "model_type":  "xgb",
+        "target_inst": "nq1s",
+        "auc_mean":    0.6885,
+        "auc_std":     0.0726,
+        "lower_ci":    0.6159,
+        "signal":      True,
+    },
+    "fesx1s": {
+        "asset_class": "equity",
+        "group":       "fesx1s",
+        "family":      "logistic",
+        "model_type":  "logistic",
+        "target_inst": "fesx1s",
+        "auc_mean":    0.5791,
+        "auc_std":     0.0605,
+        "lower_ci":    0.5186,
+        "signal":      True,
+    },
+    # ── Energy ────────────────────────────────────────────────────────────────
+    "cl1s": {
+        "asset_class": "energy",
+        "group":       "cl1s",
+        "family":      "tree",
+        "model_type":  "xgb",
+        "target_inst": "cl1s",
+        "auc_mean":    0.6748,
+        "auc_std":     0.1390,
+        "lower_ci":    0.5358,
+        "signal":      True,
     },
     "ho1s": {
-        "group":       "energy_cl_ho",
-        "model_type":  "rf",
+        "asset_class": "energy",
+        "group":       "energy_all",
+        "family":      "logistic",
+        "model_type":  "logistic",
         "target_inst": "ho1s",
-        "notes":       "strong signal but thin; single-class folds dropped; treat as indicative",
+        "auc_mean":    0.7998,
+        "auc_std":     0.3034,
+        "lower_ci":    0.4964,
+        "signal":      False,
     },
     "rb1s": {
+        "asset_class": "energy",
         "group":       "energy_all",
-        "model_type":  "xgb",
+        "family":      "logistic",
+        "model_type":  "logistic",
         "target_inst": "rb1s",
-        "notes":       "marginal signal, lower CI just clears 0.5 — interpret with caution",
+        "auc_mean":    0.5512,
+        "auc_std":     0.0938,
+        "lower_ci":    0.4574,
+        "signal":      False,
     },
+    "ng1s": {
+        "asset_class": "energy",
+        "group":       "energy_all",
+        "family":      "tree",
+        "model_type":  "rf",
+        "target_inst": "ng1s",
+        "auc_mean":    0.4772,
+        "auc_std":     0.2591,
+        "lower_ci":    0.2181,
+        "signal":      False,
+    },
+    # ── Metals ────────────────────────────────────────────────────────────────
+    "gc1s": {
+        "asset_class": "metals",
+        "group":       "precious",
+        "family":      "tree",
+        "model_type":  "xgb",
+        "target_inst": "gc1s",
+        "auc_mean":    0.4778,
+        "auc_std":     0.1007,
+        "lower_ci":    0.3771,
+        "signal":      False,
+    },
+    "si1s": {
+        "asset_class": "metals",
+        "group":       "si1s",
+        "family":      "tree",
+        "model_type":  "xgb",
+        "target_inst": "si1s",
+        "auc_mean":    0.5145,
+        "auc_std":     0.0758,
+        "lower_ci":    0.4387,
+        "signal":      False,
+    },
+    "pl1s": {
+        "asset_class": "metals",
+        "group":       "pl1s",
+        "family":      "logistic",
+        "model_type":  "logistic",
+        "target_inst": "pl1s",
+        "auc_mean":    0.6075,
+        "auc_std":     0.0806,
+        "lower_ci":    0.5269,
+        "signal":      True,
+    },
+    "hg1s": {
+        "asset_class": "metals",
+        "group":       "hg1s",
+        "family":      "tree",
+        "model_type":  "rf",
+        "target_inst": "hg1s",
+        "auc_mean":    0.6035,
+        "auc_std":     0.0414,
+        "lower_ci":    0.5621,
+        "signal":      True,
+    },
+}
+
+ASSET_CLASSES: dict[str, list[str]] = {
+    "equity": ["es1s", "nq1s", "fesx1s"],
+    "energy": ["cl1s", "ho1s", "rb1s", "ng1s"],
+    "metals": ["gc1s", "si1s", "pl1s", "hg1s"],
 }
 
 
@@ -140,14 +266,9 @@ def _feat_cols(events_df: pd.DataFrame) -> list[str]:
 
 
 def _assign_groups_champion(events_df: pd.DataFrame) -> dict[str, list[str]]:
-    """Partition feature columns into corr-cluster block and hand-assigned groups.
-
-    Extends the standard partition with an F_instrument group for pooled model dummies.
-    """
     feat_cols = _feat_cols(events_df)
     corr_cluster: list[str] = []
     hand: dict[str, list[str]] = {}
-
     for c in feat_cols:
         placed = False
         for prefix, label in _HAND_ASSIGNED_EXT.items():
@@ -164,12 +285,11 @@ def _assign_groups_champion(events_df: pd.DataFrame) -> dict[str, list[str]]:
                 break
         if not placed:
             hand.setdefault("F_misc", []).append(c)
-
     return {"corr_cluster": corr_cluster, **hand}
 
 
 # ---------------------------------------------------------------------------
-# SHAP helper
+# SHAP helper (tree models only)
 # ---------------------------------------------------------------------------
 
 def _shap_values(
@@ -178,23 +298,18 @@ def _shap_values(
     feat_names: list[str],
     max_samples: int = SHAP_MAX_SAMPLES,
 ) -> tuple[dict[str, float], dict[str, float]]:
-    """TreeSHAP with tree_path_dependent. Returns (signed_mean, magnitude_mean)."""
     try:
         import shap as _shap
-
         sub = X[:max_samples]
         expl = _shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
         sv = expl.shap_values(sub, check_additivity=False)
-
-        # Normalise output shape across SHAP / estimator versions
         if hasattr(sv, "values"):
             sv = sv.values
         if isinstance(sv, list):
-            sv = sv[1]            # binary: take class-1 array
+            sv = sv[1]
         elif sv.ndim == 3:
-            sv = sv[:, :, 1]      # (samples, features, classes)
-        sv = np.asarray(sv, dtype=float)  # (samples, features)
-
+            sv = sv[:, :, 1]
+        sv = np.asarray(sv, dtype=float)
         signed    = {feat_names[j]: float(sv[:, j].mean())         for j in range(len(feat_names))}
         magnitude = {feat_names[j]: float(np.abs(sv[:, j]).mean()) for j in range(len(feat_names))}
         return signed, magnitude
@@ -205,7 +320,7 @@ def _shap_values(
 
 
 # ---------------------------------------------------------------------------
-# Per-fold importance
+# Per-fold importance helpers
 # ---------------------------------------------------------------------------
 
 def _safe_auc(y_true: np.ndarray, y_score: np.ndarray) -> float | None:
@@ -219,36 +334,35 @@ def _safe_auc(y_true: np.ndarray, y_score: np.ndarray) -> float | None:
 
 def _clustered_mda(
     model: Any,
-    X_te: np.ndarray,
+    X_te: np.ndarray,       # already in model's feature space (scaled for logistic)
     y_te: np.ndarray,
     feat_names: list[str],
     cluster_map: dict[str, list[str]],
     auc_base: float,
     target_mask: np.ndarray | None,
-    rng: np.random.Generator,
+    fold_i: int = 0,
+    n_repeats: int = N_PERM_REPEATS,
 ) -> dict[str, float]:
-    """Jointly permute each cluster; score drop on target_mask slice (or all rows)."""
     col_idx = {n: j for j, n in enumerate(feat_names)}
-    results: dict[str, float] = {}
-
     y_score = y_te if target_mask is None else y_te[target_mask]
-
-    for cname, cols in cluster_map.items():
+    results: dict[str, float] = {}
+    for cluster_i, (cname, cols) in enumerate(cluster_map.items()):
         members = [c for c in cols if c in col_idx]
         if not members:
             results[cname] = 0.0
             continue
-
-        X_p = X_te.copy()
-        perm = rng.permutation(len(X_p))   # one shared permutation for all members
-        for c in members:
-            X_p[:, col_idx[c]] = X_p[perm, col_idx[c]]
-
-        prob_all = model.predict_proba(X_p)[:, 1]
-        prob = prob_all if target_mask is None else prob_all[target_mask]
-        auc_perm = _safe_auc(y_score, prob)
-        results[cname] = (auc_base - auc_perm) if auc_perm is not None else 0.0
-
+        drops = []
+        for p in range(n_repeats):
+            rng = np.random.default_rng([RANDOM_SEED, fold_i, cluster_i, p])
+            X_p = X_te.copy()
+            perm = rng.permutation(len(X_p))
+            for c in members:
+                X_p[:, col_idx[c]] = X_p[perm, col_idx[c]]
+            prob_all  = model.predict_proba(X_p)[:, 1]
+            prob      = prob_all if target_mask is None else prob_all[target_mask]
+            auc_perm  = _safe_auc(y_score, prob)
+            drops.append((auc_base - auc_perm) if auc_perm is not None else 0.0)
+        results[cname] = float(np.mean(drops))
     return results
 
 
@@ -257,27 +371,26 @@ def _clustered_mdi(
     feat_names: list[str],
     cluster_map: dict[str, list[str]],
 ) -> dict[str, float]:
-    """Sum MDI (feature_importances_) within each cluster."""
     fi = dict(zip(feat_names, model.feature_importances_))
-    return {
-        cname: float(sum(fi.get(c, 0.0) for c in cols))
-        for cname, cols in cluster_map.items()
-    }
+    return {cname: float(sum(fi.get(c, 0.0) for c in cols)) for cname, cols in cluster_map.items()}
 
 
 def _clustered_shap(
     shap_mag: dict[str, float],
     cluster_map: dict[str, list[str]],
 ) -> dict[str, float]:
-    """Sum per-feature mean|SHAP| within each cluster."""
-    return {
-        cname: float(sum(shap_mag.get(c, 0.0) for c in cols))
-        for cname, cols in cluster_map.items()
-    }
+    return {cname: float(sum(shap_mag.get(c, 0.0) for c in cols)) for cname, cols in cluster_map.items()}
+
+
+def _clustered_coef(
+    coef_abs: dict[str, float],
+    cluster_map: dict[str, list[str]],
+) -> dict[str, float]:
+    return {cname: float(sum(coef_abs.get(c, 0.0) for c in cols)) for cname, cols in cluster_map.items()}
 
 
 # ---------------------------------------------------------------------------
-# CPCV loop
+# CPCV importance loop
 # ---------------------------------------------------------------------------
 
 def run_champion_cpcv(
@@ -286,28 +399,28 @@ def run_champion_cpcv(
     cluster_map: dict[str, list[str]],
     champion_cfg: dict,
 ) -> dict[str, Any]:
-    """Run CPCV with the champion estimator; return aggregated importance dicts."""
-    model_type  = champion_cfg["model_type"]
+    family      = champion_cfg["family"]      # "tree" or "logistic"
+    model_type  = champion_cfg["model_type"]  # "rf", "xgb", "logistic"
     target_inst = champion_cfg["target_inst"]
 
-    ev_meta = events_df[["date", "t1", "bin", "instrument", "avg_uniqueness"]].copy()
-    X = events_df[feat_cols].fillna(0.0).to_numpy(dtype=np.float64)
-    y = events_df["bin"].to_numpy(dtype=int)
+    ev_meta     = events_df[["date", "t1", "bin", "instrument", "avg_uniqueness"]].copy()
+    X           = events_df[feat_cols].fillna(0.0).to_numpy(dtype=np.float64)
+    y           = events_df["bin"].to_numpy(dtype=int)
     instruments = events_df["instrument"].to_numpy()
 
-    cpcv = CombinatorialPurgedKFold(
-        n_groups=CPCV_N_GROUPS, k=CPCV_K, embargo=CPCV_EMBARGO
-    )
+    cpcv = CombinatorialPurgedKFold(n_groups=CPCV_N_GROUPS, k=CPCV_K, embargo=CPCV_EMBARGO)
 
-    cmda_all: list[dict] = []
-    mdi_all:  list[dict] = []       # cluster-level MDI
-    mdi_feat_all: list[np.ndarray] = []  # per-feature MDI (raw feature_importances_)
-    cshap_all: list[dict] = []
-    shap_signed_all: list[dict] = []
-    shap_mag_all: list[dict] = []
-    aucs: list[float] = []
+    # Accumulators
+    cmda_all:         list[dict] = []
+    mdi_all:          list[dict] = []
+    mdi_feat_all:     list[np.ndarray] = []
+    cshap_all:        list[dict] = []
+    shap_signed_all:  list[dict] = []
+    shap_mag_all:     list[dict] = []
+    coef_signed_all:  list[dict] = []   # logistic
+    ccoef_all:        list[dict] = []   # logistic
+    aucs:             list[float] = []
     skipped = 0
-    rng = np.random.default_rng(RANDOM_SEED)
 
     for fold_i, (tr_idx, te_idx) in enumerate(cpcv.split(ev_meta)):
         X_tr, y_tr = X[tr_idx], y[tr_idx]
@@ -318,22 +431,26 @@ def run_champion_cpcv(
             skipped += 1
             continue
 
-        # Target instrument mask on test fold
-        te_insts = instruments[te_idx]
-        target_mask = (te_insts == target_inst) if instruments_are_pooled(events_df, target_inst) else None
+        te_insts    = instruments[te_idx]
+        is_pooled   = events_df["instrument"].nunique() > 1
+        target_mask = (te_insts == target_inst) if is_pooled else None
 
-        # Check target slice has 2 classes
         y_target = y_te if target_mask is None else y_te[target_mask]
         if len(np.unique(y_target)) < 2 or len(y_target) < 2:
             skipped += 1
             continue
 
-        # Fit champion model
+        # ── Fit ───────────────────────────────────────────────────────────────
         try:
             if model_type == "rf":
-                model, _ = _tune_fit_rf(X_tr, y_tr, events_tr)
+                model, _    = _tune_fit_rf(X_tr, y_tr, events_tr)
+                X_te_model  = X_te          # trees don't need scaling
             elif model_type == "xgb":
-                model, _ = _tune_fit_xgb(X_tr, y_tr, events_tr)
+                model, _    = _tune_fit_xgb(X_tr, y_tr, events_tr)
+                X_te_model  = X_te
+            elif model_type == "logistic":
+                scaler, model, _ = _tune_fit_logistic(X_tr, y_tr, events_tr)
+                X_te_model  = scaler.transform(X_te)  # MDA permutes scaled data
             else:
                 raise ValueError(f"Unknown model_type: {model_type}")
         except Exception as e:
@@ -341,8 +458,8 @@ def run_champion_cpcv(
             skipped += 1
             continue
 
-        # Base AUC on target slice
-        prob_all  = model.predict_proba(X_te)[:, 1]
+        # ── Base AUC on target slice ──────────────────────────────────────────
+        prob_all  = model.predict_proba(X_te_model)[:, 1]
         prob_base = prob_all if target_mask is None else prob_all[target_mask]
         auc_base  = _safe_auc(y_target, prob_base)
         if auc_base is None:
@@ -350,24 +467,35 @@ def run_champion_cpcv(
             continue
         aucs.append(auc_base)
 
-        # Clustered MDA (pass full y_te; _clustered_mda applies target_mask internally)
+        # ── Clustered MDA ─────────────────────────────────────────────────────
         cmda_all.append(
-            _clustered_mda(model, X_te, y_te, feat_cols, cluster_map,
-                           auc_base, target_mask, rng)
+            _clustered_mda(model, X_te_model, y_te, feat_cols, cluster_map,
+                           auc_base, target_mask, fold_i=fold_i)
         )
 
-        # Clustered MDI + per-feature MDI
-        mdi_all.append(_clustered_mdi(model, feat_cols, cluster_map))
-        mdi_feat_all.append(model.feature_importances_)
+        # ── Tree-specific: MDI + SHAP ─────────────────────────────────────────
+        if family == "tree":
+            mdi_all.append(_clustered_mdi(model, feat_cols, cluster_map))
+            mdi_feat_all.append(model.feature_importances_)
+            X_shap = X_te if target_mask is None else X_te[target_mask]
+            s_signed, s_mag = _shap_values(model, X_shap, feat_cols)
+            shap_signed_all.append(s_signed)
+            shap_mag_all.append(s_mag)
+            cshap_all.append(_clustered_shap(s_mag, cluster_map))
 
-        # SHAP on target slice only
-        X_shap = X_te if target_mask is None else X_te[target_mask]
-        s_signed, s_mag = _shap_values(model, X_shap, feat_cols)
-        shap_signed_all.append(s_signed)
-        shap_mag_all.append(s_mag)
-        cshap_all.append(_clustered_shap(s_mag, cluster_map))
+        # ── Logistic-specific: standardised elastic-net coefficients ──────────
+        else:
+            coef = model.coef_[0]   # already in standardised feature space
+            coef_signed = {feat_cols[j]: float(coef[j]) for j in range(len(feat_cols))}
+            coef_abs    = {k: abs(v) for k, v in coef_signed.items()}
+            coef_signed_all.append(coef_signed)
+            ccoef_all.append(_clustered_coef(coef_abs, cluster_map))
 
-    print(f"    {len(aucs)} valid folds, {skipped} skipped; mean AUC={np.mean(aucs):.3f} ± {np.std(aucs):.3f}" if aucs else "    no valid folds")
+    print(
+        f"    {len(aucs)} valid folds, {skipped} skipped; "
+        f"mean AUC={np.mean(aucs):.3f} ± {np.std(aucs):.3f}"
+        if aucs else "    no valid folds"
+    )
 
     def _agg(lst: list[dict]) -> tuple[pd.Series, pd.Series]:
         if not lst:
@@ -378,9 +506,13 @@ def run_champion_cpcv(
     cmda_mean,  cmda_std  = _agg(cmda_all)
     mdi_mean,   mdi_std   = _agg(mdi_all)
     cshap_mean, cshap_std = _agg(cshap_all)
+    ccoef_mean, ccoef_std = _agg(ccoef_all)
 
     shap_signed_mean = pd.DataFrame(shap_signed_all).mean() if shap_signed_all else pd.Series(dtype=float)
     shap_mag_mean    = pd.DataFrame(shap_mag_all).mean()    if shap_mag_all    else pd.Series(dtype=float)
+
+    coef_signed_mean = pd.DataFrame(coef_signed_all).mean() if coef_signed_all else pd.Series(dtype=float)
+    coef_abs_mean    = coef_signed_mean.abs()               if not coef_signed_mean.empty else pd.Series(dtype=float)
 
     mdi_feat_mean = pd.Series(
         np.mean(mdi_feat_all, axis=0) if mdi_feat_all else np.zeros(len(feat_cols)),
@@ -388,123 +520,126 @@ def run_champion_cpcv(
     )
 
     return {
-        "cmda_mean":      cmda_mean,
-        "cmda_std":       cmda_std,
-        "mdi_mean":       mdi_mean,
-        "mdi_std":        mdi_std,
-        "cshap_mean":     cshap_mean,
-        "cshap_std":      cshap_std,
+        "family":          family,
+        "cmda_mean":       cmda_mean,
+        "cmda_std":        cmda_std,
+        # tree
+        "mdi_mean":        mdi_mean,
+        "mdi_std":         mdi_std,
+        "cshap_mean":      cshap_mean,
+        "cshap_std":       cshap_std,
         "shap_signed_mean": shap_signed_mean,
-        "shap_mag_mean":  shap_mag_mean,
-        "mdi_feat_mean":  mdi_feat_mean,
-        "fold_aucs":      aucs,
-        "n_folds":        len(aucs),
+        "shap_mag_mean":   shap_mag_mean,
+        "mdi_feat_mean":   mdi_feat_mean,
+        # logistic
+        "ccoef_mean":      ccoef_mean,
+        "ccoef_std":       ccoef_std,
+        "coef_signed_mean": coef_signed_mean,
+        "coef_abs_mean":   coef_abs_mean,
+        # shared
+        "fold_aucs": aucs,
+        "n_folds":   len(aucs),
     }
 
 
-def instruments_are_pooled(events_df: pd.DataFrame, target_inst: str) -> bool:
-    """True when the events_df contains multiple instruments (pooled group)."""
-    return events_df["instrument"].nunique() > 1
-
-
 # ---------------------------------------------------------------------------
-# Within-cluster breakdown (SHAP ranking + PCA)
+# Within-cluster breakdown (SHAP or |coef| ranking + PCA PC1–PC3)
 # ---------------------------------------------------------------------------
 
 def within_cluster_breakdown(
     events_df: pd.DataFrame,
     feat_cols: list[str],
     cluster_map: dict[str, list[str]],
-    shap_mag_mean: pd.Series,
+    member_scores: pd.Series,   # shap_mag_mean (tree) or coef_abs_mean (logistic)
     top_cluster_names: list[str],
 ) -> dict[str, dict]:
-    """For each top cluster: rank members by mean|SHAP|; PCA on full event matrix."""
     results: dict[str, dict] = {}
-    X_full = events_df[feat_cols].fillna(0.0).to_numpy(dtype=np.float64)
+    X_full   = events_df[feat_cols].fillna(0.0).to_numpy(dtype=np.float64)
     feat_idx = {n: j for j, n in enumerate(feat_cols)}
 
     for cname in top_cluster_names:
-        cols = cluster_map.get(cname, [])
+        cols    = cluster_map.get(cname, [])
         members = [c for c in cols if c in feat_idx]
         if len(members) < 2:
-            results[cname] = {"members": members, "shap_ranks": {}, "pca_pc1_var": None, "pca_loadings": {}}
+            results[cname] = {
+                "members": members, "score_ranks": {},
+                "pca_var": [], "pca_loadings": [],
+            }
             continue
 
-        # SHAP ranking
-        shap_rank = {c: float(shap_mag_mean.get(c, 0.0)) for c in members}
-        shap_rank = dict(sorted(shap_rank.items(), key=lambda x: x[1], reverse=True))
+        score_rank = {c: float(member_scores.get(c, 0.0)) for c in members}
+        score_rank = dict(sorted(score_rank.items(), key=lambda x: x[1], reverse=True))
 
-        # PCA on the cluster submatrix
         col_indices = [feat_idx[c] for c in members]
         X_sub = X_full[:, col_indices]
-        scaler = StandardScaler()
-        X_sc = scaler.fit_transform(X_sub)
         n_comp = min(3, len(members))
         pca = PCA(n_components=n_comp, random_state=RANDOM_SEED)
-        pca.fit(X_sc)
-        pc1_var = float(pca.explained_variance_ratio_[0])
-        loadings = {
-            members[j]: float(pca.components_[0, j])
-            for j in range(len(members))
-        }
+        pca.fit(StandardScaler().fit_transform(X_sub))
 
         results[cname] = {
-            "members": members,
-            "shap_ranks": shap_rank,
-            "pca_pc1_var": pc1_var,
-            "pca_loadings": loadings,
+            "members":      members,
+            "score_ranks":  score_rank,
+            "pca_var":      list(pca.explained_variance_ratio_),        # up to 3 values
+            "pca_loadings": [list(pca.components_[i]) for i in range(n_comp)],  # up to 3 arrays
         }
 
     return results
 
 
 # ---------------------------------------------------------------------------
-# Significance / agreement analysis
+# Significance / agreement
 # ---------------------------------------------------------------------------
 
 def _cluster_significance_flags(
     cmda_mean: pd.Series,
     cmda_std: pd.Series,
 ) -> pd.Series:
-    """True where mean_drop > 1 std (significantly above zero)."""
     std_safe = cmda_std.fillna(np.inf)
     return (cmda_mean > std_safe).rename("significant")
 
 
 def _rank_agreement(
     cmda_mean: pd.Series,
-    mdi_mean: pd.Series,
-    cshap_mean: pd.Series,
+    secondary: pd.Series,    # mdi_mean (tree) or ccoef_mean (logistic)
+    tertiary: pd.Series | None,  # cshap_mean (tree) or None (logistic)
+    labels: tuple[str, str, str] = ("MDA", "Secondary", "Tertiary"),
 ) -> pd.DataFrame:
-    """Kendall tau between each pair of cluster rankings."""
-    clusters = cmda_mean.index.intersection(mdi_mean.index).intersection(cshap_mean.index)
+    if tertiary is not None:
+        clusters = cmda_mean.index.intersection(secondary.index).intersection(tertiary.index)
+    else:
+        clusters = cmda_mean.index.intersection(secondary.index)
+
     if len(clusters) < 3:
         return pd.DataFrame()
 
-    rank_mda  = cmda_mean.loc[clusters].rank(ascending=False)
-    rank_mdi  = mdi_mean.loc[clusters].rank(ascending=False)
-    rank_shap = cshap_mean.loc[clusters].rank(ascending=False)
+    r_mda = cmda_mean.loc[clusters].rank(ascending=False)
+    r_sec = secondary.loc[clusters].rank(ascending=False)
 
-    tau_mda_mdi,  _ = kendalltau(rank_mda, rank_mdi)
-    tau_mda_shap, _ = kendalltau(rank_mda, rank_shap)
-    tau_mdi_shap, _ = kendalltau(rank_mdi, rank_shap)
+    tau_ms, _ = kendalltau(r_mda, r_sec)
 
-    return pd.DataFrame({
-        "method_pair": ["MDA-MDI", "MDA-SHAP", "MDI-SHAP"],
-        "kendall_tau": [tau_mda_mdi, tau_mda_shap, tau_mdi_shap],
-        "agree": [abs(tau_mda_mdi) > 0.4, abs(tau_mda_shap) > 0.4, abs(tau_mdi_shap) > 0.4],
-    })
+    if tertiary is not None:
+        r_ter = tertiary.loc[clusters].rank(ascending=False)
+        tau_mt, _ = kendalltau(r_mda, r_ter)
+        tau_st, _ = kendalltau(r_sec, r_ter)
+        return pd.DataFrame({
+            "method_pair": [f"{labels[0]}-{labels[1]}", f"{labels[0]}-{labels[2]}", f"{labels[1]}-{labels[2]}"],
+            "kendall_tau": [tau_ms, tau_mt, tau_st],
+            "agree":       [abs(tau_ms) > 0.4, abs(tau_mt) > 0.4, abs(tau_st) > 0.4],
+        })
+    else:
+        return pd.DataFrame({
+            "method_pair": [f"{labels[0]}-{labels[1]}"],
+            "kendall_tau": [tau_ms],
+            "agree":       [abs(tau_ms) > 0.4],
+        })
 
 
-def _semantic_recovery(
-    cluster_map: dict[str, list[str]],
-) -> pd.DataFrame:
-    """For each cluster, check how purely it maps to a single F-prefix family."""
+def _semantic_recovery(cluster_map: dict[str, list[str]]) -> pd.DataFrame:
+    from collections import Counter
     rows: list[dict] = []
     for cname, cols in cluster_map.items():
         if not cols:
             continue
-        from collections import Counter
         pfx_counts: Counter = Counter()
         for c in cols:
             pfx = c.split("_")[0] + "_"
@@ -512,94 +647,17 @@ def _semantic_recovery(
         dominant_pfx, dominant_n = pfx_counts.most_common(1)[0]
         purity = dominant_n / len(cols)
         rows.append({
-            "cluster":       cname,
-            "n_members":     len(cols),
-            "dominant_pfx":  dominant_pfx,
-            "purity":        round(purity, 2),
-            "pure":          purity >= 0.80,
+            "cluster":      cname,
+            "n_members":    len(cols),
+            "dominant_pfx": dominant_pfx,
+            "purity":       round(purity, 2),
+            "pure":         purity >= 0.80,
         })
     return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
-# Findings note
-# ---------------------------------------------------------------------------
-
-def _generate_findings_note(
-    inst: str,
-    champion_cfg: dict,
-    fold_aucs: list[float],
-    cmda_mean: pd.Series,
-    cmda_std: pd.Series,
-    sig_flags: pd.Series,
-    rank_df: pd.DataFrame,
-    semantic_df: pd.DataFrame,
-    top_cluster_names: list[str],
-    within_breakdown: dict[str, dict],
-) -> str:
-    lines: list[str] = []
-    lines.append(f"=== Findings note: {inst} ===")
-    lines.append(f"Champion: {champion_cfg['group']} / {champion_cfg['model_type'].upper()}")
-    lines.append(f"Signal context: {champion_cfg['notes']}")
-    lines.append(f"CPCV: {len(fold_aucs)} valid folds, AUC={np.mean(fold_aucs):.3f}±{np.std(fold_aucs):.3f}" if fold_aucs else "CPCV: 0 valid folds")
-    lines.append("")
-
-    # Driving clusters
-    sig_clusters = sig_flags[sig_flags].index.tolist()
-    insig_clusters = sig_flags[~sig_flags].index.tolist()
-    lines.append("--- Cluster-level MDA (mean ± std, sorted) ---")
-    sorted_cmda = cmda_mean.sort_values(ascending=False)
-    for cname in sorted_cmda.index:
-        flag = "*" if sig_flags.get(cname, False) else " "
-        lines.append(
-            f"  {flag} {cname:<40s}  "
-            f"{cmda_mean.get(cname, 0):+.4f} ± {cmda_std.get(cname, np.nan):.4f}"
-        )
-    lines.append("")
-    lines.append(f"Significant clusters (mean > 1σ): {sig_clusters or 'none'}")
-    lines.append(f"Inconclusive clusters (|mean| ≤ 1σ): {insig_clusters or 'none'}")
-    lines.append("")
-
-    # Method agreement
-    if not rank_df.empty:
-        lines.append("--- Cross-method rank agreement (Kendall τ) ---")
-        for _, row in rank_df.iterrows():
-            agree_str = "AGREE" if row["agree"] else "DISAGREE"
-            lines.append(f"  {row['method_pair']}: τ={row['kendall_tau']:+.2f}  [{agree_str}]")
-    lines.append("")
-
-    # Semantic recovery
-    lines.append("--- Semantic F-group recovery ---")
-    if not semantic_df.empty:
-        for _, row in semantic_df.iterrows():
-            pure_str = "pure" if row["pure"] else "mixed"
-            lines.append(
-                f"  {row['cluster']}: dominant={row['dominant_pfx'].rstrip('_')} "
-                f"purity={row['purity']:.0%} ({pure_str})"
-            )
-    lines.append("")
-
-    # Within-cluster breakdown
-    if within_breakdown:
-        lines.append("--- Within-cluster breakdown (top clusters) ---")
-        for cname, bd in within_breakdown.items():
-            lines.append(f"  {cname} (PC1 explains {bd.get('pca_pc1_var', 0) or 0:.1%}):")
-            top_shap = list(bd["shap_ranks"].items())[:5]
-            for feat, val in top_shap:
-                lines.append(f"    mean|SHAP|={val:.4f}  {feat}")
-            top_load = sorted(bd["pca_loadings"].items(), key=lambda x: abs(x[1]), reverse=True)[:3]
-            lines.append(f"    PC1 top loadings: " +
-                         ", ".join(f"{f} ({v:+.2f})" for f, v in top_load))
-    lines.append("")
-    lines.append("Note: MDI is a train-set statistic (upward-biased for high-cardinality features).")
-    lines.append("SHAP uses tree_path_dependent perturbation (corrects for correlated features).")
-    lines.append("Clustered MDA uses a shared row permutation across all cluster members.")
-
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Outputs
+# Output: save all artefacts
 # ---------------------------------------------------------------------------
 
 def _save_outputs(
@@ -616,15 +674,14 @@ def _save_outputs(
     sig_flags: pd.Series,
     rank_df: pd.DataFrame,
     within_breakdown: dict[str, dict],
-    findings_note: str,
+    champion_cfg: dict,
 ) -> None:
     out = OUTPUTS / inst
     out.mkdir(parents=True, exist_ok=True)
 
-    cmda_mean = importance["cmda_mean"]
-    cmda_std  = importance["cmda_std"]
-    mdi_mean  = importance["mdi_mean"]
-    cshap_mean = importance["cshap_mean"]
+    family     = importance["family"]
+    cmda_mean  = importance["cmda_mean"]
+    cmda_std   = importance["cmda_std"]
 
     # ── Cluster membership ──────────────────────────────────────────────────
     rows = []
@@ -638,66 +695,104 @@ def _save_outputs(
     # ── K-selection metrics ─────────────────────────────────────────────────
     cluster_metrics.to_csv(out / "cluster_k_metrics.csv", index=False)
 
-    # ── Clustered MDA full table ────────────────────────────────────────────
+    # ── Clustered MDA full ──────────────────────────────────────────────────
     cmda_df = pd.DataFrame({
-        "mean_drop": cmda_mean,
-        "std_drop":  cmda_std,
+        "mean_drop":   cmda_mean,
+        "std_drop":    cmda_std,
         "significant": sig_flags,
     })
     cmda_df.index.name = "cluster"
     cmda_df = cmda_df.sort_values("mean_drop", ascending=False)
     cmda_df.to_csv(out / "clustered_mda_full.csv")
 
-    # ── Cross-check table: MDA rank, MDI rank, SHAP rank ───────────────────
-    shared = cmda_mean.index.intersection(mdi_mean.index).intersection(cshap_mean.index)
-    crosscheck = pd.DataFrame({
-        "mda_mean":   cmda_mean.loc[shared],
-        "mda_rank":   cmda_mean.loc[shared].rank(ascending=False).astype(int),
-        "mdi_sum":    mdi_mean.loc[shared],
-        "mdi_rank":   mdi_mean.loc[shared].rank(ascending=False).astype(int),
-        "shap_sum":   cshap_mean.loc[shared],
-        "shap_rank":  cshap_mean.loc[shared].rank(ascending=False).astype(int),
-        "significant": sig_flags.reindex(shared).fillna(False),
-    })
-    crosscheck.index.name = "cluster"
-    crosscheck = crosscheck.sort_values("mda_rank")
-    crosscheck.to_csv(out / "cluster_crosscheck_table.csv")
+    # ── Cross-check table ───────────────────────────────────────────────────
+    if family == "tree":
+        mdi_mean   = importance["mdi_mean"]
+        cshap_mean = importance["cshap_mean"]
+        shared = cmda_mean.index.intersection(mdi_mean.index).intersection(cshap_mean.index)
+        cc = pd.DataFrame({
+            "mda_mean":  cmda_mean.loc[shared],
+            "mda_rank":  cmda_mean.loc[shared].rank(ascending=False).astype(int),
+            "mdi_sum":   mdi_mean.loc[shared],
+            "mdi_rank":  mdi_mean.loc[shared].rank(ascending=False).astype(int),
+            "shap_sum":  cshap_mean.loc[shared],
+            "shap_rank": cshap_mean.loc[shared].rank(ascending=False).astype(int),
+            "significant": sig_flags.reindex(shared).fillna(False),
+        })
+    else:
+        ccoef_mean = importance["ccoef_mean"]
+        shared = cmda_mean.index.intersection(ccoef_mean.index)
+        cc = pd.DataFrame({
+            "mda_mean":  cmda_mean.loc[shared],
+            "mda_rank":  cmda_mean.loc[shared].rank(ascending=False).astype(int),
+            "coef_sum":  ccoef_mean.loc[shared],
+            "coef_rank": ccoef_mean.loc[shared].rank(ascending=False).astype(int),
+            "significant": sig_flags.reindex(shared).fillna(False),
+        })
+    cc.index.name = "cluster"
+    cc.sort_values("mda_rank").to_csv(out / "cluster_crosscheck_table.csv")
 
-    # ── Global per-feature SHAP + MDI ──────────────────────────────────────
-    shap_mag  = importance["shap_mag_mean"]
-    shap_sign = importance["shap_signed_mean"]
-    mdi_feat  = importance["mdi_feat_mean"]
-    feat_df = pd.DataFrame({
-        "shap_magnitude": shap_mag,
-        "shap_signed":    shap_sign,
-        "mdi":            mdi_feat,
-    }).dropna(how="all")
-    feat_df.index.name = "feature"
-    feat_df = feat_df.sort_values("shap_magnitude", ascending=False)
-    feat_df.to_csv(out / "global_shap_summary.csv")
+    # ── Global per-feature view ─────────────────────────────────────────────
+    if family == "tree":
+        shap_mag  = importance["shap_mag_mean"]
+        shap_sign = importance["shap_signed_mean"]
+        mdi_feat  = importance["mdi_feat_mean"]
+        feat_df = pd.DataFrame({
+            "shap_magnitude": shap_mag,
+            "shap_signed":    shap_sign,
+            "mdi":            mdi_feat,
+        }).dropna(how="all")
+        feat_df.index.name = "feature"
+        feat_df.sort_values("shap_magnitude", ascending=False).to_csv(out / "global_shap_summary.csv")
+    else:
+        coef_signed = importance["coef_signed_mean"]
+        coef_abs    = importance["coef_abs_mean"]
+        feat_df = pd.DataFrame({
+            "coef_abs":    coef_abs,
+            "coef_signed": coef_signed,
+        }).dropna(how="all")
+        feat_df.index.name = "feature"
+        feat_df.sort_values("coef_abs", ascending=False).to_csv(out / "global_coef_summary.csv")
 
-    # ── Rank-agreement table ────────────────────────────────────────────────
+    # ── Rank agreement ──────────────────────────────────────────────────────
     if not rank_df.empty:
         rank_df.to_csv(out / "rank_agreement.csv", index=False)
 
     # ── Within-cluster breakdown CSVs ───────────────────────────────────────
+    score_col = "mean_shap_mag" if family == "tree" else "mean_coef_abs"
     for cname, bd in within_breakdown.items():
         safe_name = cname.replace("/", "_").replace(" ", "_")
         rows_wc = []
-        for feat, shap_val in bd["shap_ranks"].items():
-            load = bd["pca_loadings"].get(feat, np.nan)
-            rows_wc.append({
-                "feature": feat, "mean_shap_mag": shap_val,
-                "pc1_loading": load,
-            })
-        wc_df = pd.DataFrame(rows_wc)
-        wc_df["cluster"] = cname
-        wc_df["pca_pc1_var_explained"] = bd.get("pca_pc1_var")
-        wc_df.to_csv(out / f"within_cluster_{safe_name}.csv", index=False)
+        members  = bd["members"]
+        pca_var  = bd["pca_var"]
+        pca_loads = bd["pca_loadings"]
+        for j, feat in enumerate(members):
+            row_wc: dict = {
+                "feature":    feat,
+                "cluster":    cname,
+                score_col:    bd["score_ranks"].get(feat, 0.0),
+            }
+            for pc_i in range(len(pca_var)):
+                row_wc[f"pc{pc_i+1}_loading"]             = pca_loads[pc_i][j] if j < len(pca_loads[pc_i]) else np.nan
+                row_wc[f"pca_pc{pc_i+1}_var_explained"]   = pca_var[pc_i]
+            rows_wc.append(row_wc)
+        pd.DataFrame(rows_wc).to_csv(out / f"within_cluster_{safe_name}.csv", index=False)
 
-    # ── Findings note ───────────────────────────────────────────────────────
-    with open(out / "findings_note.txt", "w") as fh:
-        fh.write(findings_note)
+    # ── Champion metadata ───────────────────────────────────────────────────
+    meta = {
+        "instrument": inst,
+        "asset_class": champion_cfg["asset_class"],
+        "group":       champion_cfg["group"],
+        "family":      family,
+        "model_type":  champion_cfg["model_type"],
+        "auc_mean":    champion_cfg["auc_mean"],
+        "auc_std":     champion_cfg["auc_std"],
+        "lower_ci":    champion_cfg["lower_ci"],
+        "signal":      champion_cfg["signal"],
+        "n_folds":     importance["n_folds"],
+        "n_sig_clusters": int(sig_flags.sum()),
+    }
+    pd.DataFrame([meta]).to_csv(out / "champion_meta.csv", index=False)
 
     # ════════════════════════════════════════════════════════════════════════
     # Figures
@@ -710,8 +805,7 @@ def _save_outputs(
         fig, ax = plt.subplots(figsize=(16, 5))
         _dendrogram(Z, labels=corr_cols, ax=ax, leaf_rotation=90, leaf_font_size=5)
         cut_height = Z[-(best_k - 1), 2] if best_k > 1 else Z[-1, 2]
-        ax.axhline(y=cut_height, color="red", linestyle="--", linewidth=1.0,
-                   label=f"K={best_k} cut")
+        ax.axhline(y=cut_height, color="red", linestyle="--", linewidth=1.0, label=f"K={best_k} cut")
         ax.set_title(f"{inst} — Ward dendrogram on continuous features (Spearman distance)")
         ax.legend(fontsize=8)
         plt.tight_layout()
@@ -720,24 +814,21 @@ def _save_outputs(
     except Exception as e:
         print(f"  [warn] dendrogram failed: {e}")
 
-    # ── Clustered MDA bar chart (centerpiece) ───────────────────────────────
+    # ── Clustered MDA bar chart ─────────────────────────────────────────────
     try:
-        df_plot = cmda_df.copy()
-        colors = ["#1f77b4" if s else "#aec7e8" for s in df_plot["significant"]]
-        fig, ax = plt.subplots(figsize=(11, max(5, len(df_plot) * 0.35)))
-        y_pos = range(len(df_plot))
-        ax.barh(
-            list(y_pos), df_plot["mean_drop"],
-            xerr=df_plot["std_drop"].fillna(0),
-            align="center", capsize=3, color=colors, alpha=0.9,
-        )
+        colors = ["#1f77b4" if s else "#aec7e8" for s in cmda_df["significant"]]
+        fig, ax = plt.subplots(figsize=(11, max(5, len(cmda_df) * 0.35)))
+        y_pos = range(len(cmda_df))
+        ax.barh(list(y_pos), cmda_df["mean_drop"],
+                xerr=cmda_df["std_drop"].fillna(0), align="center",
+                capsize=3, color=colors, alpha=0.9)
         ax.set_yticks(list(y_pos))
-        ax.set_yticklabels(df_plot.index, fontsize=7)
+        ax.set_yticklabels(cmda_df.index, fontsize=7)
         ax.set_xlabel("Mean AUC drop (clustered MDA, ± std across CPCV paths)")
         ax.set_title(
-            f"{inst} champion ({importance['n_folds']} CPCV paths)  "
-            f"— Cluster-level importance\n"
-            f"(dark = significant > 1σ; light = inconclusive)"
+            f"{inst} ({champion_cfg['group']} / {champion_cfg['model_type'].upper()}, "
+            f"{importance['n_folds']} CPCV paths)\n"
+            f"Cluster-level importance (dark = significant > 1σ; light = inconclusive)"
         )
         ax.axvline(x=0, color="black", linewidth=0.8)
         plt.tight_layout()
@@ -746,59 +837,73 @@ def _save_outputs(
     except Exception as e:
         print(f"  [warn] clustered MDA chart failed: {e}")
 
-    # ── Global SHAP bar chart ───────────────────────────────────────────────
+    # ── Global feature chart (SHAP or coef) ────────────────────────────────
     try:
         top_feats = feat_df.head(30)
         fig, ax = plt.subplots(figsize=(10, max(5, len(top_feats) * 0.32)))
         y_pos = range(len(top_feats))
-        colors_shap = [
-            "#d62728" if importance["shap_signed_mean"].get(f, 0) > 0 else "#1f77b4"
-            for f in top_feats.index
-        ]
-        ax.barh(list(y_pos), top_feats["shap_magnitude"], align="center",
-                color=colors_shap, alpha=0.85)
+        if family == "tree":
+            vals = top_feats["shap_magnitude"]
+            sign_col = importance["shap_signed_mean"]
+            colors_feat = ["#d62728" if sign_col.get(f, 0) > 0 else "#1f77b4" for f in top_feats.index]
+            xlabel = "Mean |SHAP value| (tree_path_dependent)"
+            title_suffix = "Global per-feature SHAP (top 30)\nred=positive signal, blue=negative"
+        else:
+            vals = top_feats["coef_abs"]
+            sign_col = importance["coef_signed_mean"]
+            colors_feat = ["#d62728" if sign_col.get(f, 0) > 0 else "#1f77b4" for f in top_feats.index]
+            xlabel = "Mean |standardised elastic-net coefficient|"
+            title_suffix = "Global per-feature coefficient (top 30)\nred=positive, blue=negative"
+        ax.barh(list(y_pos), vals, align="center", color=colors_feat, alpha=0.85)
         ax.set_yticks(list(y_pos))
         ax.set_yticklabels(top_feats.index, fontsize=6)
-        ax.set_xlabel("Mean |SHAP value| (tree_path_dependent)")
-        ax.set_title(f"{inst} — Global per-feature SHAP (top 30)\n"
-                     f"red = positive signal, blue = negative signal")
+        ax.set_xlabel(xlabel)
+        ax.set_title(f"{inst} — {title_suffix}")
         ax.axvline(x=0, color="black", linewidth=0.5)
         plt.tight_layout()
-        fig.savefig(out / "global_shap_chart.png", dpi=130)
+        fname = "global_shap_chart.png" if family == "tree" else "global_coef_chart.png"
+        fig.savefig(out / fname, dpi=130)
         plt.close(fig)
     except Exception as e:
-        print(f"  [warn] global SHAP chart failed: {e}")
+        print(f"  [warn] global feature chart failed: {e}")
 
-    # ── Within-cluster SHAP bar charts for top clusters ─────────────────────
+    # ── Within-cluster bar charts ───────────────────────────────────────────
     for cname, bd in within_breakdown.items():
         try:
             safe_name = cname.replace("/", "_").replace(" ", "_")
-            items = list(bd["shap_ranks"].items())
+            items = list(bd["score_ranks"].items())
             if not items:
                 continue
             feats_wc = [x[0] for x in items]
             vals_wc  = [x[1] for x in items]
-            fig, axes = plt.subplots(1, 2, figsize=(13, max(3, len(feats_wc) * 0.4)))
+            pca_var  = bd["pca_var"]
+            pca_loads = bd["pca_loadings"]
 
-            # SHAP magnitude
-            ax0 = axes[0]
-            ax0.barh(range(len(feats_wc)), vals_wc, align="center", color="#1f77b4", alpha=0.85)
-            ax0.set_yticks(range(len(feats_wc)))
-            ax0.set_yticklabels(feats_wc, fontsize=7)
-            ax0.set_xlabel("Mean |SHAP| within cluster")
-            ax0.set_title(f"SHAP ranking\nPC1 explains {bd.get('pca_pc1_var', 0) or 0:.1%} of variance")
+            n_pc_plots = min(2, len(pca_var))
+            fig, axes = plt.subplots(1, 1 + n_pc_plots,
+                                     figsize=(5 + 5 * n_pc_plots, max(3, len(feats_wc) * 0.4)))
+            if not hasattr(axes, "__len__"):
+                axes = [axes]
 
-            # PCA PC1 loadings
-            ax1 = axes[1]
-            load_vals = [bd["pca_loadings"].get(f, 0.0) for f in feats_wc]
-            colors_l = ["#d62728" if v > 0 else "#1f77b4" for v in load_vals]
-            ax1.barh(range(len(feats_wc)), load_vals, align="center",
-                     color=colors_l, alpha=0.85)
-            ax1.set_yticks(range(len(feats_wc)))
-            ax1.set_yticklabels(feats_wc, fontsize=7)
-            ax1.set_xlabel("PC1 loading (standardised)")
-            ax1.set_title(f"PCA PC1 loadings")
-            ax1.axvline(x=0, color="black", linewidth=0.5)
+            score_label = "Mean |SHAP|" if family == "tree" else "Mean |coef|"
+            axes[0].barh(range(len(feats_wc)), vals_wc, align="center", color="#1f77b4", alpha=0.85)
+            axes[0].set_yticks(range(len(feats_wc)))
+            axes[0].set_yticklabels(feats_wc, fontsize=7)
+            axes[0].set_xlabel(score_label)
+            axes[0].set_title(
+                f"Member ranking\n"
+                f"PC1={pca_var[0]:.1%}" + (f" PC2={pca_var[1]:.1%}" if len(pca_var) > 1 else "")
+            )
+
+            for pc_i in range(n_pc_plots):
+                load_vals = pca_loads[pc_i] if pc_i < len(pca_loads) else [0.0] * len(feats_wc)
+                col_l = ["#d62728" if v > 0 else "#1f77b4" for v in load_vals]
+                axes[pc_i + 1].barh(range(len(feats_wc)), load_vals, align="center", color=col_l, alpha=0.85)
+                axes[pc_i + 1].set_yticks(range(len(feats_wc)))
+                axes[pc_i + 1].set_yticklabels(feats_wc, fontsize=7)
+                axes[pc_i + 1].set_xlabel("Loading")
+                axes[pc_i + 1].set_title(f"PC{pc_i+1} loadings ({pca_var[pc_i]:.1%} var)")
+                axes[pc_i + 1].axvline(x=0, color="black", linewidth=0.5)
 
             fig.suptitle(f"{inst} — Within-cluster breakdown: {cname}", fontsize=9)
             plt.tight_layout()
@@ -816,31 +921,40 @@ def _save_outputs(
 
 def run_champion_importance(
     instruments: list[str] | None = None,
+    asset_class: str | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
-    """Run the champion importance pipeline for each requested instrument."""
     OUTPUTS.mkdir(parents=True, exist_ok=True)
 
-    targets = instruments if instruments is not None else list(CHAMPIONS.keys())
+    if asset_class is not None:
+        if asset_class not in ASSET_CLASSES:
+            raise ValueError(f"Unknown asset_class: {asset_class}. Choose from {list(ASSET_CLASSES)}")
+        targets = ASSET_CLASSES[asset_class]
+    elif instruments is not None:
+        targets = instruments
+    else:
+        targets = list(CHAMPIONS.keys())
+
     results: dict[str, Any] = {}
 
     for inst in targets:
         if inst not in CHAMPIONS:
-            print(f"[skip] {inst}: not a champion instrument")
+            print(f"[skip] {inst}: not in CHAMPIONS")
             continue
 
         cfg = CHAMPIONS[inst]
-        print(f"\n{'='*64}")
-        print(f"Champion importance: {inst}  (group={cfg['group']}, model={cfg['model_type'].upper()})")
-        print("=" * 64)
+        sig_str = "SIGNAL" if cfg["signal"] else "NO-SIGNAL"
+        print(f"\n{'='*66}")
+        print(f"  {inst}  |  {cfg['group']} / {cfg['model_type'].upper()}  |  "
+              f"AUC {cfg['auc_mean']:.3f}±{cfg['auc_std']:.3f}  |  {sig_str}")
+        print("=" * 66)
 
-        # Skip-check
         done_marker = OUTPUTS / inst / "clustered_mda_full.csv"
         if done_marker.exists() and not force:
-            print(f"  [cache hit] outputs already exist; pass --force to rerun")
+            print(f"  [cache hit] pass --force to rerun")
             continue
 
-        # 1. Load events from model_comparison cache
+        # 1. Load train-only events from model_comparison cache
         cache_path = CACHE_DIR / f"{cfg['group']}_events.parquet"
         if not cache_path.exists():
             print(f"  [error] cache not found: {cache_path}")
@@ -851,85 +965,80 @@ def run_champion_importance(
 
         # 2. Cluster features
         print("  Clustering features...")
-        groups = _assign_groups_champion(events_df)
+        groups    = _assign_groups_champion(events_df)
         corr_cols = groups.pop("corr_cluster", [])
-        hand_groups = groups   # F4_latent, F5_signal, F8_calendar, F_instrument, F_misc
+        hand_groups = groups
 
         if len(corr_cols) < 3:
-            print(f"  [warn] only {len(corr_cols)} corr-cluster features; skipping corr clustering")
-            cluster_map = hand_groups
-            best_k = 0
+            print(f"  [warn] only {len(corr_cols)} corr-cluster features")
+            cluster_map     = hand_groups
+            best_k          = 0
             cluster_metrics = pd.DataFrame()
-            cluster_labels = np.array([])
-            dist_mat = np.zeros((0, 0))
+            cluster_labels  = np.array([])
+            dist_mat        = np.zeros((0, 0))
         else:
             X_corr = events_df[corr_cols].fillna(0)
             dist_mat = compute_spearman_distance(X_corr)
             best_k, cluster_metrics = select_k(X_corr, dist_mat)
             sil = cluster_metrics.set_index("K").loc[best_k, "silhouette"]
             print(f"  Best K={best_k} (silhouette={sil:.3f})")
-            cluster_labels = get_cluster_labels(dist_mat, best_k)
-            cluster_reps = cluster_representatives(X_corr, cluster_labels)
-            cluster_map = build_cluster_map(corr_cols, cluster_labels, hand_groups)
+            cluster_labels  = get_cluster_labels(dist_mat, best_k)
+            _              = cluster_representatives(X_corr, cluster_labels)
+            cluster_map     = build_cluster_map(corr_cols, cluster_labels, hand_groups)
 
         n_clusters = len(cluster_map)
         print(f"  Cluster map: {n_clusters} groups "
               f"({best_k} corr + {len(hand_groups)} hand-assigned)")
 
-        # 3. Run CPCV importance
-        print(f"  Running CPCV ({CPCV_N_GROUPS} groups, k={CPCV_K}) ...")
+        # 3. CPCV importance
+        print(f"  Running CPCV importance ({cfg['family']}) ...")
         importance = run_champion_cpcv(events_df, feat_cols, cluster_map, cfg)
 
         if not importance["fold_aucs"]:
-            print("  [error] no valid folds — skipping outputs")
+            print("  [error] no valid folds — skipping")
             continue
 
-        # 4. Significance flags + rank agreement
-        sig_flags = _cluster_significance_flags(
-            importance["cmda_mean"], importance["cmda_std"]
-        )
-        rank_df = _rank_agreement(
-            importance["cmda_mean"], importance["mdi_mean"], importance["cshap_mean"]
-        )
+        # 4. Significance + rank agreement
+        sig_flags = _cluster_significance_flags(importance["cmda_mean"], importance["cmda_std"])
 
-        # 5. Semantic recovery analysis
-        semantic_df = _semantic_recovery(cluster_map)
+        family = importance["family"]
+        if family == "tree":
+            rank_df = _rank_agreement(
+                importance["cmda_mean"], importance["mdi_mean"], importance["cshap_mean"],
+                labels=("MDA", "MDI", "SHAP"),
+            )
+        else:
+            rank_df = _rank_agreement(
+                importance["cmda_mean"], importance["ccoef_mean"], None,
+                labels=("MDA", "Coef", ""),
+            )
 
-        # 6. Within-cluster breakdown for top-N significant clusters
-        top_sig = sig_flags[sig_flags].index.tolist()
-        # Fall back to top-N by MDA if fewer than TOP_CLUSTERS_N are significant
-        sorted_by_mda = importance["cmda_mean"].sort_values(ascending=False)
-        top_by_mda = sorted_by_mda.index[:TOP_CLUSTERS_N].tolist()
+        # 5. Within-cluster breakdown for top-3 clusters
+        top_sig    = sig_flags[sig_flags].index.tolist()
+        sorted_mda = importance["cmda_mean"].sort_values(ascending=False)
+        top_by_mda = sorted_mda.index[:TOP_CLUSTERS_N].tolist()
         top_cluster_names = list(dict.fromkeys(top_sig[:TOP_CLUSTERS_N] + top_by_mda))[:TOP_CLUSTERS_N]
 
+        member_scores = (
+            importance["shap_mag_mean"] if family == "tree" else importance["coef_abs_mean"]
+        )
         within_breakdown = within_cluster_breakdown(
-            events_df, feat_cols, cluster_map,
-            importance["shap_mag_mean"], top_cluster_names
+            events_df, feat_cols, cluster_map, member_scores, top_cluster_names
         )
 
-        # 7. Findings note
-        findings_note = _generate_findings_note(
-            inst, cfg, importance["fold_aucs"],
-            importance["cmda_mean"], importance["cmda_std"],
-            sig_flags, rank_df, semantic_df,
-            top_cluster_names, within_breakdown,
-        )
-
-        # 8. Save outputs
+        # 6. Save all artefacts
         _save_outputs(
             inst, events_df, feat_cols, cluster_map, cluster_metrics,
             cluster_labels, corr_cols, dist_mat, best_k,
-            importance, sig_flags, rank_df, within_breakdown, findings_note,
+            importance, sig_flags, rank_df, within_breakdown, cfg,
         )
 
         results[inst] = {
-            "cluster_map":    cluster_map,
-            "importance":     importance,
-            "sig_flags":      sig_flags,
-            "rank_agreement": rank_df,
-            "semantic_df":    semantic_df,
+            "cluster_map":     cluster_map,
+            "importance":      importance,
+            "sig_flags":       sig_flags,
+            "rank_agreement":  rank_df,
             "within_breakdown": within_breakdown,
-            "findings_note":  findings_note,
         }
 
     return results
@@ -941,16 +1050,21 @@ def run_champion_importance(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Champion feature importance (cl1s, es1s, ho1s, rb1s)"
+        description="Champion feature importance (train-only, all 11 instruments)"
     )
     parser.add_argument(
         "--instruments", nargs="+", default=None,
-        help="Subset of champions to run (default: all four)"
+        help="Specific instruments (default: all)"
     )
     parser.add_argument(
-        "--force", action="store_true",
-        help="Rerun even if outputs already exist"
+        "--asset-class", default=None, choices=list(ASSET_CLASSES),
+        help="Run all instruments in one asset class"
     )
+    parser.add_argument("--force", action="store_true", help="Rerun even if outputs exist")
     args = parser.parse_args()
-    run_champion_importance(instruments=args.instruments, force=args.force)
+    run_champion_importance(
+        instruments=args.instruments,
+        asset_class=args.asset_class,
+        force=args.force,
+    )
     print("\nDone.")

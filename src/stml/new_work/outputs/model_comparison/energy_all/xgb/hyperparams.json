@@ -1,92 +1,92 @@
 [
   {
     "fold": 0,
-    "max_depth": "4",
-    "learning_rate": "0.05",
-    "n_estimators": "16"
+    "max_depth": "3",
+    "learning_rate": "0.01",
+    "n_estimators": "22"
   },
   {
     "fold": 1,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "58"
   },
   {
     "fold": 2,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "23"
+    "learning_rate": "0.01",
+    "n_estimators": "185"
   },
   {
     "fold": 3,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "9"
+    "learning_rate": "0.01",
+    "n_estimators": "1"
   },
   {
     "fold": 4,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "300"
+    "n_estimators": "69"
   },
   {
     "fold": 5,
-    "max_depth": "4",
+    "max_depth": "3",
+    "learning_rate": "0.01",
+    "n_estimators": "3"
+  },
+  {
+    "fold": 6,
+    "max_depth": "3",
     "learning_rate": "0.05",
     "n_estimators": "13"
   },
   {
-    "fold": 6,
-    "max_depth": "4",
-    "learning_rate": "0.05",
-    "n_estimators": "24"
-  },
-  {
     "fold": 7,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "52"
+    "n_estimators": "2"
   },
   {
     "fold": 8,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "300"
+    "n_estimators": "13"
   },
   {
     "fold": 9,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "5"
+    "n_estimators": "8"
   },
   {
     "fold": 10,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "6"
+    "learning_rate": "0.01",
+    "n_estimators": "115"
   },
   {
     "fold": 11,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "151"
+    "n_estimators": "143"
   },
   {
     "fold": 12,
     "max_depth": "4",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "5"
   },
   {
     "fold": 13,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "86"
+    "n_estimators": "2"
   },
   {
     "fold": 14,
-    "max_depth": "4",
+    "max_depth": "3",
     "learning_rate": "0.05",
-    "n_estimators": "63"
+    "n_estimators": "1"
   }
 ]

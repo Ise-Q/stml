@@ -3,13 +3,13 @@
     "fold": 0,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "77"
+    "n_estimators": "190"
   },
   {
     "fold": 1,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "3"
+    "learning_rate": "0.01",
+    "n_estimators": "131"
   },
   {
     "fold": 2,
@@ -20,73 +20,73 @@
   {
     "fold": 3,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "22"
+    "learning_rate": "0.01",
+    "n_estimators": "1"
   },
   {
     "fold": 4,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "300"
+    "n_estimators": "2"
   },
   {
     "fold": 5,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "16"
+    "learning_rate": "0.01",
+    "n_estimators": "46"
   },
   {
     "fold": 6,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "16"
+    "learning_rate": "0.01",
+    "n_estimators": "91"
   },
   {
     "fold": 7,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "15"
+    "learning_rate": "0.01",
+    "n_estimators": "2"
   },
   {
     "fold": 8,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "183"
+    "learning_rate": "0.01",
+    "n_estimators": "17"
   },
   {
     "fold": 9,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "4"
+    "n_estimators": "255"
   },
   {
     "fold": 10,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "3"
+    "learning_rate": "0.01",
+    "n_estimators": "24"
   },
   {
     "fold": 11,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "300"
+    "n_estimators": "299"
   },
   {
     "fold": 12,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "18"
+    "learning_rate": "0.01",
+    "n_estimators": "1"
   },
   {
     "fold": 13,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "25"
+    "n_estimators": "1"
   },
   {
     "fold": 14,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "126"
+    "n_estimators": "58"
   }
 ]

@@ -17,7 +17,7 @@
   {
     "fold": 3,
     "max_depth": "2",
-    "min_samples_leaf": "20"
+    "min_samples_leaf": "10"
   },
   {
     "fold": 4,
@@ -26,28 +26,28 @@
   },
   {
     "fold": 5,
-    "max_depth": "4",
-    "min_samples_leaf": "10"
+    "max_depth": "2",
+    "min_samples_leaf": "20"
   },
   {
     "fold": 6,
     "max_depth": "2",
-    "min_samples_leaf": "20"
+    "min_samples_leaf": "10"
   },
   {
     "fold": 7,
     "max_depth": "2",
-    "min_samples_leaf": "20"
+    "min_samples_leaf": "10"
   },
   {
     "fold": 8,
     "max_depth": "2",
-    "min_samples_leaf": "20"
+    "min_samples_leaf": "10"
   },
   {
     "fold": 9,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   },
   {
     "fold": 10,
@@ -57,21 +57,21 @@
   {
     "fold": 11,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   },
   {
     "fold": 12,
-    "max_depth": "4",
+    "max_depth": "2",
     "min_samples_leaf": "10"
   },
   {
     "fold": 13,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   },
   {
     "fold": 14,
     "max_depth": "2",
-    "min_samples_leaf": "20"
+    "min_samples_leaf": "10"
   }
 ]
