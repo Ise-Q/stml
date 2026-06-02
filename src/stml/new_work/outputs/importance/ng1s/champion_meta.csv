@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+ng1s,energy,energy_all,tree,rf,0.4772,0.2591,0.2181,False,12,0
