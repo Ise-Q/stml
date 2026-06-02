@@ -31,3 +31,6 @@ Thumbs.db
 
 # AI Harness
 .omc/
+
+# dir
+ignore/
