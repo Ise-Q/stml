@@ -24,6 +24,13 @@ from xgboost import XGBClassifier
 
 from stml.model.dataset import Preprocessor
 
+try:
+    import lightgbm as _lgb
+
+    HAS_LIGHTGBM: bool = True
+except Exception:
+    HAS_LIGHTGBM = False
+
 
 def _scale_pos_weight(y: np.ndarray) -> float:
     n_pos = int((y == 1).sum())
@@ -120,4 +127,112 @@ def xgb_baseline_params() -> dict:
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "reg_lambda": 1.0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# AdaBoost
+# ---------------------------------------------------------------------------
+
+
+class AdaBoostModel:
+    """AdaBoost binary classifier; median-imputes + standardises first (no native NaN).
+
+    Imbalance: AdaBoost has no ``class_weight`` parameter.  The caller's
+    ``sample_weight`` is passed straight through; when ``sample_weight`` is
+    ``None`` the distribution is left to AdaBoost's default (uniform).
+    """
+
+    def __init__(self, params: dict, seed: int = 0) -> None:
+        self.params = dict(params)
+        self.seed = seed
+        self.model_ = None
+        self.prep_: Preprocessor | None = None
+        self.feature_names_: list[str] | None = None
+
+    def fit(self, X: pd.DataFrame, y: np.ndarray, sample_weight: np.ndarray | None = None):
+        from sklearn.ensemble import AdaBoostClassifier
+        from sklearn.tree import DecisionTreeClassifier
+
+        self.feature_names_ = list(X.columns)
+        self.prep_ = Preprocessor().fit(X)
+        Xt = self.prep_.transform(X)
+
+        # sklearn >= 1.8 uses `estimator=` (the old `base_estimator=` was removed)
+        max_depth = self.params.pop("max_depth", 1)
+        self.model_ = AdaBoostClassifier(
+            estimator=DecisionTreeClassifier(max_depth=max_depth),
+            random_state=self.seed,
+            **self.params,
+        )
+        self.model_.fit(Xt, y, sample_weight=sample_weight)
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        return self.model_.predict_proba(self.prep_.transform(X))[:, 1]
+
+
+def adaboost_param_space(trial) -> dict:
+    """Optuna search space for AdaBoost."""
+    return {
+        "n_estimators": trial.suggest_int("n_estimators", 50, 400, step=50),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 1.0, log=True),
+        "max_depth": trial.suggest_categorical("max_depth", [1, 2]),
+    }
+
+
+# ---------------------------------------------------------------------------
+# LightGBM  (gated: only usable when lightgbm is installed)
+# ---------------------------------------------------------------------------
+
+
+class LGBMModel:
+    """LightGBM binary classifier; mirrors XGBModel (native NaN handling, scale_pos_weight).
+
+    The class is always *defined* so ``import stml.model.trees`` never fails.
+    ``__init__`` raises ``ImportError`` immediately when LightGBM is absent.
+    """
+
+    def __init__(self, params: dict, seed: int = 0) -> None:
+        if not HAS_LIGHTGBM:
+            raise ImportError(
+                "LGBMModel requires lightgbm; install it with `uv add lightgbm`."
+            )
+        self.params = dict(params)
+        self.seed = seed
+        self.model_ = None
+        self.feature_names_: list[str] | None = None
+
+    def fit(self, X: pd.DataFrame, y: np.ndarray, sample_weight: np.ndarray | None = None):
+        self.feature_names_ = list(X.columns)
+        self.model_ = _lgb.LGBMClassifier(
+            objective="binary",
+            scale_pos_weight=_scale_pos_weight(y),
+            random_state=self.seed,
+            n_jobs=-1,
+            verbose=-1,
+            **self.params,
+        )
+        # Fit with a DataFrame so LightGBM stores the column names; predict_proba also
+        # receives a DataFrame with the same names so sklearn's validation never warns.
+        self.model_.fit(
+            X[self.feature_names_].astype(float), y, sample_weight=sample_weight
+        )
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        return self.model_.predict_proba(X[self.feature_names_].astype(float))[:, 1]
+
+
+def lgbm_param_space(trial) -> dict:
+    """Optuna search space for LightGBM."""
+    return {
+        "n_estimators": trial.suggest_int("n_estimators", 100, 600, step=50),
+        "num_leaves": trial.suggest_int("num_leaves", 16, 128),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 5.0, log=True),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-2, 10.0, log=True),
+        "min_child_samples": trial.suggest_int("min_child_samples", 5, 50),
     }
