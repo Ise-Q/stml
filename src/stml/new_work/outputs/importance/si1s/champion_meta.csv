@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+si1s,metals,si1s,tree,xgb,0.5145,0.0758,0.4387,False,15,0
