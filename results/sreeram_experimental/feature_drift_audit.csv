@@ -1,0 +1,106 @@
+feature,n_train,n_test,ks,val_auc,keep,reason
+f18_term_spread,3466,1342,0.232301,0.530494,True,keep
+f18_term_spread_z63,3466,1342,0.059539,0.506725,True,keep
+f18_contango_flag,3466,1342,0.147128,0.532710,True,keep
+f18_term_chg5,3466,1342,0.036717,0.520237,True,keep
+f18_roll_yield,3466,1342,0.232301,0.530494,True,keep
+f19_atm_iv_1m,3466,1342,0.139672,0.541558,True,keep
+f19_atm_iv_3m,3466,1342,0.118019,0.534521,True,keep
+f19_iv_term_slope,3466,1342,0.043562,0.510046,True,keep
+f19_iv_rv_spread_20,3466,1342,0.044408,0.515818,True,keep
+f19_skew_1m,3466,1342,0.179869,0.508849,True,keep
+f19_iv_pctile_252,3466,1342,0.296337,0.559265,True,keep
+f22_eia_release_flag,3466,1342,0.004078,0.512883,True,keep
+f22_eia_crude_change_z26w,3466,1342,0.273979,0.514315,False,drop: KS>0.25 AND val_AUC<0.54
+f1_bb_pctb_20,3466,1342,0.096726,0.525599,True,keep
+f1_rsi_14,3466,1342,0.135816,0.521539,True,keep
+f1_mr_score_20,3466,1342,0.096726,0.525599,True,keep
+f2_vol_20,3466,1342,0.158819,0.531066,True,keep
+f2_vol_60,3466,1342,0.123506,0.544852,True,keep
+f2_vol_ratio_20_60,3466,1342,0.082552,0.521966,True,keep
+f2_parkinson_20,3466,1342,0.136454,0.540969,True,keep
+f2_garman_klass_20,3466,1342,0.129562,0.539864,True,keep
+f2_vol_of_vol_20,3466,1342,0.061796,0.557821,True,keep
+f5_trailing_run_length,3466,1342,0.041607,0.564773,True,keep
+f5_days_since_flip,3466,1342,0.041607,0.564773,True,keep
+f5_signal_entropy_20,3466,1342,0.087745,0.558148,True,keep
+f5_flip_rate_60,3466,1342,0.101432,0.549309,True,keep
+f5_long_bias_20,3466,1342,0.104546,0.569808,True,keep
+f5_participation_60,3466,1342,0.168672,0.523019,True,keep
+f6_ts_momentum_20,3466,1342,0.115846,0.510862,True,keep
+f6_ts_momentum_60,3466,1342,0.203297,0.509067,False,drop: KS>0.20 AND val_AUC<0.51
+f6_ma_cross_20_60,3466,1342,0.148456,0.537975,True,keep
+f6_macd_12_26,3466,1342,0.164454,0.509762,True,keep
+f6_macd_signal_9,3466,1342,0.169774,0.525213,True,keep
+f6_macd_hist,3466,1342,0.045603,0.503259,True,keep
+f7_volume_z_20,3466,1342,0.049065,0.506107,True,keep
+f7_volume_trend_20,3466,1342,0.022059,0.506596,True,keep
+f7_oi_level,3466,1342,0.064422,0.544179,True,keep
+f7_oi_change_20,3466,1342,0.038314,0.514499,True,keep
+f7_amihud_20,3466,1342,0.092202,0.525299,True,keep
+f7_kyles_lambda_20,3466,1342,0.068130,0.546457,True,keep
+f7_overnight_gap,3466,1342,0.059235,0.504320,True,keep
+f8_dow_sin,3466,1342,0.005912,0.512263,True,keep
+f8_dow_cos,3466,1342,0.003314,0.519217,True,keep
+f8_month_sin,3466,1342,0.221722,0.521800,True,keep
+f8_month_cos,3466,1342,0.270629,0.554982,True,keep
+f10_hl_range,3466,1342,0.113893,0.531984,True,keep
+f10_hl_range_mean_20,3466,1342,0.140929,0.539228,True,keep
+f10_oc_ret,3466,1342,0.060803,0.518560,True,keep
+f10_oc_ret_mean_20,3466,1342,0.115544,0.511108,True,keep
+f12_efficiency_ratio_21,3466,1342,0.046735,0.554601,True,keep
+f12_variance_ratio_5_21,3466,1342,0.044119,0.590097,True,keep
+f12_trend_tval_21,3466,1342,0.104213,0.508143,True,keep
+f12_autocorr_21,3466,1342,0.115415,0.583639,True,keep
+f12_hurst_100,3466,1342,0.123326,0.555284,True,keep
+f9_xsect_rank_60,3466,1342,0.087195,0.509179,True,keep
+f9_dispersion_z_60,3466,1342,0.154281,0.533292,True,keep
+f9_pair_corr_mean_63,3466,1342,0.107331,0.508661,True,keep
+f9_implied_corr_z_252,3466,1342,0.079282,0.534906,True,keep
+f21_gold_silver_ratio,3466,1342,0.403924,0.518558,False,drop: KS>0.25 AND val_AUC<0.54
+f21_gold_silver_z63,3466,1342,0.174506,0.518804,True,keep
+f21_copper_gold_ratio,3466,1342,0.639642,0.531902,False,drop: KS>0.25 AND val_AUC<0.54
+f21_crack_321,3466,1342,0.825261,0.541629,True,keep
+f11_vix_rank63,3466,1342,0.258512,0.514983,False,drop: KS>0.25 AND val_AUC<0.54
+f11_move_rank63,3466,1342,0.463329,0.542608,True,keep
+f11_dxy_rank63,3466,1342,0.416359,0.528851,False,drop: KS>0.25 AND val_AUC<0.54
+f11_skew_rank63,3466,1342,0.278778,0.542995,True,keep
+f11_ust10_rank63,3466,1342,0.395918,0.541668,True,keep
+f11_ust2_rank63,3466,1342,0.727757,0.534217,False,drop: KS>0.25 AND val_AUC<0.54
+f11_hy_oas_rank63,3466,1342,0.506837,0.509619,False,drop: KS>0.25 AND val_AUC<0.54
+f11_ig_oas_rank63,3466,1342,0.631529,0.518338,False,drop: KS>0.25 AND val_AUC<0.54
+f11_tips10y_rank63,3466,1342,0.438382,0.502517,False,drop: KS>0.25 AND val_AUC<0.54
+f11_be10y_rank63,3466,1342,0.185268,0.555748,True,keep
+f11_bund10_rank63,3466,1342,0.412713,0.531838,False,drop: KS>0.25 AND val_AUC<0.54
+f11_eurusd_rank63,3466,1342,0.413761,0.521040,False,drop: KS>0.25 AND val_AUC<0.54
+f11_baltic_dry_rank63,3466,1342,0.300602,0.520274,False,drop: KS>0.25 AND val_AUC<0.54
+f11_china_pmi_rank63,3466,1342,0.129591,0.540382,True,keep
+f11_us_pmi_rank63,3466,1342,0.405128,0.506108,False,drop: KS>0.25 AND val_AUC<0.54
+f11_lme_copper_rank63,3466,1342,0.200718,0.507043,False,drop: KS>0.20 AND val_AUC<0.51
+f11_eia_crude_stock_rank63,3466,1342,0.248153,0.514176,True,keep
+f11_eia_dist_stock_rank63,3466,1342,0.396395,0.533206,False,drop: KS>0.25 AND val_AUC<0.54
+f11_eia_gasoline_stock_rank63,3466,1342,0.262293,0.553283,True,keep
+f11_eia_ng_stock_rank63,3466,1342,0.287316,0.533394,False,drop: KS>0.25 AND val_AUC<0.54
+f11_vix_chg20,3466,1342,0.116322,0.505669,True,keep
+f11_move_chg20,3466,1342,0.256627,0.535610,False,drop: KS>0.25 AND val_AUC<0.54
+f11_dxy_chg20,3466,1342,0.239625,0.507159,False,drop: KS>0.20 AND val_AUC<0.51
+f11_ust10_chg20,3466,1342,0.241383,0.519818,True,keep
+f11_hy_oas_chg20,3466,1342,0.318449,0.506416,False,drop: KS>0.25 AND val_AUC<0.54
+f11_be10y_chg20,3466,1342,0.164458,0.555263,True,keep
+f11_eurusd_chg20,3466,1342,0.239777,0.510047,True,keep
+f11_vix_chg5,3466,1342,0.087404,0.509659,True,keep
+f11_ust10_chg5,3466,1342,0.185072,0.531709,True,keep
+f11_dxy_chg5,3466,1342,0.167824,0.519784,True,keep
+f11_be10y_chg5,3466,1342,0.160376,0.516082,True,keep
+f11_hy_oas_chg5,3466,1342,0.282717,0.504087,False,drop: KS>0.25 AND val_AUC<0.54
+f11_curve_slope,3466,1342,0.326346,0.547874,True,keep
+f11_credit_diff,3466,1342,0.396999,0.523493,False,drop: KS>0.25 AND val_AUC<0.54
+f11_vix_term_slope,3466,1342,0.115631,0.511815,True,keep
+f15_path_tortuosity_20,3466,1342,0.039185,0.567471,True,keep
+f15_semi_vol_ratio_20,3466,1342,0.062933,0.504585,True,keep
+f16_regime_alignment_score,3466,1342,0.107618,0.541410,True,keep
+f17_hmm_state_lo,3466,1342,,,False,drop: all-NaN
+f17_hmm_state_mid,3466,1342,,,False,drop: all-NaN
+f17_hmm_state_hi,3466,1342,,,False,drop: all-NaN
+ewma_hmm_prob_highvol,3466,1342,0.032875,0.513789,True,keep
+ewma_hmm_switch_prob,3466,1342,0.005050,0.500958,True,keep
