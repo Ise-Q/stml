@@ -1,0 +1,401 @@
+date,category,scope,venue_group,label,n_missing,n_active,affected_instruments
+1990-02-19,full_holiday,global,ALL,Presidents' Day,7,7,"cl1s,gc1s,hg1s,ho1s,pl1s,rb1s,si1s"
+1990-04-13,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-05-28,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-09-03,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-09-04,glitch,exchange_specific,US_FUTURES,,1,8,gc1s
+1990-11-22,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-12-24,early_close,global,ALL,Christmas Eve (early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1990-12-25,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-01-01,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-02-18,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-03-29,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-04-19,glitch,exchange_specific,US_FUTURES,,1,8,hg1s
+1991-05-27,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-07-05,early_close,exchange_specific,US_FUTURES,July 5 (Independence Day Friday bridge),3,8,"gc1s,hg1s,si1s"
+1991-09-02,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-11-28,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1991-12-25,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-01-01,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-02-17,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-04-17,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-05-25,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-07-03,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-09-07,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-09-08,glitch,exchange_specific,US_FUTURES,,1,8,ho1s
+1992-11-26,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1992-11-27,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),5,8,"cl1s,ho1s,ng1s,pl1s,rb1s"
+1992-12-24,early_close,exchange_specific,US_FUTURES,Christmas Eve (early close),5,8,"cl1s,ho1s,ng1s,pl1s,rb1s"
+1992-12-25,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-01-01,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-02-15,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-04-09,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-05-31,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-06-24,glitch,exchange_specific,US_FUTURES,,1,8,pl1s
+1993-07-05,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-09-06,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-11-25,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-11-26,early_close,global,ALL,Day after Thanksgiving (early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-12-24,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1993-12-31,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-02-21,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-04-01,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-04-27,full_holiday,global,ALL,Nixon state funeral,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-05-30,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-09-05,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-11-24,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-11-25,early_close,global,ALL,Day after Thanksgiving (early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1994-12-26,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-01-02,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-02-20,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-04-14,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-05-29,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-07-03,early_close,global,ALL,July 3 (pre-Independence Day early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-09-04,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-11-23,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-11-24,early_close,global,ALL,Day after Thanksgiving (early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1995-12-25,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-01-01,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-01-08,glitch,exchange_specific,US_FUTURES,,1,8,ng1s
+1996-02-19,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-04-05,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-05-27,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-07-05,early_close,global,ALL,July 5 (Independence Day Friday bridge),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-09-02,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-11-28,full_holiday,global,ALL,Thanksgiving Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-11-29,early_close,global,ALL,Day after Thanksgiving (early close),8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1996-12-25,full_holiday,global,ALL,Christmas Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-01-01,full_holiday,global,ALL,New Year's Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-02-17,full_holiday,global,ALL,Presidents' Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-03-28,full_holiday,global,ALL,Good Friday,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-05-26,full_holiday,global,ALL,Memorial Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-07-04,full_holiday,global,ALL,Independence Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-09-01,full_holiday,global,ALL,Labor Day,8,8,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-11-27,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,9,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-11-28,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,9,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1997-12-25,full_holiday,global,ALL,Christmas Day,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-01-01,full_holiday,global,ALL,New Year's Day,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-01-19,full_holiday,global,ALL,Martin Luther King Jr. Day,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-02-16,full_holiday,global,ALL,Presidents' Day,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-04-10,full_holiday,global,ALL,Good Friday,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-05-25,full_holiday,global,ALL,Memorial Day,9,9,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-07-03,full_holiday,exchange_specific,US_FUTURES,Independence Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-09-07,full_holiday,exchange_specific,US_FUTURES,Labor Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-11-26,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-11-27,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,10,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,10,fesx1s
+1998-12-25,full_holiday,global,ALL,Christmas Day,10,10,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1998-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,10,fesx1s
+1999-01-01,full_holiday,global,ALL,New Year's Day,10,10,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-01-18,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-02-15,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-04-02,full_holiday,mixed,MIXED,Good Friday,9,10,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-04-05,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,10,fesx1s
+1999-05-13,glitch,exchange_specific,EUREX,,1,10,fesx1s
+1999-05-24,full_holiday,exchange_specific,EUREX,Whit Monday (Eurex),1,10,fesx1s
+1999-05-31,full_holiday,exchange_specific,US_FUTURES,Memorial Day,9,10,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-06-03,glitch,exchange_specific,EUREX,,1,10,fesx1s
+1999-07-05,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+1999-09-06,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+1999-11-25,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+1999-11-26,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+1999-12-24,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+1999-12-31,full_holiday,mixed,MIXED,New Year's Day,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-01-03,early_close,exchange_specific,US_FUTURES,Jan 3 (New Year Monday bridge),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-01-17,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-02-21,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-04-21,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-04-24,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2000-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2000-05-29,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-07-03,early_close,exchange_specific,US_FUTURES,July 3 (pre-Independence Day early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-09-04,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-11-23,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-11-24,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2000-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2000-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2001-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-01-15,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-02-19,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-04-13,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-04-16,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2001-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2001-05-28,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-09-03,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-09-12,full_holiday,exchange_specific,US_FUTURES,9/11 aftermath - markets closed,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-09-13,full_holiday,exchange_specific,US_FUTURES,9/11 aftermath - markets closed,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-09-14,full_holiday,exchange_specific,CME_EQ,9/11 - CME equity still closed (NYMEX/COMEX reopened via ACCESS),2,11,"es1s,nq1s"
+2001-11-22,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-11-23,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2001-12-24,early_close,mixed,MIXED,Christmas Eve (early close),9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2001-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2001-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2001-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2002-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-01-21,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-02-18,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-03-29,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-04-01,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2002-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2002-05-27,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-07-05,early_close,exchange_specific,US_FUTURES,July 5 (Independence Day Friday bridge),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2002-09-02,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-11-28,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-11-29,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2002-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2002-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2002-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2002-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2003-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-01-20,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-02-17,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-04-18,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-04-21,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2003-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2003-05-26,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-09-01,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-11-27,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-11-28,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2003-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2003-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2003-12-26,full_holiday,mixed,MIXED,Boxing Day (Eurex),9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2003-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2004-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-01-02,early_close,exchange_specific,US_FUTURES,Jan 2 (New Year Friday bridge),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2004-01-19,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-02-16,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-04-09,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-04-12,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2004-05-31,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-06-11,full_holiday,exchange_specific,US_FUTURES,Reagan state funeral,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-07-05,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-09-06,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-11-25,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-11-26,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2004-12-24,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2004-12-31,full_holiday,mixed,MIXED,New Year's Day,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2005-01-17,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-02-21,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2005-03-25,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-03-28,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2005-05-30,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-09-05,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-11-24,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2005-11-25,early_close,exchange_specific,US_FUTURES,Day after Thanksgiving (early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2005-12-26,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-01-02,full_holiday,exchange_specific,US_FUTURES,New Year's Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-01-16,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-02-20,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-04-14,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-04-17,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2006-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2006-05-29,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-07-03,early_close,exchange_specific,US_FUTURES,July 3 (pre-Independence Day early close),8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2006-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,9,11,"cl1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-09-04,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-11-23,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2006-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2007-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-01-02,full_holiday,exchange_specific,CME_EQ,Ford state funeral (CME equity closed; NYMEX/COMEX electronic open),2,11,"es1s,nq1s"
+2007-01-15,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-02-19,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-04-06,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-04-09,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2007-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2007-05-28,full_holiday,global,ALL,Memorial Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-09-03,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-11-22,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2007-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2007-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2007-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2008-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2008-01-21,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2008-03-21,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2008-03-24,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2008-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2008-09-01,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2008-11-27,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2008-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2008-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2008-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2008-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2009-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2009-01-19,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-02-16,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-04-10,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2009-04-13,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2009-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2009-05-25,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-07-03,full_holiday,exchange_specific,US_FUTURES,Independence Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-09-07,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-11-26,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2009-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2009-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2009-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2010-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2010-01-18,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-02-15,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-04-02,full_holiday,mixed,MIXED,Good Friday,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-04-05,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2010-05-31,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-07-05,full_holiday,exchange_specific,US_FUTURES,Independence Day,7,11,"gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-09-06,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-11-25,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,7,11,"cl1s,gc1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2010-12-24,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2010-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2011-01-17,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2011-04-22,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2011-04-25,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2011-05-30,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2011-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2011-09-05,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2011-11-24,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2011-12-26,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2012-01-02,full_holiday,exchange_specific,US_FUTURES,New Year's Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2012-01-16,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-02-20,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-04-06,full_holiday,mixed,MIXED,Good Friday,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-04-09,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2012-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2012-05-28,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-09-03,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-11-22,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2012-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2012-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2012-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2012-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2013-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2013-01-21,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-02-18,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-03-29,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2013-04-01,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2013-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2013-05-27,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-09-02,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-11-28,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2013-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2013-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2013-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2013-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2014-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2014-01-20,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2014-02-17,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2014-04-18,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2014-04-21,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2014-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2014-05-26,full_holiday,exchange_specific,US_FUTURES,Memorial Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2014-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2014-09-01,full_holiday,exchange_specific,US_FUTURES,Labor Day,8,11,"cl1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2014-11-27,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2014-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2014-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2014-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2014-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2015-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-01-19,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-02-16,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-04-03,full_holiday,mixed,MIXED,Good Friday,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2015-04-06,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2015-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2015-05-25,full_holiday,global,ALL,Memorial Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-07-03,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-09-07,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-11-26,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2015-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2015-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2016-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-01-18,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-02-15,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-03-25,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-03-28,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2016-05-30,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-09-05,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-11-24,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2016-12-26,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-01-02,full_holiday,exchange_specific,US_FUTURES,New Year's Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-01-16,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-02-20,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-04-14,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-04-17,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2017-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2017-05-29,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-09-04,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-11-23,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2017-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2018-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-01-15,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-02-19,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-03-30,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-04-02,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2018-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2018-05-28,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-09-03,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-11-22,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2018-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2018-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2018-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2019-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-01-21,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-02-18,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-04-19,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-04-22,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2019-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2019-05-27,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-07-04,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-09-02,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-11-28,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2019-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2019-12-26,full_holiday,exchange_specific,EUREX,Boxing Day (Eurex),1,11,fesx1s
+2019-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2020-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-01-20,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-02-17,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-04-10,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-04-13,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2020-05-01,full_holiday,exchange_specific,EUREX,Labour Day (Eurex),1,11,fesx1s
+2020-05-25,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-07-03,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-09-07,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-11-26,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-12-24,early_close,exchange_specific,EUREX,Christmas Eve (early close),1,11,fesx1s
+2020-12-25,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2020-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2021-01-01,full_holiday,global,ALL,New Year's Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-01-18,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-02-15,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-04-02,full_holiday,mixed,MIXED,Good Friday,9,11,"cl1s,fesx1s,gc1s,hg1s,ho1s,ng1s,pl1s,rb1s,si1s"
+2021-04-05,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2021-05-31,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-07-05,full_holiday,exchange_specific,US_FUTURES,Independence Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-09-06,full_holiday,exchange_specific,US_FUTURES,Labor Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-11-25,full_holiday,exchange_specific,US_FUTURES,Thanksgiving Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-12-24,full_holiday,global,ALL,Christmas Day,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2021-12-31,early_close,exchange_specific,EUREX,New Year's Eve (early close),1,11,fesx1s
+2022-01-17,full_holiday,exchange_specific,US_FUTURES,Martin Luther King Jr. Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2022-02-21,full_holiday,exchange_specific,US_FUTURES,Presidents' Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2022-04-15,full_holiday,global,ALL,Good Friday,11,11,"cl1s,es1s,fesx1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2022-04-18,full_holiday,exchange_specific,EUREX,Easter Monday (Eurex),1,11,fesx1s
+2022-05-30,full_holiday,exchange_specific,US_FUTURES,Memorial Day,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"
+2022-06-20,full_holiday,exchange_specific,US_FUTURES,Juneteenth,10,11,"cl1s,es1s,gc1s,hg1s,ho1s,ng1s,nq1s,pl1s,rb1s,si1s"

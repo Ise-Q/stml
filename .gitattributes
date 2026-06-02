@@ -1,0 +1,4 @@
+# Strip Jupyter notebook outputs at commit time. Requires each clone to run once:
+#   uv run nbstripout --install
+*.ipynb filter=nbstripout
+*.ipynb diff=ipynb

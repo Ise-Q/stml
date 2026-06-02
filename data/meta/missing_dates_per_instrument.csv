@@ -1,0 +1,241 @@
+date,classification,label,instrument,venue
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),cl1s,NYMEX
+1992-11-27 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1992-12-24 00:00:00,early_close,Christmas Eve (early close),cl1s,NYMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),cl1s,NYMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),cl1s,NYMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),cl1s,NYMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),cl1s,NYMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),cl1s,NYMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),cl1s,NYMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),cl1s,NYMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),cl1s,NYMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),cl1s,NYMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),cl1s,NYMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),ho1s,NYMEX
+1992-09-08 00:00:00,unexplained,,ho1s,NYMEX
+1992-11-27 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1992-12-24 00:00:00,early_close,Christmas Eve (early close),ho1s,NYMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ho1s,NYMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),ho1s,NYMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),ho1s,NYMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ho1s,NYMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),ho1s,NYMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),ho1s,NYMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),ho1s,NYMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),ho1s,NYMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),ho1s,NYMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ho1s,NYMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),rb1s,NYMEX
+1992-11-27 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1992-12-24 00:00:00,early_close,Christmas Eve (early close),rb1s,NYMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),rb1s,NYMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),rb1s,NYMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),rb1s,NYMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),rb1s,NYMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),rb1s,NYMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),rb1s,NYMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),rb1s,NYMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),rb1s,NYMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),rb1s,NYMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),rb1s,NYMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),ng1s,NYMEX
+1992-11-27 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1992-12-24 00:00:00,early_close,Christmas Eve (early close),ng1s,NYMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ng1s,NYMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1996-01-08 00:00:00,unexplained,,ng1s,NYMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),ng1s,NYMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),ng1s,NYMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ng1s,NYMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),ng1s,NYMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),ng1s,NYMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),ng1s,NYMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),ng1s,NYMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),ng1s,NYMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),ng1s,NYMEX
+1990-09-04 00:00:00,unexplained,,gc1s,COMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),gc1s,COMEX
+1991-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),gc1s,COMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),gc1s,COMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),gc1s,COMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),gc1s,COMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),gc1s,COMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),gc1s,COMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),gc1s,COMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),gc1s,COMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),gc1s,COMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),gc1s,COMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),gc1s,COMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),si1s,COMEX
+1991-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),si1s,COMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),si1s,COMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),si1s,COMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),si1s,COMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),si1s,COMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),si1s,COMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),si1s,COMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),si1s,COMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),si1s,COMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),si1s,COMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),si1s,COMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),hg1s,COMEX
+1991-04-19 00:00:00,unexplained,,hg1s,COMEX
+1991-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),hg1s,COMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),hg1s,COMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),hg1s,COMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),hg1s,COMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),hg1s,COMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),hg1s,COMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),hg1s,COMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),hg1s,COMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),hg1s,COMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),hg1s,COMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),hg1s,COMEX
+1990-12-24 00:00:00,early_close,Christmas Eve (early close),pl1s,COMEX
+1992-11-27 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1992-12-24 00:00:00,early_close,Christmas Eve (early close),pl1s,COMEX
+1993-06-24 00:00:00,unexplained,,pl1s,COMEX
+1993-11-26 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1994-11-25 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1995-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),pl1s,COMEX
+1995-11-24 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1996-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),pl1s,COMEX
+1996-11-29 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1997-11-28 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1998-11-27 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+1999-11-26 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2000-01-03 00:00:00,early_close,Jan 3 (New Year Monday bridge),pl1s,COMEX
+2000-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),pl1s,COMEX
+2000-11-24 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2001-11-23 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),pl1s,COMEX
+2002-07-05 00:00:00,early_close,July 5 (Independence Day Friday bridge),pl1s,COMEX
+2002-11-29 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2003-11-28 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2003-12-26 00:00:00,early_close,Dec 26 (Christmas Friday bridge),pl1s,COMEX
+2004-01-02 00:00:00,early_close,Jan 2 (New Year Friday bridge),pl1s,COMEX
+2004-11-26 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2005-11-25 00:00:00,early_close,Day after Thanksgiving (early close),pl1s,COMEX
+2006-07-03 00:00:00,early_close,July 3 (pre-Independence Day early close),pl1s,COMEX
+1998-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+1998-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+1999-05-13 00:00:00,unexplained,,fesx1s,EUREX
+1999-06-03 00:00:00,unexplained,,fesx1s,EUREX
+1999-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+1999-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2001-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2001-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2002-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2002-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2003-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2003-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2004-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2004-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2007-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2007-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2008-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2008-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2009-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2009-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2010-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2010-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2012-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2012-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2013-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2013-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2014-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2014-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2015-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2015-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2018-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2018-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2019-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2019-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2020-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2020-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX
+2021-12-24 00:00:00,early_close,Christmas Eve (early close),fesx1s,EUREX
+2021-12-31 00:00:00,early_close,New Year's Eve (early close),fesx1s,EUREX

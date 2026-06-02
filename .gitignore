@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Virtual environment
+.venv/
+
+# uv
+# (uv.lock is committed)
+
+# Notebooks
+.ipynb_checkpoints/
+# Headless-execution verification artifacts (e.g. eda.executed.ipynb)
+*.executed.ipynb
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# WSL zone-identifier sidecars
+*:Zone.Identifier
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# AI Harness
+.omc/
