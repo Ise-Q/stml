@@ -23,12 +23,14 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from stml.model.cv import PurgedWalkForward
+from stml.model.linear import LogRegModel, logreg_param_space
 from stml.model.mlp import MLPModel, mlp_param_space
 from stml.model.trees import RFModel, XGBModel, rf_param_space, xgb_param_space
 from stml.model.vsn import VSNModel, vsn_param_space
 
-# model key -> (wrapper class, optuna param-space fn)
+# model key -> (wrapper class, optuna param-space fn). One per family: linear / tree / neural.
 MODEL_REGISTRY: dict[str, tuple[type, Callable]] = {
+    "logreg": (LogRegModel, logreg_param_space),
     "xgb": (XGBModel, xgb_param_space),
     "rf": (RFModel, rf_param_space),
     "mlp": (MLPModel, mlp_param_space),

@@ -3,11 +3,11 @@
 Consumes the frozen feature-engineering outputs (``results/feature_matrix.parquet`` and the
 scope / redundancy registries) read-only, turns each primary signal into a binary
 profitable/not-profitable label via the triple-barrier method (:mod:`stml.model.labels`), and
-fits & compares tree-based and neural meta-models under purged + embargoed walk-forward
-cross-validation (:mod:`stml.model.cv`) with Optuna.
+fits & compares linear, tree-based and neural meta-models (one per family) under purged +
+embargoed walk-forward cross-validation (:mod:`stml.model.cv`) with Optuna.
 
 Pipeline order: ``labels`` -> ``dataset`` -> ``cv`` -> ``barrier_search`` -> ``optuna_objective``
-(+ ``trees`` / ``mlp`` / ``vsn``) -> ``importance`` -> ``evaluate``.
+(+ ``linear`` / ``trees`` / ``mlp`` / ``vsn``) -> ``importance`` -> ``evaluate``.
 """
 
 from stml.model.barrier_search import BarrierResult, search_barriers
@@ -34,6 +34,7 @@ from stml.model.evaluate import (
 )
 from stml.model.importance import nn_importance, permutation_importance_auc, tree_importance
 from stml.model.labels import class_balance, sample_uniqueness, triple_barrier_labels
+from stml.model.linear import LogRegModel, logreg_param_space
 from stml.model.mlp import MLPModel, mlp_param_space
 from stml.model.optuna_objective import MODEL_REGISTRY, cross_val_auc, make_objective, run_study
 from stml.model.trees import RFModel, XGBModel, rf_param_space, xgb_param_space
@@ -61,11 +62,13 @@ __all__ = [
     # barrier search
     "search_barriers",
     "BarrierResult",
-    # models
+    # models (one per family: linear / tree / neural)
+    "LogRegModel",
     "XGBModel",
     "RFModel",
     "MLPModel",
     "VSNModel",
+    "logreg_param_space",
     "xgb_param_space",
     "rf_param_space",
     "mlp_param_space",
