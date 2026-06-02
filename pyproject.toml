@@ -46,6 +46,12 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (GARCH fits etc.); run with `pytest -m slow`",
+]
+
 [dependency-groups]
 dev = [
     "jupyterlab>=4.5.7",
