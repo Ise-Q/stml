@@ -2616,6 +2616,11 @@ dependencies = [
     { name = "xgboost" },
 ]
 
+[package.optional-dependencies]
+harry-features = [
+    { name = "pywavelets" },
+]
+
 [package.dev-dependencies]
 calendars = [
     { name = "exchange-calendars" },
@@ -2642,6 +2647,7 @@ requires-dist = [
     { name = "optuna", specifier = ">=4.8.0" },
     { name = "pandas", specifier = ">=3.0.3" },
     { name = "pyarrow", specifier = ">=24.0.0" },
+    { name = "pywavelets", marker = "extra == 'harry-features'", specifier = ">=1.4" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "shap", specifier = ">=0.46.0" },
@@ -2650,6 +2656,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.3" },
     { name = "xgboost", specifier = ">=2.1.0" },
 ]
+provides-extras = ["harry-features"]
 
 [package.metadata.requires-dev]
 calendars = [
