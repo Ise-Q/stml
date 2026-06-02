@@ -3,7 +3,10 @@ name = "stml"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "arch>=7.0",
+    "hmmlearn>=0.3.0",
     "ipykernel>=7.2.0",
+    "lightgbm>=4.0",
     "matplotlib>=3.10.9",
     "numpy>=2.4.6",
     "openpyxl>=3.1.0",
@@ -12,9 +15,7 @@ dependencies = [
     "pyarrow>=24.0.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
-    "shap>=0.46.0",
     "statsmodels>=0.14.6",
-    "torch>=2.12.0",
     "tqdm>=4.67.3",
     "xgboost>=2.1.0",
 ]
@@ -25,6 +26,18 @@ dependencies = [
 # Currently only the wavelet module needs an extra wheel; TDA (ripser) is
 # deferred. See reports/harry/SETUP.md.
 harry-features = ["pywavelets>=1.4"]
+# Sreeram_experimental S4 multi-task neural network (plan §3.1 Family B).
+# Kept out of the base install because the pytorch-cpu wheels are not built for
+# macOS x86_64 past 2.2; the macOS user installs from the PyPI default index
+# with `uv sync --extra multitask` once S4 is reached. The base build of
+# S0/S1/S2/S3 + S6/S7 does not depend on torch.
+multitask = ["torch>=2.2.0"]
+# Sreeram_experimental S5 cluster importance (plan §3.6).
+# shap pulls numba/llvmlite which need either a binary wheel for the platform
+# (some macOS x86_64 builds fail without LLVM toolchain) or a working compile.
+# Kept optional so the rest of the pipeline can build cleanly; install with
+# `uv sync --extra importance` when S5 is reached.
+importance = ["shap>=0.46.0", "numba>=0.60", "llvmlite>=0.43"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -32,14 +45,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }
 
 [dependency-groups]
 dev = [
