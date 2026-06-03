@@ -1346,7 +1346,7 @@ For each feature:
 * Our `--predict-start` and `--predict-end` are CLI flags. The grader changes the value.
 * The pipeline does not have ANY hardcoded H1‑22 references in the modelling code (only in the default config and in result reports).
 * Test: `test_pipeline.py::test_runs_on_alternate_window` — invoke the pipeline with `predict_start=2022-07-01, predict_end=2022-12-31` and assert it completes without error (numbers will be NaN because we don't have the H2 data, but the structure must hold).
-* **Bloomberg parquets must cover H2‑2022 too** — see §13 R‑11. If the user does not extend the BBG raw pulls before submission, the model ships under the simulated‑missingness winner (with‑BBG or no‑BBG, decided in S3).
+* **Bloomberg parquets cannot legally cover H2‑2022** — the released period (plan §5.1) ends 2022‑06‑30 and pulling beyond it would violate the brief. The model therefore ships under the simulated‑missingness winner decided in S3 (with‑BBG if robust, otherwise the no‑BBG baseline). See §13 R‑11.
 
 ### 11.5 Methodology framing — the report language §2.8 mandates
 
@@ -1398,7 +1398,7 @@ Run through this list before declaring done. Every item must be ✅.
 
 ### Hidden‑test BBG coverage (R‑11 — pre‑submission decision)
 
-* [ ] **EITHER** Bloomberg raw pulls extended to cover H2‑2022 and `bloomberg_ingest.py` re‑run, and `data/bloomberg/cleaned/*.parquet` now span 1990 → 2022‑12‑31, **OR** the shipped model is the simulated‑missingness winner (with‑BBG with NaN‑tolerant inference, or no‑BBG baseline) and the decision is documented in `methodology.md`
+* [ ] Shipped model is the simulated‑missingness winner decided in S3 (with‑BBG with NaN‑tolerant inference if it survives the < 0.03 AUC delta test, otherwise the no‑BBG baseline) and the decision is documented in `methodology.md`. Extending the BBG pull to H2‑2022 is NOT allowed (released period stops 2022‑06‑30 per §5.1).
 
 ### Required by the rubric
 
@@ -1519,14 +1519,17 @@ Run through this list before declaring done. Every item must be ✅.
 
 **Risk:** Cleaned BBG parquets (`data/bloomberg/cleaned/*.parquet`) cover up to **2022‑06‑30**. The grader's hidden test is **H2‑2022 (Jul → Dec 2022)**. At rerun time, F18 / F19 / F22 columns will be all‑NaN for the prediction window — a real distribution shift, not just a NaN‑handling mechanic. XGBoost's native NaN handling masks the issue but does not solve it.
 
-**Mitigation (decreasing preference order):**
+**Constraint (corrected 2026‑06‑03 PM):** Per plan §5.1 the released training period is **1990‑01‑02 → 2022‑06‑30 inclusive**. Pulling BBG data for H2‑2022 **violates the brief** and is therefore NOT a mitigation available to us. The grader extends the OHLCV + signals through H2‑2022 themselves at rerun time; they do not extend our BBG parquets. The architecture must be robust to BBG missingness at H2‑2022 by construction.
 
-1. **Pull BBG data for H2‑2022 before submission.** Brief allows additional data inside the released period (1990 → 2022‑06‑30) but the grader needs the BBG series to extend through H2‑2022 for the model to score the hidden window. The user has BBG access in 2026 — re‑run `bloomberg_ingest.py` after extending the raw pulls to cover the H2‑2022 window. **This is the cleanest fix and should be done before final submission.**
-2. **Validate under simulated missingness during S3.** S3 acceptance gate addition: train the model on the modelling sample, force F18/F19/F22 to NaN on a held‑out validation slice that mimics H2‑2022, and report the AUC delta. If the model degrades > 0.03 AUC under simulated missingness, the architecture is BBG‑fragile and we either fall back to option (3) or ship option (4).
-3. **Train and ship a "no‑BBG" robustness baseline** (F1–F17 + F21 only). Already documented in §5.5 as the fallback; now elevated to a **mandatory** ablation alongside the with‑BBG model. The submission picks the variant that wins on the simulated‑missingness validation, not the variant that wins on H1‑2022 OOS (which would be selection on test).
-4. **Use NaN‑tolerant inference even on the BBG model**: XGBoost handles NaN natively; the multi‑task NN gets BBG‑feature indicators dropped before the head allocation. This is the implementation backstop if (1) is impossible and (2)–(3) say BBG features are too useful to drop.
+**Mitigation (corrected — preference order):**
 
-**S3 / S8 acceptance gate addition (now mandatory):**
+1. **Validate under simulated missingness during S3.** S3 acceptance gate (mandatory): train the model on the modelling sample, force F18 / F19 / F22 to NaN on a held‑out validation slice that mimics H2‑2022, and report the AUC delta. If the model degrades > 0.03 AUC under simulated missingness on ANY asset class, the architecture is BBG‑fragile and we ship option (2) instead.
+2. **Train and ship a "no‑BBG" robustness baseline** (F1–F17 + F21 only). Already documented in §5.5 as a fallback; now a **mandatory parallel model** alongside the with‑BBG variant. The submission picks the variant that wins on the simulated‑missingness validation, not the variant that wins on H1‑2022 OOS (which would be selection on test).
+3. **Use NaN‑tolerant inference even on the BBG model**: XGBoost handles NaN natively; the multi‑task NN gets BBG‑feature indicators dropped before the head allocation. This is the implementation backstop if both (1) shows robustness AND (2)–(3) say BBG features are too useful to drop entirely.
+
+**Why pulling H2‑2022 BBG is NOT on this list:** the released period is the hard line. We do not violate it even for a clean engineering fix. The methodology is the grade.
+
+**S3 / S8 acceptance gate addition (mandatory):**
 
 * `results/sreeram_experimental/bbg_missingness_ablation.csv` exists and reports `with_bbg_auc`, `without_bbg_auc`, `simulated_missingness_auc` per asset class.
 * `methodology.md` documents which variant was shipped and why.

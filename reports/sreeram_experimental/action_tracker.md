@@ -192,9 +192,13 @@ without re-doing the diagnosis.**
      "barrier outcomes on continuous-contract target, not raw front-month
      profitability"; ng1s with-vs-without-BBG ablation if needed.
    - §2.8.6 Hidden-test BBG missingness (separate concern R-11): our cleaned
-     parquets end 2022-06-30; H2-2022 grader rerun will have all-NaN BBG cols;
-     four mitigations in preference order, with extending the BBG pull as the
-     preferred fix.
+     parquets end 2022-06-30; H2-2022 grader rerun will have all-NaN BBG cols.
+     Initially proposed 4 mitigations including "extend BBG pulls to H2-2022";
+     this was **CORRECTED in PM-3 follow-up commit** when the user flagged
+     that pulling beyond 2022-06-30 violates plan §5.1 (released period).
+     The corrected list has 3 mitigations: simulated missingness ablation
+     (mandatory), no-BBG baseline (mandatory parallel model), NaN-tolerant
+     inference (backstop). See the R-11 correction commit below.
    - §2.9 Summary: §3.1 + §3.10 + §13 updated; §0 cardinal rules unchanged
      (R5 already covers claim discipline); labels/features/deliverable byte-
      identical to S1/S2 state.
