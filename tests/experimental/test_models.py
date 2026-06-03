@@ -121,9 +121,12 @@ def test_logistic_imputes_nan_via_scale_pipeline(synth_xy) -> None:
     assert np.isfinite(proba).all()
 
 
-def test_default_roster_returns_three_estimators() -> None:
+def test_default_roster_returns_four_estimators() -> None:
+    """Roster includes linear (logistic) + 2 boosted-tree (xgb, lgbm) + bagged (rf)."""
     roster = default_roster(seed=42)
-    assert set(roster.keys()) == {"elasticnet_logistic", "xgboost", "random_forest"}
+    assert set(roster.keys()) == {
+        "elasticnet_logistic", "xgboost", "lightgbm", "random_forest",
+    }
 
 
 def test_xgb_feature_importance(synth_xy) -> None:
