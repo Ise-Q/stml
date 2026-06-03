@@ -91,6 +91,16 @@ def search_barriers(
 
     rows = []
     for pt, sl, h in grid:
+        # Guard: a disabled barrier (pt<=0 or sl<=0 -> that horizontal barrier becomes +inf in
+        # labels.py) is a DEGENERATE, one-sided geometry, not a triple barrier. The label then
+        # collapses toward sign(forward return), which is the *most learnable* target -- so the
+        # AUC-of-label-quality criterion would systematically prefer it (the disabled-PT trap).
+        # Refuse to score such configs so they can never be selected, regardless of the grid.
+        if pt <= 0 or sl <= 0:
+            rows.append({"pt": pt, "sl": sl, "h": h, "n": 0, "minority": 0.0,
+                         "pos_rate": np.nan, "auc": np.nan, "auc_std": np.nan,
+                         "n_folds": 0, "skipped": True})
+            continue
         labels = triple_barrier_labels(close_wide, ev, pt=pt, sl=sl, h=h, price_end=price_end)
         bal = class_balance(labels)
         rec = {"pt": pt, "sl": sl, "h": h, "n": bal["n"],
