@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files (downloaded separately from Insendi)
+data/*.csv
+data/*.parquet
+data/*.pkl
+
+# Generated outputs
+outputs/*.csv
+outputs/*.parquet
+outputs/*.json
+
+# Intermediate caches
+*.pkl
+*.joblib
+.cache/
