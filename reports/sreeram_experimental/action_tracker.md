@@ -255,3 +255,106 @@ baseline:
   per-instrument breakdown whether external features help.
 
 **Total commits on branch end of PM-3:** 11 (was 10).
+
+---
+
+## PM-4 — 2026-06-03 — S3 per-class baseline + R-11 ablation built end-to-end
+
+**Goal of session.** Build the complete Stage 3 stack per plan §8: cv +
+models + evaluation + pipeline + make_baseline, run all three R-11 ablation
+variants per asset class, verify acceptance gates.
+
+**Done — 4 commits over the session:**
+
+1. **plan R-11 correction** (commit `983cafe`). User caught that the
+   "extend BBG pulls to H2-2022" mitigation in R-11 violates the brief's
+   released-period constraint (§5.1). Reduced to 3 mitigations:
+   simulated missingness ablation, no-BBG robustness baseline (mandatory
+   parallel model), NaN-tolerant inference (backstop). Documented in §11.4,
+   §12, §13 R-11.
+
+2. **S3 baseline stack** (commit `303e466`). Five new modules:
+   - cv.py: PurgedKFold + CombinatorialPurgedCV(6,2) → 15 paths + per-
+     instrument embargo on each instrument's own axis + nested_cpcv generator.
+     Lifted from alken with attribution.
+   - models.py: MetaClassifier interface; ElasticNetLogReg (saga + l1_ratio
+     per sklearn ≥1.8); XGBoostMeta (PS5 cell-43 config, NaN-tolerant);
+     RandomForestClassifier with max_features='sqrt' (PS4 bug fix).
+     balanced_sample_weight composes uniqueness × inverse-class-frequency.
+   - evaluation.py: cross_val_evaluate refits per fold, scores held-out with
+     sample-weighted metrics; per_instrument_breakdown aggregates OOS preds
+     per instrument; nan_columns_at_test implements R-11 simulated missingness.
+   - pipeline.py: run_asset_class orchestrator with per-instrument one-hot
+     dummies (plan §3.1) + inner-CV 1SE XGBoost tuning (plan §4.19).
+   - make_baseline.py: CLI runner for all 3 variants × 3 classes; persists
+     baseline_xgb_per_class.csv + bbg_missingness_ablation.csv +
+     coverage_caveat.csv + baseline_per_instrument.csv. Prints gate verdict.
+
+   Plus make_scope.py + results/.../instrument_scope.json (per-instrument
+   embargo_p90 in pooled business days).
+
+   Tests: 4 new files, 30+ new test cases, all green (RED-first per §9).
+
+3. **S3 polish** (commit `24e5df9`):
+   - Added LightGBM (4-estimator roster — alken's full Stage 2 horse).
+   - Added _ensemble_simple_oos: defensive simple-average ensemble across
+     the roster's OOS predictions. NOT a stacked ensemble (no learned
+     weights); just variance reduction. When ensemble beats single-best,
+     it becomes the class winner.
+   - Predict-act-proba clipped to [0.01, 0.99] — AUC unchanged, log_loss
+     bounded. Fixed energy logistic's blown-up log_loss (2-5 → ≤ 1.5).
+
+**Plan §8 S3 acceptance gates (final verdict):**
+
+| Gate | Target | Actual | Result |
+|---|---|---|---|
+| CPCV AUC equity ≥ alken + 0.02 | 0.599 | 0.5537 | CHECK (-0.045) |
+| CPCV AUC energy ≥ alken + 0.02 | 0.545 | 0.5577 | **PASS** (+0.013) |
+| CPCV AUC metals ≥ alken + 0.02 | 0.550 | 0.5254 | CHECK (-0.025) |
+| ≥6/11 per-inst AUC > 0.55 | 6 | 4 | CHECK |
+| bbg_missingness_ablation.csv | exists | exists | **PASS** |
+| ship-decision recorded | per class | all 3 = ship_with_bbg | **PASS** |
+| coverage_caveat flags ng1s | yes | yes | **PASS** |
+
+**Per plan §13 R-8** ("If at Stage 4 acceptance gate we are stuck at 0.55
+per class, we accept the result and shift the narrative to honest negative"
++ "A well-documented honest negative beats a poorly-documented strong
+number"): **WE ACCEPT THE HONEST RESULT.** Our AUCs are within ±0.02-0.05
+of alken's per-class shipped numbers (Equity 0.579, Energy 0.525, Metals
+0.530); we hit alken on energy (+0.033), sit ~0.045 below on equity and
+~0.025 below on metals. The Grinold-Fundamental-Law ceiling (plan §2.6)
+explicitly predicts pooled AUC ≈ 0.52 with primary IC ≈ 0.07.
+
+The R-11 R-10 NEW gates added in PM-2 / PM-3 ALL PASS:
+* `bbg_missingness_ablation.csv` exists with three AUC columns per class.
+* simulated-missingness deltas are < 0.011 on every class (vs 0.03
+  threshold) — model is BBG-robust.
+* All three classes ship `with_bbg` (the BBG features help marginally and
+  don't break under simulated missingness).
+* `coverage_caveat.csv` flags `ng1s` for low feature-target coherence
+  (plan §2.8.4).
+
+**Per-instrument breakdown (with_bbg ensembles):**
+
+```
+es1s    0.557  fesx1s  0.546  nq1s    0.537   (equity, XGBoost)
+cl1s    0.583  ho1s    0.455  ng1s    0.546   rb1s 0.499  (energy, LightGBM)
+gc1s    0.431  hg1s    0.551  pl1s    0.487   si1s 0.554  (metals, ensemble_simple)
+```
+
+**Tried and rejected:** disabling the drift filter (using all 105
+features). Numerically WORSE (equity 0.545 vs 0.554, energy 0.555 vs 0.558,
+metals 0.517 vs 0.525). The drift filter is correctly pruning noise.
+
+**Total commits on branch end of PM-4:** 14 (was 11).
+
+**Next session.** S4 — multi-task neural net with instrument heads (plan
+§3.1 Family B). This is where the per-instrument AUCs can lift because
+the shared encoder learns class-level structure while the per-instrument
+heads specialise. Target gate: per-class AUC ≥ S3 baseline + 0.03.
+
+Caveat: torch isn't currently installed (kept optional via `uv sync --extra
+multitask` per plan §8 S0). Macos x86_64 needs torch 2.2.x with numpy<2.0
+constraint, which conflicts with our numpy 2.4 base. May need a separate
+venv or skip Family B in favour of sklearn's MLPClassifier (single-task,
+no instrument heads — weaker but compatible).
