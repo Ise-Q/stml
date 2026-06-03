@@ -1,0 +1,9 @@
+cluster_id,n_members,members,mdi_sum_mean,mdi_sum_std,gain_sum_mean,gain_sum_std,mda_mean,mda_std_across_folds,baseline_auc_mean
+1,19,"f19_atm_iv_1m,f19_atm_iv_3m,f19_iv_term_slope,f19_iv_pctile_252,f2_vol_20,f2_vol_60,f2_parkinson_20,f2_garman_klass_20,f2_vol_of_vol_20,f10_hl_range,f12_hurst_100,f9_dispersion_z_60,f9_pair_corr_mean_63,f9_implied_corr_z_252,f21_crack_321,f11_eia_crude_stock_rank63,f11_curve_slope,f11_vix_term_slope,f16_regime_alignment_score",0.331262,0.051365,0.331262,0.051365,0.036360,0.043082,0.542139
+7,5,"f19_skew_1m,f5_flip_rate_60,f5_participation_60,f7_oi_level,ewma_hmm_prob_highvol",0.065966,0.020783,0.065966,0.020783,0.010873,0.017507,0.542139
+6,10,"f18_term_spread_z63,f18_term_chg5,f6_macd_hist,f7_volume_z_20,f7_overnight_gap,f8_month_cos,f10_oc_ret,f11_move_rank63,f11_vix_chg20,f11_vix_chg5",0.119841,0.023597,0.119841,0.023597,0.008241,0.013112,0.542139
+8,9,"f18_term_spread,f18_contango_flag,f5_trailing_run_length,f5_signal_entropy_20,f5_long_bias_20,f8_month_sin,f12_efficiency_ratio_21,f11_eia_gasoline_stock_rank63,f15_path_tortuosity_20",0.114459,0.018903,0.114459,0.018903,0.000619,0.028319,0.542139
+5,3,"f22_eia_release_flag,f8_dow_sin,f8_dow_cos",0.004954,0.003316,0.004954,0.003316,0.000405,0.002406,0.542139
+3,4,"f11_ust10_rank63,f11_ust10_chg20,f11_ust10_chg5,f11_be10y_chg5",0.040478,0.007775,0.040478,0.007775,-0.006441,0.006196,0.542139
+4,10,"f7_oi_change_20,f12_variance_ratio_5_21,f12_autocorr_21,f9_xsect_rank_60,f21_gold_silver_z63,f11_be10y_rank63,f11_china_pmi_rank63,f11_be10y_chg20,f11_eurusd_chg20,f11_dxy_chg5",0.142914,0.038260,0.142914,0.038260,-0.007277,0.014841,0.542139
+2,12,"f19_iv_rv_spread_20,f1_bb_pctb_20,f1_rsi_14,f2_vol_ratio_20_60,f6_ts_momentum_20,f6_ma_cross_20_60,f6_macd_12_26,f6_macd_signal_9,f10_oc_ret_mean_20,f12_trend_tval_21,f11_skew_rank63,f15_semi_vol_ratio_20",0.180124,0.022600,0.180124,0.022600,-0.010282,0.038715,0.542139

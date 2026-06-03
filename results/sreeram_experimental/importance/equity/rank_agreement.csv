@@ -1,0 +1,4 @@
+metric_a,metric_b,kendall_tau,p_value
+mdi_sum_mean,mda_mean,-0.016667,0.964695
+gain_sum_mean,mda_mean,-0.016667,0.964695
+mdi_sum_mean,gain_sum_mean,1.000000,0.000000

@@ -1,0 +1,2 @@
+dropped 3 cols with variance < 1e-06
+dropped 5 near-twin cols (|ρ|>0.99)
