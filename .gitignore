@@ -34,3 +34,6 @@ Thumbs.db
 
 # dir
 ignore/
+
+# Generated report exports (markdown sources are tracked instead)
+reports/**/*.pdf
