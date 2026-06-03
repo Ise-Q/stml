@@ -1,0 +1,4 @@
+run_id,asset_class,roster,cv_scheme,reducer,use_macro,n_modelling,best_model,oos_auc,oos_brier,oos_precision,notes
+2022-01-01_equity,equity,default,cpcv,cluster_rep,True,,xgboost,0.567706,0.249286,0.607186,shipped default path; calibrated deliverable
+2022-01-01_energy,energy,default,cpcv,cluster_rep,True,,torch_mlp,0.535587,0.264947,0.618534,shipped default path; calibrated deliverable
+2022-01-01_metals,metals,default,cpcv,cluster_rep,True,,elasticnet_logistic,0.532427,0.340580,0.575444,shipped default path; calibrated deliverable

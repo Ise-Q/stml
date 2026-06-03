@@ -1,0 +1,12 @@
+instrument,n_oos_rows,ic,ic_undefined,thin
+cl1s,88,-0.031694723143444854,False,False
+es1s,118,0.014380530973451329,False,False
+fesx1s,127,-0.04400067589883027,False,False
+gc1s,30,-0.23103448275862065,False,True
+hg1s,124,-0.06043298675402365,False,False
+ho1s,2,,True,True
+ng1s,56,0.1902112562489921,False,True
+nq1s,122,0.17117744908510538,False,False
+pl1s,104,0.019813981398139814,False,False
+rb1s,124,-0.020581113801452784,False,False
+si1s,116,-0.06311863811863812,False,False

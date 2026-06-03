@@ -8,7 +8,7 @@ choice below is justified against the literature review `../reports/apb/nlr-cw-v
 commitments, 60 references), the feature set is locked before the final OOS window, and the
 results section reports honestly where the metamodel **does not** beat the blind-primary baseline.
 
-> **Reproduce:** `uv run --directory metamodel-apb python -m alken_metamodel.emit
+> **Reproduce:** `uv run --project metamodel-apb python -m alken_metamodel.emit
 > --asset-classes equity energy metals`. Deterministic (seeds fixed; single-thread native
 > kernels); the prediction window is config-driven so the grader can swap in the hidden
 > Jul–Dec 2022 half. `uv run --directory metamodel-apb pytest` → full test suite.
@@ -38,14 +38,14 @@ re-run yet fail to reproduce — violating the determinism contract. It is there
 selectable. The **autoencoder reducer** is likewise built for the EX.2 comparison only;
 cluster-representative selection is the promoted reducer (deterministic, interpretable, tied to §4).
 
-> Selected models this run (CPCV selection): **Equity → XGBoost** (0.579), **Energy → torch-MLP**
-> (0.525 — a neural variant won), **Metals → elastic-net logistic** (0.530).
+> Selected models this run (CPCV selection): **Equity → XGBoost** (0.568), **Energy → torch-MLP**
+> (0.536 — a neural variant won), **Metals → elastic-net logistic** (0.532).
 
 ---
 
 ## 0. Architecture (one-directional data flow)
 
-```
+```text
 load_clean_data()                              stml.io          OHLCV (long) + signals (wide), read-only
   → per-instrument causal features             features.py      stml E-class stack + backward-trend feature
   → regime features                            regime.py        online EWMA 2-state HMM + stml static GMM/Markov/HMM
@@ -83,7 +83,7 @@ which drops the regime/macro blocks and zero-variance columns on the modelling s
 Both are measured by `experiments/x8_feature_counts.py`. The layers:
 
 | Block | Columns (examples) | What it captures | Module / source |
-|---|---|---|---|
+| :---: | :---: | :---: | :---: |
 | F1 counter-trend | `f1_mr_score_{10,20,40}`, `f1_rsi_14`, `f1_bb_pctb_20` | mean-reversion pressure | stml `features.py` |
 | F2 vol/dispersion | `f2_vol_20` (annualised, LI), `f2_garman_klass_20`, `f2_parkinson_20` | heteroskedastic risk; **GK** range vol (Garman–Klass 1980; Korkusuz 2023, nlr-cw §A1) | stml + `volatility.py` |
 | F2-RS | `f2_rogers_satchell_20` | drift-independent range vol | stml `features_ext.py` |
@@ -162,14 +162,16 @@ Per-instrument class balance ranges ~50–69% positive; see the §5 per-instrume
 
 A horse-race behind one uniform `MetaClassifier` interface so the comparison is apples-to-apples
 (Gu-Kelly-Xiu 2020; Krauss et al. 2017; IKM 2020 small-data restraint, nlr-cw §2). The **shipped
-default roster is five estimators**; a sixth (Keras-VSN) is an off-path determinism-safe
-comparison (see *Scope*):
+default roster is five estimators** (1–5); a sixth (Keras-VSN) is an off-path determinism-safe
+comparison (see *Scope*). Estimators 1–3 run on the full feature set; the two neural variants
+(4–5) run on the **cluster-representative-reduced** feature set (EX.2: one medoid per Mantegna
+cluster), which makes the VSN's one-GRN-per-feature architecture tractable at CV scale:
 
 1. **Elastic-net logistic** (saga; median-impute + standardise),
-2. **XGBoost** (PS5 config), **3. LightGBM** — on the full feature set,
-4. **torch-MLP**, **5. torch-VSN** (byte-deterministic VSN port with softmax feature-selection
-   weights) — on the **cluster-representative-reduced** feature set (EX.2: one medoid per Mantegna
-   cluster), which makes the VSN's one-GRN-per-feature architecture tractable at CV scale.
+2. **XGBoost** (PS5 config),
+3. **LightGBM**,
+4. **torch-MLP**,
+5. **torch-VSN** (byte-deterministic VSN port with softmax feature-selection weights),
 6. **Keras-VSN** (vendored PS6 `FinalModel`) — off-path, TF op-determinism best-effort.
 
 Reduction is **fold-safe**: the reducer is wrapped with its estimator so the evaluation harness
@@ -196,15 +198,15 @@ consumes the
 probability itself (Gramegna-Giudici 2021, nlr-cw §2 — see the calibration subsection). The pooled
 matrix keeps the event-date index so concurrent **cross-instrument** labels are purged by `t1`.
 
-**Selected models (CPCV selection, real data):** Equity → **XGBoost** (15-path mean AUC 0.579),
-Energy → **torch-MLP** (0.525 — a neural variant won its class), Metals → **elastic-net logistic**
-(0.530). The torch NN family is now genuinely competitive, not a synthetic-only appendix.
+**Selected models (CPCV selection, real data):** Equity → **XGBoost** (15-path mean AUC 0.568),
+Energy → **torch-MLP** (0.536 — a neural variant won its class), Metals → **elastic-net logistic**
+(0.532). The torch NN family is now genuinely competitive, not a synthetic-only appendix.
 
 **CPCV path robustness (EX.1, modelling sample).** The fraction of the 15 purged combinatorial
 paths beating 0.5 is the discriminating signal for *where* the edge is real:
 
 | Class | best model | mean CPCV AUC | paths > 0.5 | reading |
-|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: |
 | Equity | XGBoost | **0.572** | **15 / 15** | edge is **robust** |
 | Metals | logistic | 0.524 | 13 / 15 | marginal-but-positive |
 | Energy | LightGBM | 0.493 | 6 / 15 | **no reliable edge** |
@@ -222,7 +224,7 @@ unit-tested invariant); only Brier/ECE and the stake move. On a leakage-safe in-
 the **selected** models (not LightGBM-as-proxy as in pass-2's EX.4):
 
 | Class | Selected model | ECE raw → Platt | Brier raw → Platt | AUC (raw = Platt) |
-|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: |
 | Energy | torch-MLP | 0.140 → **0.100** | 0.254 → 0.244 | 0.541 |
 | Equity | XGBoost | 0.055 → **0.027** | 0.247 → 0.242 | 0.607 |
 | Metals | logistic | 0.210 → **0.001** | 0.313 → **0.247** | 0.532 |
@@ -231,8 +233,8 @@ The raw probabilities are materially miscalibrated (Energy's torch-MLP worst at 
 need post-hoc calibration more than trees, Gramegna-Giudici 2021); Platt cuts ECE 1.4–200× with the
 AUC untouched. The **deliverable ships the calibrated probabilities** (`metamodel_predictions.csv`),
 with the raw file retained (`metamodel_predictions_raw.csv`) for this before/after; the
-`experiment_log.csv` now records the calibrated class-level Brier (Equity 0.249, Energy 0.263,
-Metals 0.344) and precision. **Note:** calibration *does* change §6 — it shifts which positions clear
+`experiment_log.csv` now records the calibrated class-level Brier (Equity 0.249, Energy 0.265,
+Metals 0.341) and precision. **Note:** calibration *does* change §6 — it shifts which positions clear
 the p̂≥0.55 Kelly floor, which moves the per-book Sharpes (Metals especially; see §6).
 
 **XGBoost benchmark (LR.4).** The horse-race is the NN-vs-tree benchmark itself: torch-MLP and
@@ -255,7 +257,7 @@ optimal-K K-means, then scored by **cluster MDI + purged cluster MDA + cluster S
 carries the **four required bug fixes**, each visible in the diff:
 
 | # | Bug | Fix | Where |
-|---|---|---|---|
+| :---: | :---: | :---: | :---: |
 | 1 | `max_features='auto'` (PS4 grid; removed in sklearn ≥1.3) | `'sqrt'` | `cluster_importance.py` MDI/SHAP forest |
 | 2 | `KFold(shuffle=True)` for MDA (leaks across overlapping labels) | injected **PurgedKFold** | vendored `calculate_cluster_importance_pfi` |
 | 3 | no real SHAP in PS2/sts-ml (MDI+PFI only) | **cluster SHAP** via `TreeExplainer`, summing member \|SHAP\| (the §4 contribution) | `cluster_importance.py` |
@@ -266,7 +268,7 @@ carries the **four required bug fixes**, each visible in the diff:
 and scoring every cluster:
 
 | Class | clusters | top cluster MDA | top cluster SHAP | near-zero-MDA clusters |
-|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: |
 | Equity | 3 | **0.031** | 0.43 | 2 / 3 |
 | Energy | 3 | 0.011 | 0.40 | 3 / 3 |
 | Metals | 2 | −0.004 | 0.71 | 2 / 2 |
@@ -294,10 +296,10 @@ NaN ranking metrics rather than crashing. The baseline is **blind-primary** (act
 **Per-instrument purged-OOS AUC (shipped default path, 11-instrument fan-out):**
 
 | Class | Model | Per-instrument AUC (n labels) | vs blind-primary |
-|---|---|---|---|
-| Equity | XGBoost | es1s 0.60 (457) · nq1s 0.61 (482) · fesx1s 0.59 (510) | **beats** |
-| Metals | logistic | hg1s 0.58 (504) · pl1s 0.50 (453) · si1s 0.50 (462) · gc1s 0.41 (138) | mixed |
-| Energy | torch-MLP | cl1s 0.55 (334) · rb1s 0.50 (504) · ho1s 0.43 (61) · ng1s 0.35 (68) | mixed |
+| :---: | :---: | :---: | :---: |
+| Equity | XGBoost | es1s 0.62 (457) · nq1s 0.59 (482) · fesx1s 0.57 (510) | **beats** |
+| Metals | logistic | hg1s 0.57 (504) · pl1s 0.49 (453) · si1s 0.51 (462) · gc1s 0.45 (138) | mixed |
+| Energy | torch-MLP | cl1s 0.56 (334) · rb1s 0.49 (504) · ho1s 0.43 (61) · ng1s 0.52 (68) | mixed |
 
 **OOS coverage caveat (S5.7 → widened S5.9).** All 11 instruments emit (no abstention), but the
 thin-coverage flag is now `n_oos_rows < 60` **OR** an undefined information coefficient — which
@@ -324,7 +326,7 @@ a hand-worked toy case confirms PT≈0 where the proxy shows z>0). With the mean
 certainty-equivalent:
 
 | Book | **PT stat (p)** *(primary)* | TM γ (t) | H–M proxy hit (z) | CER/day (γ=5) |
-|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: |
 | Energy | +0.24 (0.41) | +0.81 (1.34) | 0.510 (0.29) | +0.000203 |
 | Equity | −0.32 (0.63) | **−4.51 (−2.01)** | 0.447 (−1.38) | +0.000151 |
 | Metals | −2.17 (0.99) | −2.05 (−1.10) | 0.408 (−3.06) | −0.000014 |
@@ -412,7 +414,7 @@ labels are **netted**, a Grinold–Kahn cost model (half-spread + impact) is cha
 sized on the **calibrated** p̂ (§3.9). Net of costs:
 
 | Book | Model | Sharpe | Sortino | Ann. vol | Max DD | Turnover/yr | Hold (d) | Gross→Net |
-|---|---|---|---|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **All 11** | — | **1.31** | 1.99 | 7.5% | −2.6% | 53.7 | 2.8 | +8.3% → **+4.9%** |
 | Energy | torch-MLP | 1.86 | 3.22 | 2.9% | −1.0% | 7.8 | 3.0 | +3.2% → +2.7% |
 | Equity | XGBoost | 0.86 | 1.37 | 5.2% | −2.0% | 22.6 | 2.4 | +3.6% → +2.2% |
@@ -436,7 +438,7 @@ deflated, but the prior question is whether it clears zero at all on a ~128-day 
 assumption-strength order (`significance.py`, all per-period unless annualised):
 
 | Statistic | Pooled (all-11) value | Reading |
-|---|---|---|
+| :---: | :---: | :---: |
 | Sharpe + **t-stat** | SR/day 0.083, **t = 0.93** (n=127) | **not significant** at 5%, before any deflation |
 | **Studentised stationary block-bootstrap 95% CI** *(primary)* | per-period **[−0.04, +0.19]**; ann ×√252 [−0.59, 3.07] | **contains 0** — the width *is* the finding |
 | Lo/Opdyke analytic band | per-period [−0.09, +0.26] | parametric cross-check, also straddles 0 |
@@ -458,7 +460,7 @@ a **ladder over N**: N_eff (ONC-clustered trials, optimistic) → N_raw (the ros
 cluster-rep reducer + the F16 re-open) that N_raw under-counts:
 
 | Book | net Sharpe | DSR ladder (N_eff→…→4·N_raw) | CSCV-PBO | MinBTL vs OOS≈0.5y |
-|---|---|---|---|---|
+| :---: | :---: | :---: | :---: | :---: |
 | Energy | 1.86 | [0.86 → 0.77 → 0.70 → 0.64] (N 2→20) | 0.29 | [0.27 → 1.42]y |
 | Equity | 0.86 | [0.57 → 0.51 → 0.43 → 0.37] (N 3→20) | 0.46 | [0.73 → 1.42]y |
 | Metals | 0.00 | [0.35 → 0.19 → 0.12 → 0.08] (N 2→20) | 0.12 | [0.27 → 1.42]y |
@@ -473,7 +475,7 @@ no-edge selection. **This corroborates, but does not lead, the S6.14 verdict.**
 features and calibration — *only the exit convention differs*:
 
 | Book | simple `max_holding=10` | barrier-exact (actual `t1`) |
-|---|---|---|
+| :---: | :---: | :---: |
 | Energy | +2.16 | +1.86 |
 | Equity | +0.54 | +0.86 |
 | Metals | −0.21 | +0.00 |
@@ -497,7 +499,7 @@ forced into a false identity.
 agree the meta-model adds no exploitable act/skip edge on this primary signal:
 
 | Lens | Pass-4 result | Verdict |
-|---|---|---|
+| :---: | :---: | :---: |
 | §3/§5 OOS AUC | ≈ 0.50 (0.57 / 0.54 / 0.53) | no ranking skill |
 | §4 cluster MDA (OOS) | \|MDA\| < 0.02 across clusters | no feature carries OOS edge |
 | §6.14 significance | t = 0.93; bootstrap 95% CI contains 0 | Sharpe not distinguishable from 0 |
@@ -544,7 +546,7 @@ utility is not adopted.
 ## Commitments → modules → citations (Definition of Done)
 
 | # | Commitment | Module | nlr-cw / primary citation |
-|---|---|---|---|
+| :---: | :---: | :---: | :---: |
 | 1 | Meta-labelling act/skip filter | `triple_barrier.py`, `pipeline.py` | §1 — LdP 2018 Ch.3; Joubert 2022 |
 | 2 | Vol-adaptive ±k·σ̂ₜ + vertical T_max | `triple_barrier.py` | §1 — LdP 2018 Ch.3 |
 | 3 | Purged CV + embargo + CPCV + nested | `cross_validation.py` | §6 — LdP Ch.7/12; Bailey 2014; Harvey-Liu-Zhu 2016 |

@@ -14,14 +14,14 @@ released data read-only.
 methodological choice is justified against the literature review `../reports/apb/nlr-cw-v1.md`
 (8 commitments, 60 refs). Full design + build sequence: `docs/plans/2026-05-30-metamodel-build.md`.
 
-## Commands (run from the repo root with `--directory`)
+## Commands (run from the repo root)
 
 ```bash
 uv sync   --directory metamodel-apb              # install (Python 3.12, pinned)
 uv run    --directory metamodel-apb pytest       # tests
 uv run    --directory metamodel-apb ruff check --no-fix src/ tests/   # lint (see ruff caveat)
 uv run    --directory metamodel-apb ruff format src/ tests/
-uv run    --directory metamodel-apb python -m alken_metamodel.emit    # emit the deliverable CSVs
+uv run    --project   metamodel-apb python -m alken_metamodel.emit    # emit deliverable CSVs (use --project, NOT --directory: emit loads repo-root data/ via cwd)
 ```
 
 **Ruff caveat:** this machine's global `~/.config/ruff/ruff.toml` sets `fix = true`, so a bare
