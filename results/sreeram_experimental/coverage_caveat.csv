@@ -1,0 +1,12 @@
+instrument,n_events,n_eff,thin,low_coherence_vs_raw,noisy_coherence_vs_raw,note
+cl1s,411,88.06092282467154,False,False,False,
+es1s,564,114.09967473382294,False,False,False,
+fesx1s,626,111.69835737164536,False,False,False,
+gc1s,161,56.6033214371512,True,False,False,
+hg1s,617,122.26256954465111,False,False,False,
+ho1s,63,29.350305435302868,True,False,True,noisier R² 0.87-0.95 vs raw
+ng1s,120,32.82215579183575,True,True,False,"low feature-target coherence vs raw BBG (R² 0.72, 11 % label flip)"
+nq1s,593,120.53533664696639,False,False,False,
+pl1s,547,116.66640729079549,False,False,False,
+rb1s,617,113.75525419236814,False,False,True,noisier R² 0.87-0.95 vs raw
+si1s,567,107.87808441168731,False,False,False,
