@@ -1,0 +1,34 @@
+instrument,variant,winning_pool,winning_model,champion_auc,champion_sem,lower_ci_1se,selection_reason
+es1s,with_bbg,es1s,random_forest,0.554689,0.017302,0.537387,1SE pick (best=xgboost@equity_all 0.5627±0.0153)
+nq1s,with_bbg,equity_all,random_forest,0.537084,0.011316,0.525768,1SE pick (best=lightgbm@equity_all 0.5461±0.0146)
+fesx1s,with_bbg,equity_all,random_forest,0.557321,0.019137,0.538184,best mean AUC
+cl1s,with_bbg,cl1s,lightgbm,0.670978,0.021562,0.649415,1SE pick (best=xgboost@cl1s 0.6764±0.0225)
+ho1s,with_bbg,energy_cl_ho,elasticnet_logistic,0.599465,0.048001,0.551464,1SE pick (best=elasticnet_logistic@energy_all 0.6094±0.0410)
+rb1s,with_bbg,rb1s,random_forest,0.537887,0.020436,0.517451,1SE pick (best=lightgbm@rb1s 0.5515±0.0194)
+ng1s,with_bbg,energy_all,elasticnet_logistic,0.601375,0.044475,0.556900,best mean AUC
+gc1s,with_bbg,precious,elasticnet_logistic,0.482771,0.034115,0.448655,best mean AUC
+si1s,with_bbg,si1s,elasticnet_logistic,0.533555,0.011163,0.522392,best mean AUC
+pl1s,with_bbg,pl1s,random_forest,0.581014,0.019332,0.561682,best mean AUC
+hg1s,with_bbg,metals_all,random_forest,0.533126,0.014320,0.518807,best mean AUC
+es1s,without_bbg,es1s,random_forest,0.568051,0.012827,0.555224,1SE pick (best=random_forest@equity_all 0.5782±0.0178)
+nq1s,without_bbg,equity_all,lightgbm,0.545298,0.016842,0.528457,1SE pick (best=xgboost@equity_all 0.5487±0.0154)
+fesx1s,without_bbg,equity_all,random_forest,0.554069,0.017611,0.536459,best mean AUC
+cl1s,without_bbg,cl1s,lightgbm,0.683869,0.022509,0.661359,best mean AUC
+ho1s,without_bbg,energy_cl_ho,elasticnet_logistic,0.582842,0.036040,0.546802,1SE pick (best=elasticnet_logistic@energy_all 0.6241±0.0442)
+rb1s,without_bbg,rb1s,random_forest,0.528708,0.023442,0.505266,1SE pick (best=lightgbm@rb1s 0.5483±0.0212)
+ng1s,without_bbg,energy_all,elasticnet_logistic,0.577937,0.045566,0.532371,1SE pick (best=random_forest@energy_all 0.6131±0.0470)
+gc1s,without_bbg,precious,elasticnet_logistic,0.497034,0.028978,0.468055,best mean AUC
+si1s,without_bbg,si1s,elasticnet_logistic,0.528980,0.011366,0.517614,1SE pick (best=elasticnet_logistic@precious 0.5403±0.0127)
+pl1s,without_bbg,precious,elasticnet_logistic,0.535259,0.024390,0.510869,1SE pick (best=xgboost@metals_all 0.5508±0.0180)
+hg1s,without_bbg,metals_all,lightgbm,0.547800,0.012677,0.535123,1SE pick (best=xgboost@metals_all 0.5504±0.0113)
+es1s,simulated_missingness,es1s,random_forest,0.571956,0.014568,0.557388,1SE pick (best=random_forest@equity_all 0.5757±0.0146)
+nq1s,simulated_missingness,equity_all,random_forest,0.545462,0.013781,0.531681,best mean AUC
+fesx1s,simulated_missingness,equity_all,random_forest,0.550433,0.020854,0.529578,1SE pick (best=xgboost@equity_all 0.5577±0.0195)
+cl1s,simulated_missingness,cl1s,lightgbm,0.678908,0.026316,0.652592,best mean AUC
+ho1s,simulated_missingness,energy_cl_ho,elasticnet_logistic,0.624866,0.046904,0.577963,1SE pick (best=elasticnet_logistic@energy_all 0.6623±0.0486)
+rb1s,simulated_missingness,rb1s,random_forest,0.531671,0.022817,0.508854,best mean AUC
+ng1s,simulated_missingness,energy_all,elasticnet_logistic,0.620904,0.052878,0.568026,best mean AUC
+gc1s,simulated_missingness,precious,elasticnet_logistic,0.482003,0.030515,0.451488,best mean AUC
+si1s,simulated_missingness,si1s,elasticnet_logistic,0.533679,0.012381,0.521298,1SE pick (best=elasticnet_logistic@precious 0.5411±0.0158)
+pl1s,simulated_missingness,precious,elasticnet_logistic,0.544545,0.026103,0.518441,1SE pick (best=xgboost@metals_all 0.5597±0.0203)
+hg1s,simulated_missingness,metals_all,lightgbm,0.547306,0.010517,0.536789,best mean AUC
