@@ -17,7 +17,11 @@ from pathlib import Path
 import pandas as pd
 
 from .experiment_log import log_run
-from .pipeline import PipelineConfig, run_asset_class  # importing the package pins env first
+from .pipeline import (  # importing the package pins env first
+    DEFAULT_BARRIERS,
+    PipelineConfig,
+    run_asset_class,
+)
 from .seeding import set_seeds
 from .sizing import TARGET_VOL, position_weight
 
@@ -54,13 +58,18 @@ def select_window(df: pd.DataFrame, start, end, *, date_col: str = "date") -> pd
     return df[(d >= pd.Timestamp(start)) & (d <= pd.Timestamp(end))].copy()
 
 
-def strategy_weights(predictions: pd.DataFrame, config: PipelineConfig) -> pd.DataFrame:
+def strategy_weights(
+    predictions: pd.DataFrame, config: PipelineConfig, *, pt_sl: tuple[float, float] | None = None
+) -> pd.DataFrame:
     """§6 sizing: fractional-Kelly stake × vol-target leverage, signed by the primary side.
 
     ``predictions`` carries ``side`` (primary signal) and ``ann_vol`` (annualised realised vol).
-    A non-finite vol yields a flat (zero) weight rather than a NaN position.
+    A non-finite vol yields a flat (zero) weight rather than a NaN position. ``pt_sl`` overrides
+    the Kelly barrier geometry ``(b, d)`` — the caller passes the resolved per-class barrier's
+    ``pt_sl`` so the bet geometry matches the labels the model was trained on; ``None`` keeps the
+    config's global ``pt_sl`` (the shipped default).
     """
-    pt, sl = config.pt_sl
+    pt, sl = pt_sl if pt_sl is not None else config.pt_sl
     weights = []
     for row in predictions.itertuples(index=False):
         if not pd.notna(row.ann_vol) or not pd.notna(row.side):
@@ -122,8 +131,13 @@ def build_deliverables(
                 columns={"prediction_calibrated": "prediction"}
             )
         )
-        # size Kelly on the calibrated probability (feed it in as the ``prediction`` column)
-        sized = strategy_weights(preds.assign(prediction=preds["prediction_calibrated"]), config)
+        # size Kelly on the calibrated probability (feed it in as the ``prediction`` column),
+        # using THIS class's barrier geometry so the bet (b,d) matches the labels it learned
+        sized = strategy_weights(
+            preds.assign(prediction=preds["prediction_calibrated"]),
+            config,
+            pt_sl=result.barrier.pt_sl if result.barrier is not None else None,
+        )
         weights.append(sized)
         diagnostics[ac] = {
             "best_model": result.best_model,
@@ -179,12 +193,17 @@ def main(argv=None) -> None:
         "--no-per-instrument-embargo", dest="per_instrument_embargo", action="store_false"
     )
     parser.add_argument("--no-drift", dest="use_drift", action="store_false")
+    # EX.5 per-class barriers (vol estimator/width/horizon) are ON by default; --shipped-barriers
+    # reverts to the single global barrier (realized-vol-20, (1,1), h=10) for an apples-to-apples
+    # comparison or to reproduce the pre-EX.5 deliverable bytes.
+    parser.add_argument("--shipped-barriers", action="store_true")
     args = parser.parse_args(argv)
 
     set_seeds()
     from stml.io import load_clean_data, load_returns_panel
 
     ohlcv, signals = load_clean_data()
+    barriers = None if args.shipped_barriers else DEFAULT_BARRIERS
     config = PipelineConfig(
         predict_start=pd.Timestamp(args.predict_start),
         predict_end=pd.Timestamp(args.predict_end),
@@ -193,7 +212,28 @@ def main(argv=None) -> None:
         use_macro=not args.no_macro,
         per_instrument_embargo=args.per_instrument_embargo,
         use_drift=args.use_drift,
+        barriers=barriers,
     )
+    if barriers is None:
+        print("BARRIERS: shipped global (realized-vol-20, (1,1), h=10) for every class.")
+    else:
+        print(
+            "BARRIERS: EX.5 per-class — "
+            + ", ".join(
+                f"{ac}={b.vol_estimator}{b.vol_param}/pt_sl={b.pt_sl}/"
+                f"h={b.vol_scaled or b.max_holding}"
+                for ac, b in barriers.items()
+            )
+        )
+        # Honest provenance: XGB-selected + OFAT. Only classes that survive the xgb->lgbm swap are
+        # shipped (equity, energy); metals is OMITTED (flips negative under lightgbm, no edge) and
+        # falls back to the shipped barrier. NONE are validated under this torch roster. Adopted at
+        # user direction, not a demonstrated improvement — see experiments/results/ex5_*.
+        print(
+            "  CAVEAT: XGBoost-selected & OFAT; equity+energy survive the model swap, metals "
+            "omitted (falls back to shipped); not validated under roster=default. "
+            "--shipped-barriers reverts."
+        )
     raw_preds, cal_preds, weights, diagnostics = build_deliverables(
         ohlcv, signals, config, asset_classes=args.asset_classes
     )
@@ -225,7 +265,10 @@ def main(argv=None) -> None:
                 "oos_auc": round(diag["cv_scores"].get(diag["best_model"], float("nan")), 6),
                 "oos_brier": round(diag["oos_brier"], 6),  # XT.2: now measured, not blank
                 "oos_precision": round(diag["oos_precision"], 6),
-                "notes": "shipped default path; calibrated deliverable",
+                "notes": (
+                    f"barriers={'ex5_per_class' if config.barriers else 'shipped_global'}; "
+                    "calibrated deliverable"
+                ),
             },
             log_path,
         )

@@ -20,6 +20,7 @@ Leakage discipline enforced here:
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -29,6 +30,7 @@ import pandas as pd
 from stml.io import _find_repo_root
 from stml.metamodel.scope import ASSET_CLASS_MAP
 
+from .barrier_vol import barrier_sigma
 from .calibration import PlattCalibrator
 from .cross_validation import CombinatorialPurgedCV, PurgedKFold, nested_cpcv
 from .evaluation import cross_val_evaluate, evaluate_predictions, oos_predictions
@@ -38,6 +40,7 @@ from .features import (
     daily_barrier_sigma,
     filter_signal_days,
 )
+from .labelling_variants import triple_barrier_labels_ext, vol_scaled_horizon
 from .models import balanced_sample_weight, tree_linear_roster
 from .regime import assemble_regime_features
 from .seeding import set_seeds
@@ -48,6 +51,58 @@ from .triple_barrier import triple_barrier_labels
 ASSET_CLASS_CODES = {"equity": "EQ", "energy": "EN", "metals": "ME"}
 _LABEL_COLS = ("side", "t1", "ret", "bin", "weight")
 _NON_FEATURE = set(_LABEL_COLS) | {"instrument", "date"}
+
+
+@dataclass(frozen=True)
+class BarrierSpec:
+    """One asset class's triple-barrier geometry (an EX.5 per-class recommendation).
+
+    ``vol_estimator`` selects the **daily** barrier-σ source:
+    - ``"shipped"`` — the live pipeline's ``daily_barrier_sigma`` (``f2_vol_20``/√252, a
+      realized-vol-20 close-to-close std);
+    - ``"gk"`` / ``"ewma"`` / ``"rolling"`` — the genuinely different estimators from
+      ``barrier_vol.barrier_sigma`` (``vol_param`` = the window / span).
+
+    Exactly one of ``max_holding`` (fixed bar count, V1) or ``vol_scaled`` (``(h0, h_min, h_max)``
+    per-event horizon, V2) is set; ``pt_sl`` is the ``(profit-take, stop-loss)`` width pair. The
+    defaults reproduce the shipped barrier, so ``BarrierSpec("shipped", 20, config.pt_sl,
+    config.max_holding)`` is the backward-compatible no-op (see ``resolve_barrier``).
+    """
+
+    vol_estimator: str = "shipped"
+    vol_param: int = 20
+    pt_sl: tuple[float, float] = (1.0, 1.0)
+    max_holding: int | None = 10
+    vol_scaled: tuple[int, int, int] | None = None
+
+    def __post_init__(self) -> None:
+        if (self.max_holding is None) == (self.vol_scaled is None):
+            raise ValueError(
+                "BarrierSpec needs exactly one of max_holding (fixed horizon) or "
+                "vol_scaled (per-event horizon)"
+            )
+        if self.vol_estimator not in {"shipped", "gk", "ewma", "rolling"}:
+            raise ValueError(
+                f"unknown vol estimator {self.vol_estimator!r}; "
+                "expected one of shipped|gk|ewma|rolling"
+            )
+
+
+#: EX.5 economically-ranked per-class barriers (net-Sharpe winners on the modelling window).
+#: CONFIDENCE: XGBoost-selected and OFAT — each sweep stage varied one factor with the others at
+#: the LdP anchor, so the per-class triple was never measured jointly. Only the classes whose pick
+#: SURVIVES the xgb->lgbm robustness swap are shipped: equity (robust; its deployed model is the
+#: selection model) and energy (0.25 net Sharpe vs the 0.09 always-act floor). METALS IS
+#: DELIBERATELY OMITTED — its tight-stop width flips to a NEGATIVE net Sharpe under lightgbm (-0.04
+#: vs the +0.13 floor) and the class shows no learnable edge (AUC ~0.50), so per resolve_barrier it
+#: falls back to the shipped global barrier (the task spec says to FLAG, not ship, an edge that
+#: traces to imbalance rather than signal). NONE are validated under the shipped torch
+#: ``roster="default"``. ``PipelineConfig.barriers`` stays ``None`` by default so every non-emit
+#: consumer is byte-unchanged; provenance in ``experiments/results/ex5_barrier_economic_sweep_*``.
+DEFAULT_BARRIERS: dict[str, BarrierSpec] = {
+    "equity": BarrierSpec("rolling", 50, (2.0, 1.0), 10, None),
+    "energy": BarrierSpec("ewma", 20, (0.5, 0.25), None, (10, 2, 40)),
+}
 
 
 def class_members(asset_class: str) -> list[str]:
@@ -99,6 +154,23 @@ class PipelineConfig:
     cv_scheme: str = "purged"  # "purged" (PurgedKFold) or "cpcv" (15-path selection distribution)
     cpcv_groups: int = 6  # N for CombinatorialPurgedCV -> C(6,2)=15 paths
     cpcv_test_groups: int = 2
+    #: EX.5 per-class barrier overrides ({asset_class: BarrierSpec}); ``None`` ⇒ every class uses
+    #: the shipped barrier (``pt_sl``/``max_holding`` above), keeping the default path unchanged.
+    barriers: Mapping[str, BarrierSpec] | None = None
+
+
+def resolve_barrier(config: PipelineConfig, asset_class: str) -> BarrierSpec:
+    """The barrier geometry for ``asset_class``: a per-class override if configured, else the
+    shipped global (realized-vol-20, ``config.pt_sl`` / ``config.max_holding``).
+
+    ``config.barriers`` defaults to ``None`` ⇒ every class resolves to the shipped spec ⇒
+    byte-identical to the pre-EX.5 pipeline. ``emit`` passes ``barriers=DEFAULT_BARRIERS`` to opt
+    into the per-class geometry; a class absent from a partial map also falls back to shipped (no
+    ``KeyError``).
+    """
+    if config.barriers and asset_class in config.barriers:
+        return config.barriers[asset_class]
+    return BarrierSpec("shipped", 20, config.pt_sl, config.max_holding, None)
 
 
 def _roster_factory(config: PipelineConfig):
@@ -125,6 +197,7 @@ class AssetClassResult:
     calibrator: object  # per-class Platt map fit on modelling-OOS preds (pass-3 S3.9)
     oos_brier: float  # class-level modelling-OOS Brier (XT.2 experiment-log backfill)
     oos_precision: float  # class-level modelling-OOS precision (XT.2)
+    barrier: BarrierSpec | None = None  # the resolved per-class barrier geometry (EX.5 / shipped)
 
 
 class _IdentityCalibrator:
@@ -162,11 +235,54 @@ def _close_of(ohlcv_inst: pd.DataFrame) -> pd.Series:
     return s.astype(float)
 
 
+def _barrier_labels(
+    ohlcv_inst: pd.DataFrame, feats: pd.DataFrame, signal: pd.Series, spec: BarrierSpec
+) -> pd.DataFrame:
+    """Triple-barrier meta-labels under ``spec``'s geometry (the shipped path is byte-identical).
+
+    ``shipped`` + a fixed horizon routes through the core ``triple_barrier_labels`` — the unchanged
+    deliverable path. Any other vol estimator, or a vol-scaled horizon, routes through the ``_ext``
+    labeller and **drops its string ``barrier_type`` provenance column**, so only the numeric
+    ``side, t1, ret, bin, weight`` schema reaches the feature join (a stray string column would be
+    treated as a feature by ``feature_columns`` and crash the estimator).
+    """
+    close = _close_of(ohlcv_inst)
+    if spec.vol_estimator == "shipped":
+        sigma = daily_barrier_sigma(feats)  # realized-vol-20, the live default
+    else:
+        sigma = barrier_sigma(ohlcv_inst, spec.vol_estimator, spec.vol_param)
+
+    if spec.vol_estimator == "shipped" and spec.vol_scaled is None:
+        return triple_barrier_labels(
+            close, signal, sigma, pt_sl=spec.pt_sl, max_holding=spec.max_holding
+        )
+
+    if spec.vol_scaled is not None:
+        h0, h_min, h_max = spec.vol_scaled
+        t_events = signal.index[signal.to_numpy() != 0]
+        horizon = vol_scaled_horizon(sigma, t_events, h0, h_min=h_min, h_max=h_max)
+    else:
+        horizon = spec.max_holding
+    labels = triple_barrier_labels_ext(close, signal, sigma, pt_sl=spec.pt_sl, max_holding=horizon)
+    return labels[list(_LABEL_COLS)]  # drop barrier_type -> keep only the numeric label schema
+
+
 def build_instrument_panel(
-    ohlcv: pd.DataFrame, signals: pd.DataFrame, instrument: str, config: PipelineConfig
+    ohlcv: pd.DataFrame,
+    signals: pd.DataFrame,
+    instrument: str,
+    config: PipelineConfig,
+    *,
+    barrier: BarrierSpec | None = None,
 ) -> pd.DataFrame:
     """Per-instrument modelling table: causal features (+regime) joined to triple-barrier
-    meta-labels on the non-zero-signal trade days, keyed by event date and instrument."""
+    meta-labels on the non-zero-signal trade days, keyed by event date and instrument.
+
+    ``barrier`` defaults to the shipped spec (realized-vol-20, ``config.pt_sl`` / ``max_holding``),
+    so the default call is byte-identical to the pre-EX.5 pipeline; an EX.5 ``BarrierSpec`` swaps
+    the vol estimator, width and/or horizon for this instrument's class.
+    """
+    spec = barrier or BarrierSpec("shipped", 20, config.pt_sl, config.max_holding, None)
     ohlcv_inst = ohlcv[ohlcv["instrument"] == instrument]
     signal = signals.set_index("date")[instrument].sort_index()
     signal.index = pd.DatetimeIndex(signal.index)
@@ -188,14 +304,7 @@ def build_instrument_panel(
         macro = macro_features(feats.index)  # PIT-lagged, causal -> truncation-invariant
         feats = pd.concat([feats, macro.reindex(feats.index)], axis=1)
 
-    sigma = daily_barrier_sigma(feats)  # de-annualised daily barrier width
-    labels = triple_barrier_labels(
-        _close_of(ohlcv_inst),
-        signal,
-        sigma,
-        pt_sl=config.pt_sl,
-        max_holding=config.max_holding,
-    )
+    labels = _barrier_labels(ohlcv_inst, feats, signal, spec)
 
     feats_on_events = filter_signal_days(feats, signal)
     panel = feats_on_events.join(labels, how="inner").dropna(subset=["bin"])
@@ -206,14 +315,22 @@ def build_instrument_panel(
 
 
 def build_class_panel(
-    ohlcv: pd.DataFrame, signals: pd.DataFrame, instruments: list[str], config: PipelineConfig
+    ohlcv: pd.DataFrame,
+    signals: pd.DataFrame,
+    instruments: list[str],
+    config: PipelineConfig,
+    *,
+    barrier: BarrierSpec | None = None,
 ) -> pd.DataFrame:
     """Pool the class's instrument panels and add instrument-id one-hot columns.
 
     Keeps the event-date index (duplicated across instruments) so the purged CV can purge
-    concurrent cross-instrument labels by their ``t1`` spans.
+    concurrent cross-instrument labels by their ``t1`` spans. ``barrier`` (the resolved per-class
+    geometry) is threaded to every instrument panel unchanged.
     """
-    panels = [build_instrument_panel(ohlcv, signals, i, config) for i in instruments]
+    panels = [
+        build_instrument_panel(ohlcv, signals, i, config, barrier=barrier) for i in instruments
+    ]
     pooled = pd.concat(panels, axis=0)
     for inst in instruments:
         pooled[f"inst_{inst}"] = (pooled["instrument"] == inst).astype(float)
@@ -361,8 +478,9 @@ def run_asset_class(
     config = config or PipelineConfig()
     set_seeds(config.seed)
     instruments = class_members(asset_class)
+    barrier = resolve_barrier(config, asset_class)
 
-    pooled = build_class_panel(ohlcv, signals, instruments, config)
+    pooled = build_class_panel(ohlcv, signals, instruments, config, barrier=barrier)
     cols = feature_columns(pooled)
     X = pooled[cols]
     y = pooled["bin"].to_numpy()
@@ -431,4 +549,5 @@ def run_asset_class(
         calibrator=calibrator,
         oos_brier=float(class_metrics.get("brier", float("nan"))),
         oos_precision=float(class_metrics.get("precision", float("nan"))),
+        barrier=barrier,
     )
