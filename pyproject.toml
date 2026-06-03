@@ -31,7 +31,7 @@ harry-features = ["pywavelets>=1.4"]
 # macOS x86_64 past 2.2; the macOS user installs from the PyPI default index
 # with `uv sync --extra multitask` once S4 is reached. The base build of
 # S0/S1/S2/S3 + S6/S7 does not depend on torch.
-multitask = ["torch>=2.2.0"]
+multitask = ["torch>=2.2.0,<2.3"]
 # Sreeram_experimental S5 cluster importance (plan §3.6).
 # shap pulls numba/llvmlite which need either a binary wheel for the platform
 # (some macOS x86_64 builds fail without LLVM toolchain) or a working compile.

@@ -42,6 +42,13 @@ from stml.experimental.evaluation import CVResult, cross_val_evaluate
 from stml.experimental.make_scope import embargo_days_map
 from stml.experimental.models import balanced_sample_weight, default_roster
 
+# Multi-task NN (S4) — torch is in optional `multitask` extra.
+try:
+    from stml.experimental.multitask import MultiTaskConfig, MultiTaskMetaClassifier
+    MULTITASK_AVAILABLE = True
+except ImportError:
+    MULTITASK_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Pool definitions — Harry §4.11 INSTRUMENT_REGIMES + the full asset class.
@@ -183,6 +190,131 @@ def _filter_oos_to_instrument(
     return out.loc[out["instrument"] == instrument].reset_index(drop=True)
 
 
+def _evaluate_multitask_candidate(
+    *,
+    instrument: str,
+    pool: str,
+    pool_df: pd.DataFrame,
+    feature_cols: list[str],
+    cfg: PipelineConfig,
+    nan_cols_at_test: list[str] | None,
+    embargo_map: dict[str, int],
+) -> CandidateResult:
+    """Multi-task NN evaluator — only makes sense on multi-instrument pools.
+
+    Manually iterates CPCV(6,2) folds (instead of using cross_val_evaluate which
+    is built for sklearn-style estimators without instrument_ids).
+    """
+    if not MULTITASK_AVAILABLE:
+        return CandidateResult(
+            instrument=instrument, pool=pool, model_name="multitask_nn",
+        )
+    pool_members = POOL_MEMBERS[pool]
+    if len(pool_members) < 2:
+        return CandidateResult(
+            instrument=instrument, pool=pool, model_name="multitask_nn",
+        )
+    inst_to_id = {ticker: i for i, ticker in enumerate(pool_members)}
+    if instrument not in inst_to_id:
+        return CandidateResult(
+            instrument=instrument, pool=pool, model_name="multitask_nn",
+        )
+
+    pool_df = pool_df.copy()
+    X = pool_df.loc[:, feature_cols].copy()
+    y = pool_df["label"].astype(int)
+    t = pd.to_datetime(pool_df["t_signal"])
+    t1 = pd.to_datetime(pool_df["t_end"])
+    instruments = pool_df["instrument"]
+    inst_ids = instruments.map(inst_to_id).astype(int).values
+    uniq = pool_df["uniqueness_weight"].astype(float).values
+
+    cv = CombinatorialPurgedCV(
+        n_groups=cfg.cpcv_n_groups,
+        n_test_groups=cfg.cpcv_n_test_groups,
+        t=t, t1=t1,
+        pct_embargo=cfg.cpcv_pct_embargo,
+        instruments=instruments, embargo_days=embargo_map,
+    )
+
+    oos_rows = []
+    for fold_id, (train_idx, test_idx) in enumerate(cv.split(X)):
+        if len(train_idx) == 0 or len(test_idx) == 0:
+            continue
+        X_tr = X.iloc[train_idx]
+        y_tr = y.iloc[train_idx]
+        inst_tr = inst_ids[train_idx]
+        sw_tr = balanced_sample_weight(y_tr.values, base=uniq[train_idx])
+        t_tr = t.iloc[train_idx]
+        X_te = X.iloc[test_idx].copy()
+        y_te = y.iloc[test_idx]
+        inst_te = inst_ids[test_idx]
+        if nan_cols_at_test:
+            for col in nan_cols_at_test:
+                if col in X_te.columns:
+                    X_te[col] = np.nan
+
+        m = MultiTaskMetaClassifier(
+            n_instruments=len(pool_members),
+            config=MultiTaskConfig(seed=cfg.seed, val_frac=0.2,
+                                     n_epochs=100, early_stop_patience=15),
+        )
+        try:
+            m.fit(X_tr, y_tr, instrument_ids=inst_tr, sample_weight=sw_tr,
+                  t_signal_for_split=t_tr)
+            proba = m.predict_act_proba(X_te, instrument_ids=inst_te)
+        except Exception as exc:
+            continue
+
+        # Record OOS rows for the target instrument.
+        for j, (event_idx, prob, label) in enumerate(zip(test_idx, proba, y_te.values)):
+            if instruments.iloc[event_idx] != instrument:
+                continue
+            oos_rows.append({
+                "fold": fold_id,
+                "row_idx": int(event_idx),
+                "y_true": int(label),
+                "y_proba": float(prob),
+                "sample_weight": float(uniq[event_idx]),
+                "instrument": instrument,
+            })
+
+    if not oos_rows:
+        return CandidateResult(
+            instrument=instrument, pool=pool, model_name="multitask_nn",
+            n_modelling=len(pool_df),
+        )
+    oos_df = pd.DataFrame(oos_rows)
+    # Per-fold AUC on this instrument's slices.
+    from sklearn.metrics import roc_auc_score
+    per_fold = []
+    for fold_id, grp in oos_df.groupby("fold"):
+        if grp["y_true"].nunique() < 2:
+            continue
+        try:
+            a = roc_auc_score(grp["y_true"], grp["y_proba"], sample_weight=grp["sample_weight"])
+            per_fold.append(a)
+        except Exception:
+            pass
+    if not per_fold:
+        return CandidateResult(
+            instrument=instrument, pool=pool, model_name="multitask_nn",
+            n_modelling=len(pool_df),
+            n_oos_for_instrument=len(oos_df),
+            oos_predictions=oos_df,
+        )
+    return CandidateResult(
+        instrument=instrument, pool=pool, model_name="multitask_nn",
+        mean_auc=float(np.mean(per_fold)),
+        std_auc=float(np.std(per_fold)),
+        sem=float(np.std(per_fold) / max(np.sqrt(len(per_fold)), 1.0)),
+        n_modelling=len(pool_df),
+        n_oos_for_instrument=len(oos_df),
+        oos_predictions=oos_df,
+        feature_cols=feature_cols,
+    )
+
+
 def _evaluate_candidate(
     *,
     instrument: str,
@@ -307,11 +439,14 @@ def select_champion(candidates: list[CandidateResult]) -> ChampionResult:
     threshold = best.mean_auc - (best.sem if not np.isnan(best.sem) else 0.0)
 
     # Models, more-regularised → less.
+    # The multi-task NN sits at the most-complex end because it has many
+    # parameters; we prefer simpler models when they're within 1 SE.
     model_rank = {
         "elasticnet_logistic": 0,
         "random_forest": 1,
         "lightgbm": 2,
         "xgboost": 3,
+        "multitask_nn": 4,
     }
     # Pools, smaller → larger.
     def _pool_size(pool: str) -> int:
@@ -375,6 +510,20 @@ def run_champion_for_instrument(
                 embargo_map=embargo_map,
             )
             candidates.append(c)
+
+        # Multi-task NN — only on multi-instrument pools (sharing makes no
+        # sense for individual pools).
+        if MULTITASK_AVAILABLE and len(POOL_MEMBERS[pool]) >= 2:
+            mt = _evaluate_multitask_candidate(
+                instrument=instrument,
+                pool=pool,
+                pool_df=pool_df,
+                feature_cols=feature_cols,
+                cfg=cfg,
+                nan_cols_at_test=nan_at_test,
+                embargo_map=embargo_map,
+            )
+            candidates.append(mt)
 
     return select_champion(candidates)
 
