@@ -115,12 +115,19 @@ class MetaClassifier:
         return self.base.predict_proba(x)
 
     def predict_act_proba(self, X) -> np.ndarray:
-        """P(class == 1) — the 'act' probability in meta-labelling."""
+        """P(class == 1) — the 'act' probability in meta-labelling.
+
+        Clipped to [0.01, 0.99] so a single extreme prediction can't blow up
+        the log-loss of an otherwise OK model. AUC is unchanged by clipping
+        because AUC depends only on ranking, not absolute probabilities.
+        """
         proba = self.predict_proba(X)
         classes = list(self.base.classes_)
         if 1 in classes:
-            return proba[:, classes.index(1)]
-        return np.zeros(proba.shape[0])  # degenerate single-class fold
+            p = proba[:, classes.index(1)]
+        else:
+            p = np.zeros(proba.shape[0])  # degenerate single-class fold
+        return np.clip(p, 0.01, 0.99)
 
     @property
     def feature_names(self) -> list[str] | None:
@@ -187,6 +194,31 @@ def make_xgb(*, seed: int = 42, **overrides: Any) -> MetaClassifier:
     return MetaClassifier("xgboost", XGBClassifier(**config), scale=False)
 
 
+def make_lightgbm(*, seed: int = 42, **overrides: Any) -> MetaClassifier:
+    """LightGBM — alken-parity regularised config (deterministic, NaN-tolerant)."""
+    from lightgbm import LGBMClassifier  # lazy
+
+    config = dict(
+        n_estimators=200,
+        num_leaves=15,
+        max_depth=-1,
+        learning_rate=0.05,
+        subsample=0.8,
+        subsample_freq=1,
+        colsample_bytree=0.8,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        min_child_samples=5,
+        random_state=seed,
+        n_jobs=1,
+        deterministic=True,
+        force_row_wise=True,
+        verbose=-1,
+    )
+    config.update(overrides)
+    return MetaClassifier("lightgbm", LGBMClassifier(**config), scale=False)
+
+
 def make_random_forest(
     *, seed: int = 42, max_depth: int = 6, n_estimators: int = 200,
     min_samples_leaf: int = 10, **overrides: Any
@@ -209,9 +241,10 @@ def make_random_forest(
 
 
 def default_roster(seed: int = 42) -> dict[str, MetaClassifier]:
-    """The plan §8 S3 roster — three families (linear / tree / tree-bagging)."""
+    """The plan §8 S3 roster — four families (linear / boosted tree / boosted tree / bagged tree)."""
     return {
         "elasticnet_logistic": make_elasticnet_logistic(seed=seed),
         "xgboost": make_xgb(seed=seed),
+        "lightgbm": make_lightgbm(seed=seed),
         "random_forest": make_random_forest(seed=seed),
     }

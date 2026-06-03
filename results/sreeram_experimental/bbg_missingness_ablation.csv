@@ -1,4 +1,4 @@
 asset_class,simulated_missingness_auc,with_bbg_auc,without_bbg_auc,delta_simulated_vs_with_bbg,delta_without_vs_with_bbg,ship_decision
-energy,0.559279,0.558106,0.555217,0.001172,-0.002889,ship_with_bbg
+energy,0.554124,0.557742,0.563020,-0.003617,0.005278,ship_with_bbg
 equity,0.557332,0.553696,0.556336,0.003636,0.002640,ship_with_bbg
-metals,0.520447,0.510243,0.524413,0.010204,0.014169,ship_with_bbg
+metals,0.532581,0.525406,0.533702,0.007175,0.008296,ship_with_bbg

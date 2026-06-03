@@ -2,9 +2,9 @@ asset_class,variant,best_model,n_modelling,n_features,pooled_mean_auc,pooled_std
 equity,with_bbg,xgboost,1277,83,0.553696,0.042330
 equity,without_bbg,xgboost,1277,71,0.556336,0.049149
 equity,simulated_missingness,xgboost,1277,83,0.557332,0.056723
-energy,with_bbg,elasticnet_logistic,804,84,0.558106,0.077622
-energy,without_bbg,random_forest,804,72,0.555217,0.050954
-energy,simulated_missingness,elasticnet_logistic,804,84,0.559279,0.074616
-metals,with_bbg,random_forest,1385,84,0.510243,0.034428
-metals,without_bbg,xgboost,1385,72,0.524413,0.034784
-metals,simulated_missingness,xgboost,1385,84,0.520447,0.040130
+energy,with_bbg,lightgbm,804,84,0.557742,0.054476
+energy,without_bbg,lightgbm,804,72,0.563020,0.050965
+energy,simulated_missingness,ensemble_simple,804,84,0.554124,
+metals,with_bbg,ensemble_simple,1385,84,0.525406,
+metals,without_bbg,ensemble_simple,1385,72,0.533702,
+metals,simulated_missingness,ensemble_simple,1385,84,0.532581,

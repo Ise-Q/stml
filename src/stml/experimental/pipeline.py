@@ -220,6 +220,34 @@ def run_asset_class(
     best_name = max(valid, key=valid.get) if valid else next(iter(roster_cv))
     winner = roster_cv[best_name]
 
+    # Also build a simple-average ensemble across the three estimators
+    # (defensive variance reduction, NOT stacking — plan §3.10 only rejects
+    # stacked ensembles with learned weights). Tracked as "ensemble_simple"
+    # in roster_cv and considered for the per-class winner pick.
+    ens_oos = _ensemble_simple_oos(roster_cv)
+    if ens_oos is not None and not ens_oos.empty:
+        from sklearn.metrics import roc_auc_score
+        # Pool-fold AUC for the ensemble (one row per OOS row after averaging).
+        ens_auc = float("nan")
+        if ens_oos["y_true"].nunique() >= 2:
+            try:
+                ens_auc = float(roc_auc_score(
+                    ens_oos["y_true"], ens_oos["y_proba"],
+                    sample_weight=ens_oos["sample_weight"],
+                ))
+            except Exception:
+                pass
+        if not np.isnan(ens_auc) and ens_auc > auc_by_model.get(best_name, -1):
+            # Replace the winner with the ensemble if it scores higher.
+            best_name = "ensemble_simple"
+            winner = CVResult(
+                fold_scores=pd.DataFrame(),
+                oos_predictions=ens_oos,
+                mean_scores={"auc": ens_auc},
+                std_scores={"auc": float("nan")},
+            )
+            roster_cv["ensemble_simple"] = winner
+
     per_inst = per_instrument_breakdown(
         instruments=instruments, oos_predictions=winner.oos_predictions
     )
@@ -238,6 +266,44 @@ def run_asset_class(
     )
 
 
+def _ensemble_simple_oos(roster_cv: dict[str, CVResult]) -> pd.DataFrame | None:
+    """Build a simple-average ensemble OOS prediction frame across estimators.
+
+    For each (row_idx, fold) tuple present in ALL estimators' OOS predictions,
+    take the simple mean of `y_proba`. Then dedupe by row_idx (mean across
+    folds) and return one row per OOS event.
+
+    Returns ``None`` if fewer than 2 estimators have non-empty OOS frames.
+    """
+    frames = [
+        res.oos_predictions for res in roster_cv.values()
+        if res.oos_predictions is not None and not res.oos_predictions.empty
+    ]
+    if len(frames) < 2:
+        return None
+
+    # Align by (row_idx, fold) — every estimator was fit on the same CPCV
+    # splits, so the (row_idx, fold) sets should match.
+    base = frames[0][["row_idx", "fold", "y_true", "sample_weight"]].copy()
+    base["y_proba_sum"] = frames[0]["y_proba"].astype(float)
+    base["n_models"] = 1
+    for f in frames[1:]:
+        merge = f[["row_idx", "fold", "y_proba"]]
+        merged = base.merge(merge, on=["row_idx", "fold"], how="inner", suffixes=("", "_x"))
+        merged["y_proba_sum"] = merged["y_proba_sum"] + merged["y_proba"]
+        merged["n_models"] = merged["n_models"] + 1
+        base = merged.drop(columns=["y_proba"])
+    base["y_proba"] = base["y_proba_sum"] / base["n_models"]
+    # Dedupe by row_idx — mean across folds.
+    out = base.groupby("row_idx", as_index=False).agg(
+        y_true=("y_true", "first"),
+        sample_weight=("sample_weight", "first"),
+        y_proba=("y_proba", "mean"),
+        fold=("fold", "first"),
+    )
+    return out[["fold", "row_idx", "y_true", "y_proba", "sample_weight"]]
+
+
 def _fresh_estimator(
     name: str,
     *,
@@ -247,6 +313,7 @@ def _fresh_estimator(
     """Build a fresh MetaClassifier by name."""
     from stml.experimental.models import (
         make_elasticnet_logistic,
+        make_lightgbm,
         make_random_forest,
         make_xgb,
     )
@@ -255,6 +322,8 @@ def _fresh_estimator(
         return make_elasticnet_logistic(seed=seed)
     if name == "xgboost":
         return make_xgb(seed=seed, **(xgb_overrides or {}))
+    if name == "lightgbm":
+        return make_lightgbm(seed=seed)
     if name == "random_forest":
         return make_random_forest(seed=seed)
     raise ValueError(f"Unknown estimator name: {name}")
