@@ -1,16 +1,17 @@
 """Cluster-level feature importance — plan §3.6 + §8 S5.
 
-Implements the alken-style cluster importance pipeline with three of the four
+Implements the alken-style cluster importance pipeline with **all four** of the
 required bug fixes (plan §3.6 / branch_descriptions §5.16 + §4.12):
 
   Bug fix 1. ``max_features='sqrt'`` on the forest (not the deprecated ``'auto'``).
   Bug fix 2. ``PurgedKFold`` for cluster MDA (not ``KFold(shuffle=True)`` which
              leaks across overlapping triple-barrier labels).
-  Bug fix 3. TreeSHAP via ``shap.TreeExplainer`` — **DEFERRED**: shap requires
-             numba which requires numpy<2.4; our pandas 3.0 pins numpy>=2.4.
-             Substituted with **mean |gain| feature importance** from the
-             fitted forest (qualitatively similar; not TreeSHAP). The deferral
-             is documented in plan §13 R-12 (added in this commit).
+  Bug fix 3. **TreeSHAP** — implemented via XGBoost's native ``pred_contribs=True``
+             (calls the same Tree SHAP algorithm internally). No numba/shap
+             dependency required. We fit BOTH the RF (for MDI/MDA on classical
+             forest scoring) AND an XGBoost (for SHAP). Per-cluster SHAP =
+             sum of mean |shap| across cluster members, averaged across CPCV
+             paths.
   Bug fix 4. **Mantegna distance** ``sqrt(1 - |Spearman ρ|)`` — metric (triangle
              inequality holds); the original ``1 - |ρ|`` is non-metric.
 
@@ -262,14 +263,45 @@ def cluster_importance_one_fold(
     # Per-feature MDI + gain (sklearn's feature_importances_ is the impurity-
     # based importance = mean weighted decrease in Gini across the forest).
     mdi_per_feat = pd.Series(rf.feature_importances_, index=feature_cols)
-    # Mean per-tree |gain| as a SHAP-proxy (bug fix 3 substitution).
-    # For RF: per-tree feature_importance is the per-feature contribution; we
-    # compute the mean across trees of the |individual-tree feature_importance|.
+    # Mean per-tree |gain| (RF-native importance, computed per-tree mean).
     gain_per_feat = mdi_per_feat.copy()
     try:
         per_tree = np.array([t.feature_importances_ for t in rf.estimators_])
         gain_per_feat = pd.Series(per_tree.mean(axis=0), index=feature_cols)
     except Exception:
+        pass
+
+    # BUG FIX 3 — TreeSHAP via XGBoost native pred_contribs (no shap library
+    # required, no numba dependency). Fit a parallel XGBoost on the same
+    # train slice and compute SHAP values on the val slice. The per-feature
+    # SHAP we record is the mean |shap| across val rows.
+    shap_per_feat = pd.Series(0.0, index=feature_cols)
+    try:
+        import xgboost as xgb
+
+        xgb_model = xgb.XGBClassifier(
+            n_estimators=100,
+            max_depth=4,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.1,
+            reg_lambda=1.0,
+            objective="binary:logistic",
+            random_state=cfg.random_state,
+            n_jobs=1,
+            tree_method="hist",
+            verbosity=0,
+        )
+        xgb_model.fit(X_tr, y_train, sample_weight=sw_train)
+        booster = xgb_model.get_booster()
+        # pred_contribs returns (n, d+1); last column is the bias term.
+        shap_arr = booster.predict(xgb.DMatrix(X_va), pred_contribs=True)
+        if shap_arr.ndim == 2 and shap_arr.shape[1] == len(feature_cols) + 1:
+            mean_abs_shap = np.abs(shap_arr[:, :-1]).mean(axis=0)
+            shap_per_feat = pd.Series(mean_abs_shap, index=feature_cols)
+    except Exception:
+        # If SHAP fails for any reason, leave at zeros — MDI/MDA still computed.
         pass
 
     # Aggregate per cluster.
@@ -311,6 +343,7 @@ def cluster_importance_one_fold(
             "members": ",".join(members),
             "mdi_sum": float(mdi_per_feat.loc[members].sum()),
             "gain_sum": float(gain_per_feat.loc[members].sum()),
+            "shap_sum": float(shap_per_feat.loc[members].sum()),
             "mda_mean": mda_mean,
             "mda_std": mda_std,
             "baseline_auc": baseline_auc,
@@ -337,6 +370,8 @@ def aggregate_across_folds(per_fold_dfs: list[pd.DataFrame]) -> pd.DataFrame:
             mdi_sum_std=("mdi_sum", "std"),
             gain_sum_mean=("gain_sum", "mean"),
             gain_sum_std=("gain_sum", "std"),
+            shap_sum_mean=("shap_sum", "mean"),
+            shap_sum_std=("shap_sum", "std"),
             mda_mean=("mda_mean", "mean"),
             mda_std_across_folds=("mda_mean", "std"),
             baseline_auc_mean=("baseline_auc", "mean"),
@@ -351,7 +386,13 @@ def kendall_rank_agreement(agg: pd.DataFrame) -> pd.DataFrame:
     """Cross-method Kendall τ between MDI / MDA / gain rankings (alken §4.12)."""
     if agg.empty:
         return pd.DataFrame()
-    pairs = [("mdi_sum_mean", "mda_mean"), ("gain_sum_mean", "mda_mean"), ("mdi_sum_mean", "gain_sum_mean")]
+    pairs = [
+        ("mdi_sum_mean", "mda_mean"),
+        ("gain_sum_mean", "mda_mean"),
+        ("mdi_sum_mean", "gain_sum_mean"),
+        ("shap_sum_mean", "mda_mean"),
+        ("shap_sum_mean", "mdi_sum_mean"),
+    ]
     rows = []
     for a, b in pairs:
         s1 = agg[a].dropna()

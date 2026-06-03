@@ -100,12 +100,12 @@ def test_importance_forest_uses_sqrt_max_features():
 
 
 # ---------------------------------------------------------------------------
-# Bug fix 3 substitution — mean |gain| importance.
+# Bug fix 3 — TreeSHAP via XGBoost native pred_contribs.
 # ---------------------------------------------------------------------------
 
 
-def test_cluster_importance_one_fold_emits_gain_sum():
-    """gain_sum is the SHAP substitute (plan §3.6 bug fix 3 deferred)."""
+def test_cluster_importance_one_fold_emits_gain_and_shap():
+    """Both gain_sum AND shap_sum (TreeSHAP bug fix 3) should be present."""
     from stml.experimental.importance import (
         ImportanceConfig,
         cluster_importance_one_fold,
@@ -126,10 +126,43 @@ def test_cluster_importance_one_fold_emits_gain_sum():
         rng=rng,
     )
     assert "gain_sum" in df.columns
+    assert "shap_sum" in df.columns
     assert "mdi_sum" in df.columns
     assert "mda_mean" in df.columns
-    # At least one cluster should have meaningful gain.
     assert df["gain_sum"].max() > 0
+    # SHAP should be > 0 for the cluster containing the informative feature.
+    assert df["shap_sum"].max() > 0
+
+
+def test_shap_aligns_with_informative_feature():
+    """TreeSHAP should give the highest SHAP to the cluster with the informative feature."""
+    from stml.experimental.importance import (
+        ImportanceConfig,
+        cluster_importance_one_fold,
+    )
+
+    rng = np.random.default_rng(7)
+    n = 200
+    d = 4
+    X = pd.DataFrame(rng.standard_normal((n, d)), columns=[f"f{i}" for i in range(d)])
+    # f0 is the informative feature; f1, f2, f3 are noise.
+    y = (X["f0"] + 0.2 * rng.standard_normal(n) > 0).astype(int).values
+    sw = np.ones(n)
+    # Cluster 0 holds informative f0; cluster 1 = noise.
+    membership = pd.Series([0, 1, 1, 1], index=X.columns)
+
+    df = cluster_importance_one_fold(
+        X_train=X.iloc[:150], y_train=y[:150], sw_train=sw[:150],
+        X_val=X.iloc[150:], y_val=y[150:], sw_val=sw[150:],
+        membership=membership, cfg=ImportanceConfig(n_estimators=100),
+        rng=np.random.default_rng(0),
+    )
+    informative = df.loc[df["cluster_id"] == 0].iloc[0]
+    noise = df.loc[df["cluster_id"] == 1].iloc[0]
+    assert informative["shap_sum"] > noise["shap_sum"], (
+        f"SHAP should rank informative cluster higher: "
+        f"informative={informative['shap_sum']:.4f}, noise={noise['shap_sum']:.4f}"
+    )
 
 
 # ---------------------------------------------------------------------------
