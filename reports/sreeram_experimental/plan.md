@@ -15,7 +15,10 @@
 0. [Cardinal rules (read every session)](#0-cardinal-rules-read-every-session)
 1. [Assignment recap and the constraints we operate under](#1-assignment-recap-and-the-constraints-we-operate-under)
 2. [Diagnostic findings — what the data actually says](#2-diagnostic-findings--what-the-data-actually-says)
+    * §2.8 added 2026‑06‑03: **OHLCV is an adjusted continuous‑futures series**, not raw front‑month — asset‑class verdict
+    * §2.9 summary of what §2.8 changes
 3. [Architectural decisions — what we build and why](#3-architectural-decisions--what-we-build-and-why)
+    * §3.11 added 2026‑06‑03: **What we deliberately do NOT *claim*** — the §2.8 framing discipline
 4. [What we take from each existing branch (and what we do NOT)](#4-what-we-take-from-each-existing-branch-and-what-we-do-not)
 5. [The Bloomberg data ingestion plan](#5-the-bloomberg-data-ingestion-plan)
 6. [Repository structure (the canonical layout)](#6-repository-structure-the-canonical-layout)
@@ -24,8 +27,11 @@
 9. [Testing strategy (RED‑first TDD)](#9-testing-strategy-red-first-tdd)
 10. [Determinism and reproducibility contract](#10-determinism-and-reproducibility-contract)
 11. [Leakage and cross‑validation discipline](#11-leakage-and-cross-validation-discipline)
+    * §11.5 added 2026‑06‑03: **Methodology framing — the report language §2.8 mandates**
 12. [Submission readiness checklist](#12-submission-readiness-checklist)
 13. [Risk register — what could go wrong](#13-risk-register--what-could-go-wrong)
+    * R‑10 added 2026‑06‑03: continuous‑contract adjustment artefact on target (esp. `ng1s`)
+    * R‑11 added 2026‑06‑03: BBG feature missingness in H2‑2022 hidden test
 14. [Glossary and pointers](#14-glossary-and-pointers)
 
 ---
@@ -291,6 +297,101 @@ Only 9 features are BOTH stable AND have non‑trivial signal. Force the model t
 
 **Implication:** drop `f5_signal` as a direct feature. Keep behavioural signal‑derived features (`f5_long_bias_20`, `f5_signal_entropy_20`, `f5_trailing_run_length`). These describe the signal's *structure*, not its instantaneous direction, and survive the regime break.
 
+### 2.8 `ohlcv_data.csv` is an **adjusted continuous‑futures series**, not raw front‑month prices — and the adjustment artefact is asset‑specific
+
+This finding was diagnosed on 2026‑06‑02 night after the Bloomberg pull arrived and the BBG‑raw front‑month prices could be cross‑checked against the project's OHLCV closes. **The substantive conclusion: `ohlcv_data.csv` is real‑market‑derived data transformed into a continuous contract via ratio / proportional back‑adjustment, not pure additive Panama back‑adjustment, and not synthetic data.** It is internally consistent for the supervised problem (the hidden test uses the same convention), but the adjustment artefact is materially different across asset classes and that drives several modelling decisions.
+
+#### 2.8.1 What `ohlcv_data.csv` actually is
+
+* At the start of each instrument's history, the OHLCV close matches the raw Bloomberg front‑month close exactly (cl1s 22.89, gc1s 402.10, si1s 5.253, ng1s 1.62 …). So the data is **market‑derived**, not synthetic.
+* Through the history, the OHLCV closes diverge from raw front‑month closes by an asset‑specific factor — by 2020‑01‑02 the multipliers are roughly cl1s 0.41, gc1s 0.40, ng1s 0.0013, etc. This pattern is consistent with **ratio / proportional continuous‑contract back‑adjustment** (Panama back‑adjustment would preserve dollar differences with a slope close to 1.0; the observed slopes of `diff(OHLCV) ~ diff(raw)` match the level ratios, not 1.0):
+
+| Instrument | Median OHLCV / raw level ratio | Slope of OHLCV‑diff vs raw‑diff |
+|---|---:|---:|
+| gc1s gold | 0.4040 | 0.4076 |
+| si1s silver | 0.3287 | 0.3306 |
+| hg1s copper | 0.0118 | 0.0118 |
+| rb1s gasoline | 0.0260 | 0.0259 |
+| ng1s natural gas | 0.0006 | 0.00045 |
+
+* The OHLCV thus represents an **adjusted continuous trading series**. The implicit return process at time `t` is `course_return = raw_market_return + adjustment_artefact`. For most assets `adjustment_artefact` is tiny on a daily horizon; for natural gas it is large.
+
+#### 2.8.2 Return agreement OHLCV‑vs‑raw, modelling window 2020‑01‑02 → 2022‑06‑30
+
+The decisive empirical test: do the **daily log returns** in `ohlcv_data.csv` track the daily log returns of the raw BBG front contract over the modelling window?
+
+| Asset | Log‑return R² vs raw | Mean abs return diff (bps) | Days > 100 bps diff | Verdict |
+|---|---:|---:|---:|---|
+| si1s silver | 0.9996 | 1.7 | 0 | **strongly coherent** |
+| pl1s platinum | 0.9980 | 3.6 | 0 | **strongly coherent** |
+| hg1s copper | 0.9961 | 3.7 | 1 | **strongly coherent** |
+| gc1s gold | 0.9952 | 2.1 | 1 | **strongly coherent** |
+| cl1s WTI | 0.9748 | 10.2 | 10 | mostly coherent (Apr‑2020 caveat) |
+| fesx1s Euro Stoxx | 0.9658 | 4.7 | 14 | mostly coherent |
+| nq1s Nasdaq | 0.9518 | 5.3 | 11 | mostly coherent |
+| rb1s RBOB | 0.9471 | 23.7 | 36 | **use caution** |
+| es1s S&P 500 | 0.9394 | 4.6 | 6 | mostly coherent |
+| ho1s heating oil | 0.8722 | 21.5 | 25 | **use caution** |
+| **ng1s natural gas** | **0.7212** | **39.3** | **48** | **problematic** |
+
+#### 2.8.3 Label agreement OHLCV‑vs‑raw, same window
+
+Re‑labelling on raw BBG front‑month closes (same labeller, same pt=sl=0.5, h=10) and comparing per‑event labels:
+
+| Instrument | Label agreement | Notes |
+|---|---:|---|
+| si1s | 99.6 % | clean |
+| ho1s | 98.4 % | clean despite noisy returns |
+| cl1s | 98.0 % | mostly clean |
+| hg1s | 97.8 % | clean |
+| pl1s | 97.6 % | clean |
+| gc1s | 95.7 % | clean |
+| rb1s | 94.3 % | usable |
+| **ng1s** | **89.2 %** | **~11 % of labels flip vs raw‑market labels** |
+
+The natural gas label flip rate is the load‑bearing number. It quantifies how much of `ng1s`'s barrier outcomes are driven by adjustment artefacts rather than raw‑market price action — and therefore how much of any "feature → label" signal is genuinely economic vs construction‑specific.
+
+#### 2.8.4 Asset‑class verdict — does external macro / BBG meaning carry across the transformation?
+
+The question the user asked: *"If external features are real but the target is transformed, are the learned relationships meaningful?"* The empirical answer is **asset‑specific**:
+
+| Asset group | Interpretation | What to claim |
+|---|---|---|
+| **Metals** (gc1s, si1s, hg1s, pl1s) | **Safe** — course returns ≈ raw returns; real macro/BBG features remain economically meaningful | "macro / rates / IV features predict the course `gc1s` move because the course series tracks raw gold" |
+| **Equity** (es1s, nq1s, fesx1s) | **Mostly safe** — some Mar‑2020 vol‑event artefacts but R² ≈ 0.94–0.97 | "macro / IV features remain interpretable; flag Mar‑2020 worst days in the limitations section" |
+| **Crude** (cl1s) | **Mostly safe with one caveat** — direction match 98 %; the Apr‑2020 negative‑oil day (raw −$37.63 vs course stayed positive) is transformed away and breaks raw‑equivalence | "we predict barrier outcomes on the provided continuous series; do not claim raw front‑month profitability" |
+| **HO / RB** (ho1s, rb1s) | **Use caution** — R² 0.87–0.95 but 25–36 days with > 100 bps adjustment noise | "external features may help but the target carries material adjustment noise; report per‑instrument carefully" |
+| **Natural gas** (ng1s) | **Problematic** — R² 0.72, 48 days with > 100 bps difference, 11 % label flips | "for `ng1s` external features predict the raw‑market component but not the adjustment component; results interpreted as construction‑specific, not deployable" |
+
+Concrete `ng1s` artefact examples: 2022‑01‑28 raw NG log return −30.05 % vs course +7.98 %; 2022‑01‑27 raw +38.17 % vs course +5.94 %; 2020‑09‑29 raw +19.80 % vs course −8.74 %. The same external feature cannot simultaneously predict both directions on the same day.
+
+#### 2.8.5 Implications for the build
+
+These flow directly into §3 and into the methodology document we ship:
+
+* **Per‑asset‑class modelling becomes more strongly justified.** Already in §3.1 for AUC‑headroom reasons (per‑instrument single‑feature ceilings); §2.8 adds **economic‑interpretability heterogeneity** as a second axis — the price you pay for pooling across asset classes is not only loss of single‑feature signal but also loss of feature‑target‑coherence (because the energy classes have more adjustment artefact than metals). Per‑class models avoid forcing a single decision function to absorb both clean and noisy targets.
+* **`ng1s` gets flagged as high‑artefact in the deliverable.** We continue to predict on all 11 instruments (the brief asks for ≥ 1 full class; covering all is rewarded), but the methodology document includes an explicit limitations bullet about `ng1s`: low feature‑target coherence, 11 % label‑flip‑vs‑raw, results interpreted as construction‑specific rather than deployable. We also document the option of running a per‑instrument ablation that drops external BBG / macro features for `ng1s`; this is investigated in S3 if the with‑BBG model under‑performs the without‑BBG model on `ng1s`'s validation slice.
+* **HO and RB get a parallel caution.** Lighter than `ng1s` (no explicit limitations bullet) but the methodology mentions them as "noisier‑but‑usable" with R² 0.87–0.95.
+* **The headline narrative shifts subtly.** The deliverable predicts *barrier outcomes on the course continuous series* — that is internally consistent with the grader's hidden test (which uses the same convention). It does **not** claim raw front‑month deployable trading profitability. This shapes the report language (see §11 below).
+* **No change to the labels themselves.** S1 events.parquet stays as‑is. The course OHLCV is what the grader rates on, so the labels we produce match the assessment target.
+
+#### 2.8.6 Hidden‑test BBG feature missingness — a separate but linked concern (R‑11)
+
+A parallel concern surfaced in the same analysis: our cleaned Bloomberg parquets only cover up to **2022‑06‑30** because that is when we pulled. The grader's hidden test runs on **H2‑2022 (Jul → Dec 2022)**. At rerun time, F18 / F19 / F22 columns will be **all‑NaN** for the prediction window unless we extend the pulls.
+
+This is a deployment mismatch that is independent of the continuous‑contract issue but interacts with it. Mitigations (in decreasing preference order):
+
+1. **Pull BBG data for H2‑2022 too.** The brief allows additional data "inside the released training period (1990 → 2022‑06‑30)" — but the *grader's rerun* will need the BBG series to extend through H2‑2022 for the model to score the hidden window. The user has BBG access now and can pull the H2‑2022 BBG window before submission. This is the cleanest fix.
+2. **Validate the model under simulated BBG missingness.** Hold out a fraction of the H1‑2022 validation slice with F18 / F19 / F22 forced to NaN, retrain, and compare AUC. If the model degrades materially, the architecture is BBG‑fragile.
+3. **Ship the model in a NaN‑tolerant configuration** (XGBoost native NaN handling, multi‑task NN gets BBG indicators dropped at inference). This works mechanically but feature‑family disappearance is a real distribution shift — Option 1 is preferred.
+4. **Train the final model on a "no‑BBG" feature set as a robustness baseline** (the F1–F17 + F21 stack alone). Plan §5.5 already documented this fallback; what we add here is an explicit *with‑vs‑without* ablation in S3 acceptance so the decision is made on numerical evidence, not on belief.
+
+The S3 acceptance gate now requires this ablation. See §3.10 + §13 R‑11 below.
+
+### 2.9 Summary of what §2.8 changes vs the original plan
+
+Three pieces of the plan get updated as a consequence of §2.8 — §3.1 (model architecture justification), §3.10 (what we deliberately do NOT claim), and §13 risk register (R‑10, R‑11). The cardinal rules (§0) do NOT change — the existing R5 ("methodology, not performance, is the grade") already covers the claim discipline that §2.8 sharpens. The labels, the GARCH σ̂, the CPCV machinery, the feature stack, and the deliverable format all stay byte‑identical to what S1 and S2 produced.
+
 ---
 
 ## 3. Architectural decisions — what we build and why
@@ -299,7 +400,7 @@ Each decision is tagged with its origin: **[finding]** (justified by §2), **[be
 
 ### 3.1 Two model families, one architecture: per‑class XGBoost + multi‑task neural net
 
-**[finding §2.3]** **Pooled modelling leaves +0.22 AUC per instrument on the table.** We address this two ways:
+**[finding §2.3 + §2.8]** Two findings now justify per‑asset‑class modelling. **(a)** Pooled modelling leaves +0.22 AUC per instrument on the table (§2.3). **(b)** The economic‑interpretability of features against the course continuous‑contract target is **heterogeneous across asset classes** (§2.8.4 verdict table) — metals are strongly coherent (R² > 0.995), equity mostly coherent, energy noisier with `ng1s` problematic (R² 0.72, 11 % label flip vs raw). A single pooled model would absorb both clean and noisy targets and the noisy ones (`ng1s` especially) would pull the decision boundary against the cleaner ones. Per‑class models avoid this contamination. We address both findings two ways:
 
 **Family A — Per‑asset‑class XGBoost with instrument‑conditioned interactions**
 
@@ -455,6 +556,15 @@ Total: ~120 columns (target; final count after dedup will be lower).
 * **Smooth‑taper sizing as default**: rejected by alken's CER gate; we re‑evaluate but expect to revert.
 * **Per‑instrument Baker‑McHale κᵢ as default**: rejected by alken's paired bootstrap; we re‑evaluate but expect to revert.
 * **Manual selection of "drop equity from training"** (Sreeram v3): selection on test; methodology punishes it.
+
+### 3.11 What we deliberately do NOT *claim* — the §2.8 discipline
+
+In addition to architectural choices, §2.8 surfaces a **framing discipline**: there are statements the deliverable must not make even if the numbers tempt us. These belong on the negative list because they are easy mistakes:
+
+* **Do not claim raw front‑month trading profitability.** The target is the course continuous‑contract series, not raw BBG front prices. Any backtest Sharpe is barrier‑outcome Sharpe on the course series.
+* **Do not claim universal economic interpretability.** Macro / BBG features are interpretable for metals and equity; the report must explicitly caveat `ng1s` and (lighter) `ho1s` / `rb1s` as having materially more adjustment artefact in the target.
+* **Do not claim per‑instrument `ng1s` performance is deployable.** If the model produces a strong `ng1s` AUC, the methodology document interprets it as construction‑specific (the model has learned the adjustment artefact's predictability, not the raw‑market signal). A neutral or near‑0.5 `ng1s` AUC is the honest reading and should not be presented as a failure.
+* **Do not present "with BBG features" results without the parallel "without BBG features" ablation per asset class** (S3 acceptance gate addition — §13 R‑11). The submission ships a model that is robust to BBG feature missingness at the grader's hidden‑test runtime.
 
 ---
 
@@ -1064,10 +1174,11 @@ Each stage has a concrete deliverable, a test gate (numerical or property), and 
 
 * Per‑class CPCV mean AUC ≥ alken's numbers (Equity 0.579, Energy 0.525, Metals 0.530). We expect to clear by 0.02–0.05 each because of the better features + drift filter, even before the multi‑task NN.
 * **Per‑instrument AUC:** at least 6 of 11 instruments AUC > 0.55 on the modelling sample (alken got 5).
+* **BBG missingness ablation** (§13 R‑11, NEW): produce `results/sreeram_experimental/bbg_missingness_ablation.csv` with three columns per asset class: `with_bbg_auc`, `without_bbg_auc`, `simulated_missingness_auc`. The "simulated missingness" run forces F18 / F19 / F22 to NaN on the validation slice (`> embargo_end`) and rescores. **Gate:** if `simulated_missingness_auc` drops > 0.03 AUC vs `with_bbg_auc` for any asset class, the architecture is BBG‑fragile and the S8 deliverable ships the `without_bbg` variant.
 
 If we miss the gate, debug before moving on. Likely culprits: too aggressive drift filter, wrong σ̂ source, label noise.
 
-**Single canonical artefact:** `results/sreeram_experimental/baseline_xgb_per_class.csv`.
+**Single canonical artefacts:** `results/sreeram_experimental/baseline_xgb_per_class.csv` + `results/sreeram_experimental/bbg_missingness_ablation.csv`.
 
 ### Stage 4 — Multi‑task neural net (target: 2 days)
 
@@ -1235,6 +1346,21 @@ For each feature:
 * Our `--predict-start` and `--predict-end` are CLI flags. The grader changes the value.
 * The pipeline does not have ANY hardcoded H1‑22 references in the modelling code (only in the default config and in result reports).
 * Test: `test_pipeline.py::test_runs_on_alternate_window` — invoke the pipeline with `predict_start=2022-07-01, predict_end=2022-12-31` and assert it completes without error (numbers will be NaN because we don't have the H2 data, but the structure must hold).
+* **Bloomberg parquets must cover H2‑2022 too** — see §13 R‑11. If the user does not extend the BBG raw pulls before submission, the model ships under the simulated‑missingness winner (with‑BBG or no‑BBG, decided in S3).
+
+### 11.5 Methodology framing — the report language §2.8 mandates
+
+The final report (`reports/sreeram_experimental/final_report.md`) MUST use language consistent with §2.8 + §3.11. The two canonical sentences:
+
+> *"The released OHLCV data are continuous futures series rather than raw front‑month Bloomberg prices. We therefore define all labels on the provided continuous‑contract series, matching the evaluation target. To assess whether external market features remain economically meaningful, we compared course‑series returns with raw Bloomberg front‑contract returns. Metals show near‑identical return dynamics (R² > 0.995), equity index futures remain mostly coherent (R² 0.94–0.97), and the daily‑return process for these classes is close to raw market; real macro and IV features therefore remain interpretable. Energy contracts, especially natural gas (R² 0.72; 11 % label flip relative to a raw‑futures relabel), show materially larger adjustment artefacts; for these instruments, external features may predict the raw‑market component but not the adjustment component of the course target. We treat energy results with caution and evaluate feature families by asset class."*
+
+> *"Our results should be interpreted as predictions of barrier outcomes on the coursework continuous‑contract target, not as direct evidence of deployable raw front‑month futures trading profitability."*
+
+The report does NOT use:
+* "raw futures profitability"
+* "tradeable WTI / Brent / NG signal"
+* "macro features predict gold/oil/copper" without the per‑asset caveat
+* `ng1s` results framed as deployable
 
 ---
 
@@ -1265,6 +1391,14 @@ Run through this list before declaring done. Every item must be ✅.
 * [ ] Per‑instrument AUC table in the report sources from `results/sreeram_experimental/master_results.csv`
 * [ ] Significance section reports t‑stat, bootstrap CI, MinTRL, DSR ladder, PT stat
 * [ ] At least four of the five lenses (AUC, MDA, significance, deflation, PT) agree on the verdict
+* [ ] **§2.8 OHLCV‑adjusted‑continuous framing language present** (the two §11.5 canonical sentences appear in §1 and §6 of `final_report.md`)
+* [ ] **`results/sreeram_experimental/bbg_missingness_ablation.csv` exists** (§13 R‑11) with `with_bbg_auc`, `without_bbg_auc`, `simulated_missingness_auc` per asset class
+* [ ] **`coverage_caveat.csv` flags `ng1s` for low feature‑target coherence** alongside the thin‑instrument flags (ho1s, gc1s, ng1s)
+* [ ] **No use of "raw futures profitability" / "tradeable WTI signal" language** in `final_report.md` — language audit per §11.5
+
+### Hidden‑test BBG coverage (R‑11 — pre‑submission decision)
+
+* [ ] **EITHER** Bloomberg raw pulls extended to cover H2‑2022 and `bloomberg_ingest.py` re‑run, and `data/bloomberg/cleaned/*.parquet` now span 1990 → 2022‑12‑31, **OR** the shipped model is the simulated‑missingness winner (with‑BBG with NaN‑tolerant inference, or no‑BBG baseline) and the decision is documented in `methodology.md`
 
 ### Required by the rubric
 
@@ -1364,9 +1498,38 @@ Run through this list before declaring done. Every item must be ✅.
 
 **Risk:** BBG `CL1 Comdty` may use a different roll convention than the `cl1s` we have in `ohlcv_data.csv`. Term structure derived from misaligned series is garbage.
 
-**Mitigation:**
-* `tests/experimental/test_bloomberg_ingest.py::test_front_month_correlation_with_ohlcv` asserts the correlation between BBG `CL1` and our `cl1s` close prices is > 0.99 over the overlapping period.
-* If the test fails, we use a different roll source or drop the term‑structure family.
+**Status (2026‑06‑02 night):** **CONFIRMED in practice — see §2.8.** OHLCV is back‑adjusted continuous (ratio / proportional), BBG raw is unadjusted. We do NOT mix them. F18 term structure uses BBG‑raw front and BBG‑raw 2nd (both from the same raw convention); labels and F1‑F17 + F21 use OHLCV. R‑9 is therefore *handled architecturally*, not by a correlation test.
+
+**Mitigation in code:** `bloomberg_validation_report.md` documents the OHLCV‑vs‑BBG scale divergence (cl1s 24.80 vs $61.18 in 2020); `features/bloomberg.py` uses `_front_second_close()` that pulls both legs from `data/bloomberg/cleaned/futures_term.parquet` only, never mixing in OHLCV.
+
+### R‑10 — Continuous‑contract adjustment artefact on the target (especially `ng1s`)
+
+**Risk:** The course OHLCV is an adjusted continuous series; the implied return process is `course_return = raw_market_return + adjustment_artefact` (§2.8.1). For `ng1s` the artefact is large (R² 0.72 vs raw, 11 % label flip rate). A model trained on course `ng1s` labels learns a mixture of the raw‑market signal and the adjustment artefact; external macro / IV / COT features predict the raw‑market component but not the artefact. The `ng1s` per‑instrument AUC may therefore be **construction‑specific** rather than economically deployable.
+
+**Materiality:** Asset‑specific. Metals strongly coherent (R² > 0.995); equity / crude mostly coherent; HO / RB caution; `ng1s` problematic. The risk is not that the project fails — the grader's hidden test uses the same continuous‑contract convention, so the supervised problem is internally consistent — but that the **methodology document overclaims raw‑market deployability**.
+
+**Mitigation (plan §3.11 framing discipline + S8 methodology language):**
+
+1. Methodology document presents `ng1s` results as construction‑specific, not deployable. The "we predict barrier outcomes on the provided continuous‑contract series" language goes in §1 of the report and is repeated in §6 (limitations).
+2. The per‑instrument breakdown table in `final_report.md` includes a `feature_target_R2_vs_raw` column or footnote citing §2.8.2 — so the reader sees which per‑instrument AUCs sit on coherent vs noisy targets.
+3. Per‑class XGBoost / multi‑task NN avoid pooling across asset classes (§3.1), so noisy energy targets don't contaminate the metals decision boundary.
+4. We DO NOT drop `ng1s` from the deliverable; the brief allows ≥1 full class and we ship all 11. The deliverable's `coverage_caveat.csv` flags `ng1s` alongside thin instruments (ho1s, gc1s) so the reader is told.
+
+### R‑11 — Bloomberg feature missingness in the H2‑2022 hidden test
+
+**Risk:** Cleaned BBG parquets (`data/bloomberg/cleaned/*.parquet`) cover up to **2022‑06‑30**. The grader's hidden test is **H2‑2022 (Jul → Dec 2022)**. At rerun time, F18 / F19 / F22 columns will be all‑NaN for the prediction window — a real distribution shift, not just a NaN‑handling mechanic. XGBoost's native NaN handling masks the issue but does not solve it.
+
+**Mitigation (decreasing preference order):**
+
+1. **Pull BBG data for H2‑2022 before submission.** Brief allows additional data inside the released period (1990 → 2022‑06‑30) but the grader needs the BBG series to extend through H2‑2022 for the model to score the hidden window. The user has BBG access in 2026 — re‑run `bloomberg_ingest.py` after extending the raw pulls to cover the H2‑2022 window. **This is the cleanest fix and should be done before final submission.**
+2. **Validate under simulated missingness during S3.** S3 acceptance gate addition: train the model on the modelling sample, force F18/F19/F22 to NaN on a held‑out validation slice that mimics H2‑2022, and report the AUC delta. If the model degrades > 0.03 AUC under simulated missingness, the architecture is BBG‑fragile and we either fall back to option (3) or ship option (4).
+3. **Train and ship a "no‑BBG" robustness baseline** (F1–F17 + F21 only). Already documented in §5.5 as the fallback; now elevated to a **mandatory** ablation alongside the with‑BBG model. The submission picks the variant that wins on the simulated‑missingness validation, not the variant that wins on H1‑2022 OOS (which would be selection on test).
+4. **Use NaN‑tolerant inference even on the BBG model**: XGBoost handles NaN natively; the multi‑task NN gets BBG‑feature indicators dropped before the head allocation. This is the implementation backstop if (1) is impossible and (2)–(3) say BBG features are too useful to drop.
+
+**S3 / S8 acceptance gate addition (now mandatory):**
+
+* `results/sreeram_experimental/bbg_missingness_ablation.csv` exists and reports `with_bbg_auc`, `without_bbg_auc`, `simulated_missingness_auc` per asset class.
+* `methodology.md` documents which variant was shipped and why.
 
 ---
 

@@ -157,3 +157,97 @@ Plan §8 S3 acceptance gates:
 - Per-class CPCV mean AUC ≥ alken's numbers (Equity 0.579, Energy 0.525,
   Metals 0.530) by ≥0.02 each.
 - ≥6 of 11 per-instrument AUCs > 0.55 on modelling sample.
+- **NEW** (added in PM-3): BBG missingness ablation produces
+  `bbg_missingness_ablation.csv` with simulated H2-2022 BBG missingness
+  delta AUC; ship the `without_bbg` baseline if `simulated_missingness_auc`
+  drops > 0.03 vs `with_bbg_auc` on any class.
+
+---
+
+## PM-3 — 2026-06-03 — OHLCV-as-adjusted-continuous-futures finding documented
+
+**Goal of session.** The user surfaced a previously-undiagnosed dataset-validity
+issue: `ohlcv_data.csv` is NOT raw front-month Bloomberg prices — it is an
+adjusted continuous-futures series (ratio / proportional back-adjustment).
+This has been fully diagnosed (asset-by-asset return R² + label agreement vs
+raw Bloomberg in a separate analysis). The session's task: **document the
+finding in plan.md so the implications flow into S3 and the final report,
+without re-doing the diagnosis.**
+
+**Done — single-commit documentation pass on `plan.md`:**
+
+1. **§2.8 — The OHLCV-continuous-contract finding.** New 6-subsection block:
+   - §2.8.1 What the data actually is — ratio back-adjusted, market-derived;
+     evidence: matching open prices at history start, level-ratio-matching diff
+     slopes (gc1s 0.41, ng1s 0.0013, etc.).
+   - §2.8.2 Return-agreement OHLCV vs raw, 2020-01-02 → 2022-06-30 table:
+     metals R² > 0.995, equity 0.94-0.97, ho/rb 0.87-0.95, **ng1s 0.7212**.
+   - §2.8.3 Label-agreement OHLCV vs raw: metals/equity/crude 95-99 %,
+     **ng1s 89.2 % (11 % label flip rate)**.
+   - §2.8.4 Asset-class verdict table — Metals safe, equity mostly safe, crude
+     caveat (Apr-2020 negative oil transformed away), HO/RB caution, ng1s
+     problematic.
+   - §2.8.5 Implications: per-asset-class modelling becomes more strongly
+     justified; ng1s gets flagged in deliverable; methodology shifts to
+     "barrier outcomes on continuous-contract target, not raw front-month
+     profitability"; ng1s with-vs-without-BBG ablation if needed.
+   - §2.8.6 Hidden-test BBG missingness (separate concern R-11): our cleaned
+     parquets end 2022-06-30; H2-2022 grader rerun will have all-NaN BBG cols;
+     four mitigations in preference order, with extending the BBG pull as the
+     preferred fix.
+   - §2.9 Summary: §3.1 + §3.10 + §13 updated; §0 cardinal rules unchanged
+     (R5 already covers claim discipline); labels/features/deliverable byte-
+     identical to S1/S2 state.
+
+2. **§3.1 cross-reference added** — pooled modelling now justified BOTH by
+   §2.3 (AUC headroom) AND by §2.8 (heterogeneous feature-target coherence).
+
+3. **§3.11 — "What we deliberately do NOT *claim*" (NEW)** — framing
+   discipline list: do not claim raw front-month profitability; do not claim
+   universal economic interpretability; do not present ng1s results as
+   deployable; do not present with-BBG without parallel without-BBG ablation.
+
+4. **§11.5 — Methodology framing canonical language (NEW)** — two verbatim
+   sentences the final report MUST use (the §2.8 OHLCV-disclosure paragraph
+   + the "barrier outcomes on continuous-contract target" paragraph).
+   Negative list: no "raw futures profitability", no "tradeable WTI signal",
+   no per-asset macro claims without caveats, no ng1s deployability claims.
+
+5. **§12 submission checklist additions**:
+   - §2.8 framing language present in §1 and §6 of `final_report.md`
+   - `bbg_missingness_ablation.csv` exists
+   - `coverage_caveat.csv` flags ng1s for low feature-target coherence
+   - Language audit — no overclaim phrasing
+   - Hidden-test BBG coverage decision: either extend pulls to H2-2022 OR
+     ship the simulated-missingness winner
+
+6. **§13 risk register additions**:
+   - R-9 status updated to "CONFIRMED — handled architecturally" (BBG raw
+     vs OHLCV back-adjusted, F18 uses BBG-only legs).
+   - **R-10 (NEW)** — Continuous-contract adjustment artefact on target,
+     especially ng1s. Material risk: methodology overclaim. Four mitigations
+     covering report framing, per-instrument footnote, per-class modelling,
+     and explicit limitations bullet.
+   - **R-11 (NEW)** — BBG feature missingness in H2-2022 hidden test. Four
+     mitigations in preference order. S3 / S8 gate addition mandatory.
+
+7. **§8 S3 acceptance gate updated** — `bbg_missingness_ablation.csv`
+   becomes a mandatory artefact alongside `baseline_xgb_per_class.csv`;
+   ship-decision rule documented.
+
+**No code changes.** S1 events.parquet and S2 features.parquet are
+byte-identical to the PM-2 end-of-session state. The finding affects
+*framing* and *S3 ablation* — not the data we built.
+
+**Implications for next session (S3).** When we build the per-class XGBoost
+baseline:
+- Compute `with_bbg_auc` (full 80-feature matrix) per asset class.
+- Compute `without_bbg_auc` (drop F18 / F19 / F22; ~12-15 fewer features) per
+  asset class.
+- Compute `simulated_missingness_auc` (full matrix at train time, F18/F19/F22
+  forced to NaN on validation slice).
+- Persist `results/sreeram_experimental/bbg_missingness_ablation.csv`.
+- For `ng1s` specifically, compute the with-vs-without-BBG AUC and note in
+  per-instrument breakdown whether external features help.
+
+**Total commits on branch end of PM-3:** 11 (was 10).
