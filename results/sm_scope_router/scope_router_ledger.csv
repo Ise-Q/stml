@@ -1,0 +1,19 @@
+scope,members,instrument,model,variant,n_modelling,n_oos,mean_auc,sem,std_auc,lower_ci_1se,skipped,reason,elapsed_s
+energy_all,cl1s+ho1s+rb1s+ng1s,cl1s,lightgbm,without_bbg,804,1364,0.565092,0.027556,0.103105,0.537536,False,,1.700000
+energy_all,cl1s+ho1s+rb1s+ng1s,cl1s,xgboost,without_bbg,804,1364,0.558078,0.032361,0.121083,0.525717,False,,0.900000
+energy_all,cl1s+ho1s+rb1s+ng1s,ho1s,lightgbm,without_bbg,804,169,0.524881,0.045564,0.170485,0.479317,False,,1.400000
+energy_all,cl1s+ho1s+rb1s+ng1s,ho1s,xgboost,without_bbg,804,169,0.361467,0.049811,0.186377,0.311656,False,,0.600000
+energy_all,cl1s+ho1s+rb1s+ng1s,rb1s,lightgbm,without_bbg,804,2071,0.518632,0.018874,0.070619,0.499758,False,,1.300000
+energy_all,cl1s+ho1s+rb1s+ng1s,rb1s,xgboost,without_bbg,804,2071,0.497084,0.014945,0.055919,0.482139,False,,0.600000
+energy_all,cl1s+ho1s+rb1s+ng1s,ng1s,lightgbm,without_bbg,804,148,0.573438,0.053338,0.160015,0.520100,False,,1.300000
+energy_all,cl1s+ho1s+rb1s+ng1s,ng1s,xgboost,without_bbg,804,148,0.476925,0.072645,0.217936,0.404280,False,,0.600000
+energy_ex_ng,cl1s+ho1s+rb1s,cl1s,lightgbm,without_bbg,774,1368,0.554604,0.028022,0.104847,0.526582,False,,1.200000
+energy_ex_ng,cl1s+ho1s+rb1s,cl1s,xgboost,without_bbg,774,1368,0.566486,0.033603,0.125732,0.532883,False,,0.600000
+energy_ex_ng,cl1s+ho1s+rb1s,ho1s,lightgbm,without_bbg,774,169,0.516618,0.051309,0.191982,0.465308,False,,1.200000
+energy_ex_ng,cl1s+ho1s+rb1s,ho1s,xgboost,without_bbg,774,169,0.450935,0.060346,0.225794,0.390589,False,,0.600000
+energy_ex_ng,cl1s+ho1s+rb1s,rb1s,lightgbm,without_bbg,774,2075,0.516527,0.016102,0.060250,0.500425,False,,1.200000
+energy_ex_ng,cl1s+ho1s+rb1s,rb1s,xgboost,without_bbg,774,2075,0.491242,0.017151,0.064172,0.474091,False,,0.600000
+cl_only,cl1s,cl1s,lightgbm,without_bbg,294,1372,0.683869,0.022509,0.084222,0.661359,False,,0.400000
+cl_only,cl1s,cl1s,xgboost,without_bbg,294,1372,0.680853,0.023367,0.087433,0.657485,False,,0.300000
+ng_separate,ng1s,ng1s,lightgbm,without_bbg,30,0,,,,,True,individual pool < MIN_INDIVIDUAL_EVENTS=250,0.000000
+ng_separate,ng1s,ng1s,xgboost,without_bbg,30,0,,,,,True,individual pool < MIN_INDIVIDUAL_EVENTS=250,0.000000
