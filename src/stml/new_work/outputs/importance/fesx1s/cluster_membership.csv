@@ -90,11 +90,11 @@ F4_latent,f4_pc1,f4_,False
 F4_latent,f4_pc2,f4_,False
 F4_latent,f4_pc3,f4_,False
 F4_latent,f4_pc4,f4_,False
-F5_signal,f5_signal,f5_,True
-F5_signal,f5_trailing_run_length,f5_,True
-F5_signal,f5_participation_20,f5_,True
-F5_signal,f5_long_bias_20,f5_,True
-F5_signal,f5_sign_agree_mr,f5_,True
+F5_signal,f5_signal,f5_,False
+F5_signal,f5_trailing_run_length,f5_,False
+F5_signal,f5_participation_20,f5_,False
+F5_signal,f5_long_bias_20,f5_,False
+F5_signal,f5_sign_agree_mr,f5_,False
 F8_calendar,f8_dow_sin,f8_,False
 F8_calendar,f8_dow_cos,f8_,False
 F8_calendar,f8_month_sin,f8_,False

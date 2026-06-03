@@ -807,20 +807,22 @@ def _save_outputs(
     # ════════════════════════════════════════════════════════════════════════
 
     # ── Dendrogram ──────────────────────────────────────────────────────────
-    try:
-        condensed = squareform(dist_mat)
-        Z = _linkage(condensed, method="ward")
-        fig, ax = plt.subplots(figsize=(16, 5))
-        _dendrogram(Z, labels=corr_cols, ax=ax, leaf_rotation=90, leaf_font_size=5)
-        cut_height = Z[-(best_k - 1), 2] if best_k > 1 else Z[-1, 2]
-        ax.axhline(y=cut_height, color="red", linestyle="--", linewidth=1.0, label=f"K={best_k} cut")
-        ax.set_title(f"{inst} — Ward dendrogram on continuous features (Spearman distance)")
-        ax.legend(fontsize=8)
-        plt.tight_layout()
-        fig.savefig(out / "dendrogram.png", dpi=130)
-        plt.close(fig)
-    except Exception as e:
-        print(f"  [warn] dendrogram failed: {e}")
+    # Skipped when best_k==0 (clustering reused from saved membership — dendrogram unchanged).
+    if best_k > 0 and dist_mat.size > 0:
+        try:
+            condensed = squareform(dist_mat)
+            Z = _linkage(condensed, method="ward")
+            fig, ax = plt.subplots(figsize=(16, 5))
+            _dendrogram(Z, labels=corr_cols, ax=ax, leaf_rotation=90, leaf_font_size=5)
+            cut_height = Z[-(best_k - 1), 2] if best_k > 1 else Z[-1, 2]
+            ax.axhline(y=cut_height, color="red", linestyle="--", linewidth=1.0, label=f"K={best_k} cut")
+            ax.set_title(f"{inst} — Ward dendrogram on continuous features (Spearman distance)")
+            ax.legend(fontsize=8)
+            plt.tight_layout()
+            fig.savefig(out / "dendrogram.png", dpi=130)
+            plt.close(fig)
+        except Exception as e:
+            print(f"  [warn] dendrogram failed: {e}")
 
     # ── Clustered MDA bar chart ─────────────────────────────────────────────
     try:
@@ -971,32 +973,62 @@ def run_champion_importance(
         feat_cols = _feat_cols(events_df)
         print(f"  Events: {len(events_df)}, features: {len(feat_cols)}")
 
-        # 2. Cluster features
-        print("  Clustering features...")
-        groups    = _assign_groups_champion(events_df)
-        corr_cols = groups.pop("corr_cluster", [])
-        hand_groups = groups
+        # 2. Cluster features — reuse saved membership if feature matrix is unchanged.
+        # Clustering is label-independent (Ward on Spearman distance of price/macro features).
+        # We re-cluster only if the saved membership is absent or incompatible (e.g. group changed).
+        membership_path  = OUTPUTS / inst / "cluster_membership.csv"
+        k_metrics_path   = OUTPUTS / inst / "cluster_k_metrics.csv"
+        reuse_clustering = False
 
-        if len(corr_cols) < 3:
-            print(f"  [warn] only {len(corr_cols)} corr-cluster features")
-            cluster_map     = hand_groups
-            best_k          = 0
-            cluster_metrics = pd.DataFrame()
-            cluster_labels  = np.array([])
-            dist_mat        = np.zeros((0, 0))
-        else:
-            X_corr = events_df[corr_cols].fillna(0)
-            dist_mat = compute_spearman_distance(X_corr)
-            best_k, cluster_metrics = select_k(X_corr, dist_mat)
-            sil = cluster_metrics.set_index("K").loc[best_k, "silhouette"]
-            print(f"  Best K={best_k} (silhouette={sil:.3f})")
-            cluster_labels  = get_cluster_labels(dist_mat, best_k)
-            _              = cluster_representatives(X_corr, cluster_labels)
-            cluster_map     = build_cluster_map(corr_cols, cluster_labels, hand_groups)
+        if membership_path.exists():
+            saved_mem = pd.read_csv(membership_path)
+            mem_features = set(saved_mem["feature"].tolist())
+            missing = mem_features - set(feat_cols)
+            if not missing:
+                # All saved features are present → reconstruct cluster_map from file.
+                cluster_map = {}
+                for _, row in saved_mem.iterrows():
+                    cluster_map.setdefault(row["cluster"], []).append(row["feature"])
+                cluster_metrics = pd.read_csv(k_metrics_path) if k_metrics_path.exists() else pd.DataFrame()
+                corr_cols       = [c for cname, cols in cluster_map.items()
+                                   for c in cols
+                                   if any(c.startswith(p) for p in CORR_CLUSTER_PREFIXES)]
+                dist_mat        = np.zeros((0, 0))
+                cluster_labels  = np.array([], dtype=int)
+                best_k          = 0   # 0 → skip dendrogram regeneration
+                reuse_clustering = True
+                print(f"  Reusing cluster_membership.csv ({len(cluster_map)} clusters, "
+                      f"{len(mem_features)} features) — no re-cluster needed")
+            else:
+                print(f"  cluster_membership incompatible: {len(missing)} features absent "
+                      f"from current events (group likely changed). Re-clustering.")
+
+        if not reuse_clustering:
+            print("  Clustering features...")
+            groups      = _assign_groups_champion(events_df)
+            corr_cols   = groups.pop("corr_cluster", [])
+            hand_groups = groups
+
+            if len(corr_cols) < 3:
+                print(f"  [warn] only {len(corr_cols)} corr-cluster features")
+                cluster_map     = hand_groups
+                best_k          = 0
+                cluster_metrics = pd.DataFrame()
+                cluster_labels  = np.array([])
+                dist_mat        = np.zeros((0, 0))
+            else:
+                X_corr = events_df[corr_cols].fillna(0)
+                dist_mat = compute_spearman_distance(X_corr)
+                best_k, cluster_metrics = select_k(X_corr, dist_mat)
+                sil = cluster_metrics.set_index("K").loc[best_k, "silhouette"]
+                print(f"  Best K={best_k} (silhouette={sil:.3f})")
+                cluster_labels  = get_cluster_labels(dist_mat, best_k)
+                _               = cluster_representatives(X_corr, cluster_labels)
+                cluster_map     = build_cluster_map(corr_cols, cluster_labels, hand_groups)
 
         n_clusters = len(cluster_map)
         print(f"  Cluster map: {n_clusters} groups "
-              f"({best_k} corr + {len(hand_groups)} hand-assigned)")
+              f"(corr: {len(corr_cols)} features + {len(cluster_map)-best_k if best_k else '?'} hand-assigned)")
 
         # 3. CPCV importance
         print(f"  Running CPCV importance ({cfg['family']}) ...")

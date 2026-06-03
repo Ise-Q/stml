@@ -1,2 +1,2 @@
 instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
-ho1s,energy,energy_all,logistic,logistic,0.7998,0.3034,0.4964,False,15,0
+ho1s,energy,energy_cl_ho,logistic,logistic,0.4923,0.1892,0.3031,False,12,0

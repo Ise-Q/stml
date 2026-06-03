@@ -1,2 +1,2 @@
 instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
-nq1s,equity,nq1s,tree,xgb,0.6885,0.0726,0.6159,True,15,2
+nq1s,equity,nq1s,tree,xgb,0.5702,0.0328,0.5374,True,15,2
