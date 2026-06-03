@@ -1,17 +1,17 @@
 [
   {
     "fold": 0,
-    "hidden_layer_sizes": "(64, 32)",
+    "hidden_layer_sizes": "(64,)",
     "alpha": "0.01"
   },
   {
     "fold": 1,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
     "fold": 2,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
@@ -41,7 +41,7 @@
   },
   {
     "fold": 8,
-    "hidden_layer_sizes": "(64, 32)",
+    "hidden_layer_sizes": "(64,)",
     "alpha": "0.01"
   },
   {

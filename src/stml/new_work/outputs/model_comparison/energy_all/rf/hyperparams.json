@@ -26,8 +26,8 @@
   },
   {
     "fold": 5,
-    "max_depth": "6",
-    "min_samples_leaf": "10"
+    "max_depth": "2",
+    "min_samples_leaf": "20"
   },
   {
     "fold": 6,
@@ -42,17 +42,17 @@
   {
     "fold": 8,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   },
   {
     "fold": 9,
-    "max_depth": "4",
+    "max_depth": "2",
     "min_samples_leaf": "20"
   },
   {
     "fold": 10,
-    "max_depth": "4",
-    "min_samples_leaf": "20"
+    "max_depth": "2",
+    "min_samples_leaf": "10"
   },
   {
     "fold": 11,

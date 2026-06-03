@@ -1,23 +1,27 @@
 """champion_importance.py — Feature importance for all champions (train-only, clean split).
 
-Champions (selection_table.csv, purged inner k-fold + 1SE, global cut 2021-10-06):
+Champions (new labels, selection_table.csv, purged inner k-fold + 1SE, global cut 2021-10-06):
 
 EQUITY:
-  es1s   → es1s        / RF       (NO SIGNAL  lower_ci=0.40)
-  nq1s   → nq1s        / XGB      (signal     lower_ci=0.62)
-  fesx1s → fesx1s      / logistic (signal     lower_ci=0.52)
+  es1s   → es1s        / logistic (SIGNAL     lower_ci=0.57)   [was: RF / NO SIGNAL]
+  nq1s   → nq1s        / XGB      (signal     lower_ci=0.54)   [was: lower_ci=0.62]
+  fesx1s → fesx1s      / RF       (NO SIGNAL  lower_ci=0.47)   [was: logistic / SIGNAL]
 
 ENERGY:
-  cl1s   → cl1s        / XGB      (signal     lower_ci=0.54)
-  ho1s   → energy_all  / logistic (NO SIGNAL  lower_ci=0.50)
-  rb1s   → energy_all  / logistic (NO SIGNAL  lower_ci=0.46)
-  ng1s   → energy_all  / RF       (NO SIGNAL  lower_ci=0.22)
+  cl1s   → cl1s        / logistic (NO SIGNAL  lower_ci=0.49)   [was: XGB / SIGNAL]
+  ho1s   → energy_cl_ho/ logistic (NO SIGNAL  lower_ci=0.30)   [sel. MLP; logistic for import.]
+  rb1s   → rb1s        / logistic (SIGNAL     lower_ci=0.51)   [was: energy_all / NO SIGNAL]
+  ng1s   → energy_all  / RF       (SIGNAL     lower_ci=0.52)   [sel. MLP; RF for importance]
 
 METALS:
-  gc1s   → precious    / XGB      (NO SIGNAL  lower_ci=0.38)
-  si1s   → si1s        / XGB      (NO SIGNAL  lower_ci=0.44)
-  pl1s   → pl1s        / logistic (signal     lower_ci=0.53)
-  hg1s   → hg1s        / RF       (signal     lower_ci=0.56)
+  gc1s   → precious    / RF       (NO SIGNAL  lower_ci=0.37)   [was: XGB]
+  si1s   → precious    / RF       (NO SIGNAL  lower_ci=0.48)   [was: si1s individual / XGB]
+  pl1s   → precious    / RF       (SIGNAL     lower_ci=0.54)   [was: pl1s individual / NO SIGNAL]
+  hg1s   → hg1s        / RF       (signal     lower_ci=0.51)   [was: lower_ci=0.56]
+
+Signal-status changes vs old labels:
+  es1s:   NO SIGNAL → SIGNAL  |  fesx1s: SIGNAL → NO SIGNAL  |  cl1s:  SIGNAL → NO SIGNAL
+  rb1s:   NO SIGNAL → SIGNAL  |  ng1s:   NO SIGNAL → SIGNAL  |  pl1s:  NO SIGNAL → SIGNAL
 
 Pipeline per instrument
 -----------------------
@@ -42,7 +46,7 @@ Pipeline per instrument
    Logistic: global_coef_summary.csv + chart.
 6. Outputs under outputs/importance/{instrument}/.
 
-NO-SIGNAL instruments (es1s, ho1s, rb1s, ng1s, gc1s, si1s) are run in full;
+NO-SIGNAL instruments (fesx1s, cl1s, ho1s, gc1s, si1s) are run in full;
   importance reflects model noise — run for completeness and contrast only.
 
 Usage
@@ -128,13 +132,13 @@ CHAMPIONS: dict[str, dict] = {
     "es1s": {
         "asset_class": "equity",
         "group":       "es1s",
-        "family":      "tree",
-        "model_type":  "rf",
+        "family":      "logistic",
+        "model_type":  "logistic",
         "target_inst": "es1s",
-        "auc_mean":    0.5163,
-        "auc_std":     0.1125,
-        "lower_ci":    0.4038,
-        "signal":      False,
+        "auc_mean":    0.5953,
+        "auc_std":     0.0285,
+        "lower_ci":    0.5668,
+        "signal":      True,
     },
     "nq1s": {
         "asset_class": "equity",
@@ -142,99 +146,103 @@ CHAMPIONS: dict[str, dict] = {
         "family":      "tree",
         "model_type":  "xgb",
         "target_inst": "nq1s",
-        "auc_mean":    0.6885,
-        "auc_std":     0.0726,
-        "lower_ci":    0.6159,
+        "auc_mean":    0.5702,
+        "auc_std":     0.0328,
+        "lower_ci":    0.5374,
         "signal":      True,
     },
     "fesx1s": {
         "asset_class": "equity",
         "group":       "fesx1s",
-        "family":      "logistic",
-        "model_type":  "logistic",
+        "family":      "tree",
+        "model_type":  "rf",
         "target_inst": "fesx1s",
-        "auc_mean":    0.5791,
-        "auc_std":     0.0605,
-        "lower_ci":    0.5186,
-        "signal":      True,
+        "auc_mean":    0.4964,
+        "auc_std":     0.0242,
+        "lower_ci":    0.4722,
+        "signal":      False,
     },
     # ── Energy ────────────────────────────────────────────────────────────────
     "cl1s": {
         "asset_class": "energy",
         "group":       "cl1s",
-        "family":      "tree",
-        "model_type":  "xgb",
+        "family":      "logistic",
+        "model_type":  "logistic",
         "target_inst": "cl1s",
-        "auc_mean":    0.6748,
-        "auc_std":     0.1390,
-        "lower_ci":    0.5358,
-        "signal":      True,
+        "auc_mean":    0.5374,
+        "auc_std":     0.0498,
+        "lower_ci":    0.4876,
+        "signal":      False,
     },
     "ho1s": {
+        # Selection champion: energy_cl_ho/mlp (AUC=0.4923). MLP unsupported for
+        # tree/coef importance → use energy_cl_ho/logistic (AUC=0.4043) for importance.
         "asset_class": "energy",
-        "group":       "energy_all",
+        "group":       "energy_cl_ho",
         "family":      "logistic",
         "model_type":  "logistic",
         "target_inst": "ho1s",
-        "auc_mean":    0.7998,
-        "auc_std":     0.3034,
-        "lower_ci":    0.4964,
+        "auc_mean":    0.4923,
+        "auc_std":     0.1892,
+        "lower_ci":    0.3031,
         "signal":      False,
     },
     "rb1s": {
         "asset_class": "energy",
-        "group":       "energy_all",
+        "group":       "rb1s",
         "family":      "logistic",
         "model_type":  "logistic",
         "target_inst": "rb1s",
-        "auc_mean":    0.5512,
-        "auc_std":     0.0938,
-        "lower_ci":    0.4574,
-        "signal":      False,
+        "auc_mean":    0.5773,
+        "auc_std":     0.0710,
+        "lower_ci":    0.5063,
+        "signal":      True,
     },
     "ng1s": {
+        # Selection champion: energy_all/mlp (AUC=0.6576). MLP unsupported for
+        # tree/coef importance → use energy_all/rf (best non-MLP per-inst AUC=0.5912).
         "asset_class": "energy",
         "group":       "energy_all",
         "family":      "tree",
         "model_type":  "rf",
         "target_inst": "ng1s",
-        "auc_mean":    0.4772,
-        "auc_std":     0.2591,
-        "lower_ci":    0.2181,
-        "signal":      False,
+        "auc_mean":    0.6576,
+        "auc_std":     0.1389,
+        "lower_ci":    0.5187,
+        "signal":      True,
     },
     # ── Metals ────────────────────────────────────────────────────────────────
     "gc1s": {
         "asset_class": "metals",
         "group":       "precious",
         "family":      "tree",
-        "model_type":  "xgb",
+        "model_type":  "rf",
         "target_inst": "gc1s",
-        "auc_mean":    0.4778,
-        "auc_std":     0.1007,
-        "lower_ci":    0.3771,
+        "auc_mean":    0.4866,
+        "auc_std":     0.1132,
+        "lower_ci":    0.3734,
         "signal":      False,
     },
     "si1s": {
         "asset_class": "metals",
-        "group":       "si1s",
+        "group":       "precious",
         "family":      "tree",
-        "model_type":  "xgb",
+        "model_type":  "rf",
         "target_inst": "si1s",
-        "auc_mean":    0.5145,
-        "auc_std":     0.0758,
-        "lower_ci":    0.4387,
+        "auc_mean":    0.5400,
+        "auc_std":     0.0638,
+        "lower_ci":    0.4762,
         "signal":      False,
     },
     "pl1s": {
         "asset_class": "metals",
-        "group":       "pl1s",
-        "family":      "logistic",
-        "model_type":  "logistic",
+        "group":       "precious",
+        "family":      "tree",
+        "model_type":  "rf",
         "target_inst": "pl1s",
-        "auc_mean":    0.6075,
-        "auc_std":     0.0806,
-        "lower_ci":    0.5269,
+        "auc_mean":    0.5697,
+        "auc_std":     0.0301,
+        "lower_ci":    0.5396,
         "signal":      True,
     },
     "hg1s": {
@@ -243,9 +251,9 @@ CHAMPIONS: dict[str, dict] = {
         "family":      "tree",
         "model_type":  "rf",
         "target_inst": "hg1s",
-        "auc_mean":    0.6035,
-        "auc_std":     0.0414,
-        "lower_ci":    0.5621,
+        "auc_mean":    0.5463,
+        "auc_std":     0.0405,
+        "lower_ci":    0.5058,
         "signal":      True,
     },
 }

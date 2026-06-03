@@ -1,7 +1,7 @@
 [
   {
     "fold": 0,
-    "hidden_layer_sizes": "(64, 32)",
+    "hidden_layer_sizes": "(64,)",
     "alpha": "0.01"
   },
   {
@@ -11,17 +11,17 @@
   },
   {
     "fold": 2,
-    "hidden_layer_sizes": "(64, 32)",
+    "hidden_layer_sizes": "(64,)",
     "alpha": "0.01"
   },
   {
     "fold": 3,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
     "fold": 4,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
@@ -31,12 +31,12 @@
   },
   {
     "fold": 6,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
     "fold": 7,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
@@ -51,7 +51,7 @@
   },
   {
     "fold": 10,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
@@ -71,7 +71,7 @@
   },
   {
     "fold": 14,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   }
 ]

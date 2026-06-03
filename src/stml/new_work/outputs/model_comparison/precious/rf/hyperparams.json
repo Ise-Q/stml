@@ -1,8 +1,8 @@
 [
   {
     "fold": 0,
-    "max_depth": "4",
-    "min_samples_leaf": "10"
+    "max_depth": "2",
+    "min_samples_leaf": "20"
   },
   {
     "fold": 1,
@@ -26,7 +26,7 @@
   },
   {
     "fold": 5,
-    "max_depth": "4",
+    "max_depth": "2",
     "min_samples_leaf": "20"
   },
   {
@@ -37,11 +37,11 @@
   {
     "fold": 7,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   },
   {
     "fold": 8,
-    "max_depth": "4",
+    "max_depth": "2",
     "min_samples_leaf": "20"
   },
   {
@@ -51,13 +51,13 @@
   },
   {
     "fold": 10,
-    "max_depth": "2",
+    "max_depth": "4",
     "min_samples_leaf": "20"
   },
   {
     "fold": 11,
-    "max_depth": "4",
-    "min_samples_leaf": "10"
+    "max_depth": "2",
+    "min_samples_leaf": "20"
   },
   {
     "fold": 12,
@@ -66,8 +66,8 @@
   },
   {
     "fold": 13,
-    "max_depth": "4",
-    "min_samples_leaf": "10"
+    "max_depth": "2",
+    "min_samples_leaf": "20"
   },
   {
     "fold": 14,

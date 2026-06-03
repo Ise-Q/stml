@@ -1,12 +1,12 @@
 instrument,signal_flag,chosen_group,chosen_model,auc_mean,auc_std,lower_ci,brier_raw,brier_calibrated,logloss_calibrated,calibration_method,runner_up_group,runner_up_model,runner_up_auc,tie_notes
-cl1s,True,cl1s,xgb,0.7065,0.1299,0.5766,0.21772,0.19564,0.69597,none,cl1s,rf,0.6439,11 candidates within 1σ
-es1s,True,es1s,rf,0.6047,0.0691,0.5357,0.24619,0.24324,0.69083,none,es1s,xgb,0.5829,4 candidates within 1σ
-fesx1s,False,,,0.4978,0.0475,0.4503,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-gc1s,False,,,0.5433,0.1208,0.4225,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-hg1s,False,,,0.5302,0.0636,0.4666,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-ho1s,True,energy_cl_ho,rf,0.6338,0.1552,0.6198,0.21356,0.20157,0.59026,none,energy_all,mlp,0.775,6 candidates within 1σ
-ng1s,False,,,0.5901,0.1425,0.4476,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-nq1s,False,,,0.542,0.1082,0.4337,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-pl1s,False,,,0.5408,0.0516,0.4892,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
-rb1s,True,energy_all,xgb,0.6291,0.1183,0.5142,0.24886,0.24685,0.69867,none,rb1s,xgb,0.5572,6 candidates within 1σ
-si1s,False,,,0.4989,0.0669,0.432,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+cl1s,True,cl1s,xgb,0.7193,0.0821,0.6371,0.25188,0.22049,0.83541,sigmoid,energy_cl_ho,xgb,0.7172,4 candidates within 1σ
+es1s,False,,,0.5118,0.092,0.4197,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+fesx1s,True,fesx1s,mlp,0.5453,0.0601,0.5275,0.29537,0.25184,0.69877,sigmoid,fesx1s,logistic,0.5876,3 candidates within 1σ; MLP vs non-MLP within Brier noise — prefer logistic/RF
+gc1s,False,,,0.5004,0.1232,0.3772,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+hg1s,True,hg1s,rf,0.5818,0.0446,0.5372,0.24551,0.2453,0.69984,none,hg1s,xgb,0.5507,4 candidates within 1σ
+ho1s,False,,,0.5715,0.1111,0.4604,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+ng1s,False,,,0.5517,0.1048,0.4469,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+nq1s,True,nq1s,xgb,0.7114,0.1188,0.5927,0.23563,0.23351,0.65897,none,nq1s,logistic,0.6686,4 candidates within 1σ
+pl1s,False,,,0.6088,0.1296,0.4792,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+rb1s,False,,,0.5496,0.0846,0.4649,,,,,,,,no exploitable signal (lower CI ≤ 0.50)
+si1s,True,si1s,rf,0.6015,0.074,0.5423,0.24571,0.24473,0.73584,none,si1s,xgb,0.6163,5 candidates within 1σ

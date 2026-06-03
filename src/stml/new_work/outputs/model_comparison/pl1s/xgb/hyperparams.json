@@ -3,90 +3,90 @@
     "fold": 0,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "43"
   },
   {
     "fold": 1,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "3"
   },
   {
     "fold": 2,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "12"
+    "n_estimators": "299"
   },
   {
     "fold": 3,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "52"
+    "n_estimators": "101"
   },
   {
     "fold": 4,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "4"
+    "n_estimators": "130"
   },
   {
     "fold": 5,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "122"
+    "n_estimators": "50"
   },
   {
     "fold": 6,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "42"
+    "n_estimators": "104"
   },
   {
     "fold": 7,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "84"
+    "n_estimators": "85"
   },
   {
     "fold": 8,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "13"
+    "learning_rate": "0.01",
+    "n_estimators": "41"
   },
   {
     "fold": 9,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "153"
+    "n_estimators": "24"
   },
   {
     "fold": 10,
     "max_depth": "3",
-    "learning_rate": "0.05",
-    "n_estimators": "32"
+    "learning_rate": "0.01",
+    "n_estimators": "18"
   },
   {
     "fold": 11,
     "max_depth": "3",
-    "learning_rate": "0.01",
-    "n_estimators": "51"
+    "learning_rate": "0.05",
+    "n_estimators": "76"
   },
   {
     "fold": 12,
     "max_depth": "3",
-    "learning_rate": "0.01",
-    "n_estimators": "32"
+    "learning_rate": "0.05",
+    "n_estimators": "70"
   },
   {
     "fold": 13,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "139"
   },
   {
     "fold": 14,
     "max_depth": "3",
     "learning_rate": "0.01",
-    "n_estimators": "1"
+    "n_estimators": "98"
   }
 ]

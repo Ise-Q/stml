@@ -31,12 +31,12 @@
   },
   {
     "fold": 6,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {
     "fold": 7,
-    "hidden_layer_sizes": "(64,)",
+    "hidden_layer_sizes": "(64, 32)",
     "alpha": "0.01"
   },
   {

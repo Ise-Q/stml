@@ -72,6 +72,6 @@
   {
     "fold": 14,
     "max_depth": "2",
-    "min_samples_leaf": "10"
+    "min_samples_leaf": "20"
   }
 ]
