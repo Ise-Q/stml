@@ -41,16 +41,17 @@ The pipeline follows the structure prescribed by the coursework brief:
 
 ## Data
 
-Two CSV files, downloadable from Insendi under *Coursework*:
+| File                                | Source     | Contents                                                                 |
+| ----------------------------------- | ---------- | ------------------------------------------------------------------------ |
+| `data/ohlcv_data.csv`               | coursework | Daily OHLCV for all eleven instruments, one row per `(instrument, date)`. History starts in 1990 for most instruments (ES1S from 1997, FESX1S from 1998, NQ1S from 1999). |
+| `data/primary_signals.csv`          | coursework | Daily primary-model signals from January 2020, one row per `date`, one column per instrument, values in `{-1, 0, +1}`. |
+| `data/external/macro_xasset.csv`    | external   | Daily panel of 21 macro and cross-asset series (rates, vol, FX, credit, EIA inventories, PMIs), 1990-01-02 to 2022-06-30. |
+| `data/external/macro_xasset_raw.xlsx` | external | Raw multi-axis spreadsheet `macro_xasset.csv` is derived from; kept for provenance. |
 
-| File                  | Contents                                                                 |
-| --------------------- | ------------------------------------------------------------------------ |
-| `ohlcv_data.csv`      | Daily OHLCV history for all eleven instruments, one row per `(instrument, date)`. History starts in 1990 for most instruments (ES1S from 1997, FESX1S from 1998, NQ1S from 1999). |
-| `primary_signals.csv` | Daily primary-model signals from January 2020, one row per `date`, one column per instrument, values in `{-1, 0, +1}`. |
-
-Both files belong in `data/`. The released window covers up to **30 June 2022**;
-the final six months (July–December 2022) are a hidden test set used by the
-markers. See [data/README.md](data/README.md) for column-level detail.
+All files are committed; nothing needs to be downloaded to reproduce. The
+released window covers all dates up to **30 June 2022**; the final six months
+(July–December 2022) are a hidden test set used by the markers. See
+[data/README.md](data/README.md) for column-level detail.
 
 ## Repository layout
 
@@ -58,7 +59,10 @@ markers. See [data/README.md](data/README.md) for column-level detail.
 .
 ├── README.md
 ├── requirements.txt
-├── data/                     # OHLCV + primary signals (not tracked)
+├── data/
+│   ├── ohlcv_data.csv
+│   ├── primary_signals.csv
+│   └── external/
 ├── src/metamodel/            # Library code
 ├── notebooks/                # End-to-end Jupyter notebooks
 ├── reports/                  # Figures, tables, written analysis

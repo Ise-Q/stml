@@ -34,12 +34,7 @@ Thumbs.db
 *.swp
 *.swo
 
-# Data files (downloaded separately from Insendi)
-data/*.csv
-data/*.parquet
-data/*.pkl
-
-# Generated outputs
+# Generated outputs (not committed; produced by running the pipeline)
 outputs/*.csv
 outputs/*.parquet
 outputs/*.json
