@@ -52,6 +52,7 @@ sys.path.insert(0, str(_REPO / "src"))
 
 from stml.na_checks import load_clean_ohlcv, native_returns, wide_returns
 from stml.new_work.cpcv_search import CombinatorialPurgedKFold
+from stml.new_work.triple_barrier import _avg_uniqueness
 from stml.harry.features.macro_features import (
     m1_volatility_term_structure,
     m2_rates_curve,
@@ -94,7 +95,7 @@ DATA_PATHS = {
     "ohlcv":       _REPO / "data" / "ohlcv_data.csv",
     "signals":     _REPO / "data" / "primary_signals.csv",
     "macro_feats": _REPO / "data" / "meta" / "macro_features.csv",
-    "labels":      _REPO / "data" / "meta" / "triple_barrier_labels_fixed.csv",
+    "labels":      _REPO / "data" / "meta" / "triple_barrier_labels.csv",
     "hmm_vol":     _HERE / "features_hmm_vol.csv",
     "hmm_macro":   _HERE / "features_hmm_macro.csv",
     "alt_macro":   _REPO / "data" / "alternate_data_cleaned.csv",
@@ -140,6 +141,16 @@ def load_all_data() -> dict[str, pd.DataFrame]:
     labels = pd.read_csv(
         DATA_PATHS["labels"], parse_dates=["date", "t1"]
     )
+    # Normalise new label schema to the expected internal schema.
+    # New file: label→bin, sigma→trgt, pt→pt_mult, sl→sl_mult.
+    labels = labels.rename(columns={
+        "label":  "bin",
+        "sigma":  "trgt",
+        "pt":     "pt_mult",
+        "sl":     "sl_mult",
+    })
+    # Drop columns that must not leak into the feature matrix.
+    labels = labels.drop(columns=["partition", "touch"], errors="ignore")
 
     hmm_vol = pd.read_csv(DATA_PATHS["hmm_vol"], parse_dates=["date"])
     hmm_macro = pd.read_csv(DATA_PATHS["hmm_macro"], parse_dates=["date"])
@@ -524,6 +535,15 @@ def build_feature_matrix(
     ev["date"] = pd.to_datetime(ev["date"])
     ev["t1"] = pd.to_datetime(ev["t1"])
     ev = ev.sort_values("date").reset_index(drop=True)
+
+    # avg_uniqueness is not in the new label file — compute from bar index.
+    if "avg_uniqueness" not in ev.columns:
+        bar_index = close.sort_index().index
+        ev["avg_uniqueness"] = _avg_uniqueness(ev, bar_index)
+
+    # sigma_method placeholder (metadata only, not used as a feature).
+    if "sigma_method" not in ev.columns:
+        ev["sigma_method"] = "garch"
 
     # Look up features at event (signal) dates
     feat_cols = [c for c in daily.columns]

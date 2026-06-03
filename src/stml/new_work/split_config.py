@@ -1,6 +1,8 @@
 """split_config.py — Single source of truth for the global train/test split.
 
-Global cut: 2021-10-06 (70th percentile of 4,764 pooled events across 11 instruments).
+Global cut: 2021-10-06 (70th percentile of 4,917 pooled events across 11 instruments
+            in the new label file; 70th-pct date = 2021-10-04, rounded to next trading
+            day 2021-10-06 for backward compatibility).
 Embargo end: 2021-10-20 (cut + 10 trading days).
 
 Train: date <= GLOBAL_CUT and t1 < GLOBAL_CUT (purge label-window crossers).
