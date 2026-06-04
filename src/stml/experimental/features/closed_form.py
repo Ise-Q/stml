@@ -10,12 +10,6 @@ Families covered (methodology spec):
     F10 price action      — high-low range, open-to-open return
     F12 path structure    — variance ratio, efficiency ratio, trend t-val, Hurst
 
-Lifted with attribution from:
-* ``src/stml/features.py`` (Sreeram)  — F1, F2, F5, F6, F8 closed forms
-* ``src/stml/alternative/features/microstructure_fixed.py`` (Harry) — F7 (with zero-volume mask)
-* ``src/stml/alternative/features/signal_trajectory.py`` (Harry) — F5 signal-derived
-* ``src/stml/metamodel/features.py`` — F12 path-structure forms
-
 Every feature is E-class (no fit), right-edge truncation invariant.
 """
 
@@ -355,7 +349,7 @@ register(FeatureSpec("f10_oc_ret_mean_20", "F10", _f10_oc_ret_mean_20, "E", 20, 
 
 
 # ---------------------------------------------------------------------------
-# F12 — Path structure (the reference / Sreeram-promoted family).
+# F12 — Path structure.
 # ---------------------------------------------------------------------------
 
 

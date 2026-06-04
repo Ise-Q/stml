@@ -12,8 +12,7 @@ the branches cut from here, not in this directory.
    captures, its lookback, its leakage class (E / TF / LI), and a reuse pointer.
    It opens with the methodology notes: the leakage contract, the two
    standardization regimes (FE-train-frozen TF families vs causal expanding-z
-   twins), the F15 daily-sigma note, the provenance of every family
-   (signal-deep-dive / Harry / Sreeram), and the no-labels statement.
+   twins), the F15 daily-sigma note, and the no-labels statement.
 
 2. [`missing-data-report.md`](missing-data-report.md) — the authoritative
    data-cleaning reference: every category of missing / anomalous row in the

@@ -470,7 +470,7 @@ def run_class(
         if wc.empty:
             continue
         within_dfs[cid] = wc
-        # Use the dominant F-family suffix as Harry does (e.g., C14_f11).
+        # File name carries the dominant F-family of the cluster, e.g. C14_f11.
         suffix = wc["feature"].iloc[0].split("_")[0]  # e.g., "f2"
         wc.to_csv(out_dir / f"within_cluster_C{cid}_{suffix}.csv",
                    index=False, float_format="%.6f")

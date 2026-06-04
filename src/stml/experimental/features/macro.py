@@ -41,7 +41,7 @@ _LEVEL_SERIES = {
     "CHINA_PMI_MFG": "china_pmi",
     "US_ISM_MFG_PMI": "us_pmi",
     "LME_COPPER_STOCK": "lme_copper",
-    # EIA LEVEL series — Harry has these, BBG file has CHANGE (complementary).
+    # EIA LEVEL series (the cleaned BBG panel carries the CHANGE — complementary).
     "EIA_CRUDE_STOCK": "eia_crude_stock",
     "EIA_DIST_STOCK": "eia_dist_stock",
     "EIA_GASOLINE_STOCK": "eia_gasoline_stock",

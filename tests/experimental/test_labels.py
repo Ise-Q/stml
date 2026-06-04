@@ -36,7 +36,7 @@ from stml.experimental.labels import (
 
 
 # ---------------------------------------------------------------------------
-# The Harry off-by-one test — load-bearing.
+# Entry-convention off-by-one test — load-bearing.
 # ---------------------------------------------------------------------------
 
 
@@ -53,12 +53,12 @@ def test_t_plus_one_entry_changes_label_5_row_ohlc() -> None:
         prices = [100, 110, 108, 119, 119]
         signal at t=0, side = +1
         h = 3, σ_t = 0.05 (daily) → barrier = 0.5 · 0.05 · √3 ≈ 0.0433
-        With entry at t=0 (Sreeram convention):
+        With entry at t=0 (entry-at-t convention):
             window prices = [110, 108, 119, 119]
             entry close = 100
             log returns vs 100: +0.0953, +0.0770, +0.1740 — PT hit at bar 1 (0.0953 > 0.0433)
             label = 1
-        With entry at t=1 (Harry convention) — what this module does:
+        With entry at t=1 (entry-at-t+1 convention — what this module does):
             window prices = [108, 119, 119]
             entry close = 110
             log returns vs 110: −0.0184, +0.0784, +0.0784 — PT hit at bar 2 (0.0784 > 0.0433)
@@ -67,7 +67,7 @@ def test_t_plus_one_entry_changes_label_5_row_ohlc() -> None:
     # The opposite-label invariant is easier to construct with a downtrending
     # post-entry path that hits SL after a favourable first bar — emulate that.
     # Setup: side=+1, sigma_at_t = 0.10, h = 3 → barrier = 0.5 · 0.10 · √3 ≈ 0.0866.
-    # Prices: t=0 -> 100 (signal), t=1 -> 113 (favourable spike under Sreeram entry),
+    # Prices: t=0 -> 100 (signal), t=1 -> 113 (favourable spike under entry-at-t),
     # then t=2..4 -> 100, 95, 95 (drift down).
     prices = pd.Series(
         [100.0, 113.0, 100.0, 95.0, 95.0],
@@ -91,7 +91,7 @@ def test_t_plus_one_entry_changes_label_5_row_ohlc() -> None:
     assert ev["barrier_hit"] == "sl"
     assert ev["label"] == 0  # ret < 0 → label 0
     assert ev["ret"] < -0.05
-    # If the labeller used "entry at t" (Sreeram) instead, the favourable
+    # If the labeller used "entry at t" instead, the favourable
     # t→t+1 +0.122 jump would hit PT at bar 1 and the label would be 1.
     # This event proves we're on the t+1 convention.
 

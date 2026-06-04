@@ -7,19 +7,26 @@ triple-barrier exit. The optional strategy-construction track converts the
 calibrated probabilities into vol-targeted position weights.
 
 The submission is organised so that the narrative + charts live in a single
-notebook (`submission.ipynb`) and the two deliverable CSVs live under
-`outputs/`. Every numerical claim made in the notebook reproduces from the
-CSV artefacts under `results/submission/`.
+notebook (`submission.ipynb`), the written report lives at the repo root as
+**`Group_Final_Report.pdf`**, and the two deliverable CSVs live under
+`outputs/`. Every numerical claim made in the notebook and the report
+reproduces from the CSV artefacts under `results/submission/`.
 
 ---
 
 ## 1. Start here
 
 ```
+Group_Final_Report.pdf               ← the written project report (read this first)
 submission.ipynb                     ← run top-to-bottom; one section per brief section
 outputs/metamodel_predictions.csv    ← REQUIRED deliverable (H1 2022)
 outputs/strategy_weights.csv         ← Optional (bonus track) deliverable (H1 2022)
 ```
+
+The report (`Group_Final_Report.pdf`) is the primary written deliverable; the
+notebook provides the executable narrative + reproducible artefacts the report
+cites. The two CSVs are the brief's required + optional deliverables for the
+H1 2022 released window. **For the H2 2022 hidden test rerun, see §4 below.**
 
 Both CSVs are in the brief's exact format:
 
@@ -261,6 +268,7 @@ produces it, and the cached result artefact a reader can open directly.
 ## 6. Repository layout
 
 ```
+Group_Final_Report.pdf          Written project report (the primary deliverable)
 submission.ipynb                Notebook — one section per brief section, runs top-to-bottom
 README.md                       This file
 scripts/

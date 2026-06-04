@@ -2,10 +2,11 @@
 canonical events parquet.
 
 Replaces the previous GARCH(1,1) + global ``pt=sl=0.5, h=10`` label
-generator. The new labelling methodology is documented in
-``triple-barrier-label.pdf`` (Jay): per-instrument ``(pt, sl, h)`` geometry
-selected by adjusted-Sharpe over a 343-geometry grid with a held-out
-2022-H1 validation slice.
+generator. The shipped labelling methodology: per-instrument
+``(pt, sl, h)`` geometry selected by adjusted-Sharpe over a 343-geometry
+grid (``pt, sl ∈ {0.25, 0.5, 0.75, 1, 1.5, 2, 2.5}`` × ``h ∈ {1, 2, 3, 5,
+10, 15, 20}``) with a held-out 2022-H1 validation slice and a
+placebo-in-time check at return lags 0 / 1 / 2.
 
 Inputs:
 
@@ -86,7 +87,7 @@ _VALID_TOUCHES = ("pt", "sl", "vert")
 def _validate_raw(df: pd.DataFrame) -> None:
     missing = [c for c in _REQUIRED_COLS if c not in df.columns]
     if missing:
-        raise ValueError(f"Jay CSV missing columns: {missing}")
+        raise ValueError(f"labels CSV missing columns: {missing}")
     parts = set(df["partition"].dropna().unique())
     bad_parts = parts - set(_VALID_PARTITIONS)
     if bad_parts:
@@ -297,7 +298,7 @@ def build_events(
         })
 
     if not parts:
-        raise RuntimeError("Jay CSV produced 0 events for every instrument")
+        raise RuntimeError("labels CSV produced 0 events for every instrument")
 
     events_all = pd.concat(parts, ignore_index=True)
     events_all = events_all.sort_values(["instrument", "t_signal"]).reset_index(drop=True)
@@ -326,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     with pd.option_context("display.max_columns", None, "display.width", 220):
         print(audit.to_string(index=False))
 
-    print("\n=== Per-instrument geometry (Jay) ===")
+    print("\n=== Per-instrument geometry ===")
     with pd.option_context("display.max_columns", None, "display.width", 200):
         print(geometry.to_string(index=False))
 

@@ -1,10 +1,9 @@
 """F15 conditional risk + F16 concept drift + F17 HMM regimes.
 
-Lifted with attribution from:
-* ``src/stml/alternative/features/conditional_risk.py``  → F15 path_tortuosity, semi_vol_ratio
-* ``src/stml/alternative/features/concept_drift.py``     → F16 regime_alignment_score
-* ``src/stml/regimes.py`` (Sreeram)                → F17 HMM filtered posteriors
-* ````  → EWMA HMM (causal, no CV seam)
+* F15 — path tortuosity, semi-vol ratio (closed-form, no fit).
+* F16 — regime alignment score (closed-form).
+* F17 — HMM filtered posteriors (fit on a contiguous train prefix only).
+* EWMA HMM regime probabilities (causal recurrence, no CV seam).
 
 F15 / F16 are E-class (no fit). F17 + EWMA HMM are TF-class but fit on a
 contiguous prefix that ends BEFORE the modelling window, so they remain

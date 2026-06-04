@@ -1,8 +1,6 @@
 """Purged + combinatorial CV for triple-barrier labels.
 
-Plan §3.4 / §8 Stage 3 deliverable. Lifted with attribution from
-
-``src/stml/cv.py`` (Sreeram, the original `PurgedKFold`).
+Plan §3.4 / §8 Stage 3 deliverable.
 
 Three splitters:
 
