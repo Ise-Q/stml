@@ -1,0 +1,6 @@
+Metric,A Benchmark / Yang-Zhang (default),A Benchmark / EWMA(60),"A Benchmark / GARCH(1,1)",A Benchmark / GJR-GARCH (equity only),B all_or_nothing / Yang-Zhang (default),B all_or_nothing / EWMA(60),"B all_or_nothing / GARCH(1,1)",B all_or_nothing / GJR-GARCH (equity only)
+Ann return,+7.93%,+8.62%,+7.56%,+7.49%,+3.92%,+4.90%,+3.99%,+3.82%
+Ann vol,5.50%,6.10%,5.84%,5.72%,2.59%,2.87%,2.76%,2.65%
+Sharpe,1.441,1.412,1.295,1.311,1.514,1.707,1.446,1.440
+t-stat,1.22,1.19,1.09,1.11,1.28,1.44,1.22,1.22
+Max DD,-3.12%,-3.42%,-3.31%,-3.21%,-1.29%,-1.41%,-1.43%,-1.33%

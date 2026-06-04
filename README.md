@@ -7,11 +7,12 @@ trading signal `s ∈ {−1, 0, +1}` for 11 futures and predicts, for each non-z
 The notebook has two parts. **Part I — the feature-engineering foundation** regenerates the full F1–F17
 feature matrix **from raw OHLCV + signals**, including for the hidden Jul–Dec 2022 window. **Part II —
 the meta-model** fits the model under purged CPCV, selects a champion per instrument, extracts the
-cluster-level **weight vector** (feature importance), and saves the **hyper-parameter / champion cache**
-(`src/stml/new_work/outputs/selected_hps.json`) so re-runs reuse it. Part II **loads the team's
-committed CPCV results by default**; set `FORCE_RECOMPUTE = True` to re-run the real fit. The
-consolidated `date,instrument,prediction` deliverable, the H2-2022 refit, and position-sizing are a
-later step.
+cluster-level **weight vector** (feature importance), builds a **calibrated, vol-targeted strategy**
+(the metamodel-vs-primary comparison with the SOPS/`bsops` sizing), and saves the **hyper-parameter /
+champion cache** (`src/stml/new_work/outputs/selected_hps.json`) so re-runs reuse it. Part II **loads
+the team's committed results by default**; set `FORCE_RECOMPUTE = True` to re-run the real CPCV fit and
+rebuild the strategy net returns. The consolidated `date,instrument,prediction` deliverable and the
+H2-2022 refit are a later step.
 
 ---
 
@@ -22,8 +23,11 @@ submission.ipynb                       the one notebook — run this top-to-bott
 src/stml/                              the util package (imported as `import stml`)
   metamodel/ , model/                  Part I — the F1–F17 feature pipeline
   harry/ , new_work/                   Part II — meta-model: features, CPCV, importance, hp_cache
+  new_work/ (strategy §11)             config, data, vol, targeting, weights, evaluate, models/ (VSN-LSTM, TFT)
+  experimental/                        import-closed sizing / backtest / calibration / significance (§11)
   new_work/outputs/                    Part II committed results (CPCV, finalisation, importance,
-                                       _cache/*.parquet) + selected_hps.json (saved hyper-parameters)
+                                       _cache/*.parquet) + metamodel_predictions.csv + selected_hps.json
+results/strategy_eval/                 Part II — committed strategy net returns + summary + charts (§11)
 data/
   ohlcv_data.csv                       raw OHLCV            ← REPLACE with your through-Dec-2022 file
   primary_signals.csv                  raw signals         ← REPLACE with your through-Dec-2022 file
@@ -33,6 +37,7 @@ data/
   meta/triple_barrier_labels.csv       Part II — canonical triple-barrier meta-labels (team input)
   meta/macro_features.csv              Part II — macro feature source (HMM)
   alternate_data_cleaned.csv           Part II — macro feature source (M1–M6)
+  oof_meta_probabilities.csv           Part II — training out-of-fold meta-probabilities (strategy §11)
 requirements.txt                     pinned deps (pip fallback)
 pyproject.toml / uv.lock             project + locked deps (uv)
 ```
