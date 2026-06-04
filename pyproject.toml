@@ -44,7 +44,10 @@ torch = { index = "pytorch-cpu" }
 [dependency-groups]
 dev = [
     "jupyterlab>=4.5.7",
+    "nbconvert[webpdf]>=7.17.1",
     "nbstripout>=0.9.1",
+    "playwright>=1.60.0",
+    "pytest>=9.0.3",
     "ruff>=0.15.13",
 ]
 # Optional: external exchange calendars used only as a cross-check in
