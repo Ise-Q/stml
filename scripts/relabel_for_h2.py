@@ -26,8 +26,7 @@ Convention (mirrors the released labels exactly)
 * **Entry**: at the close of the signal bar (``t_start == t_signal``).
 * **σ**: 20-bar trailing standard deviation of close-to-close arithmetic
   returns (``f2_vol_20`` style; same as the shipped CSV's ``sigma`` column).
-* **Path**: ``close[t+1 : t+h]`` (h bars strictly after entry), per Jay's
-  ``stml.model.labels.triple_barrier_labels``.
+* **Path**: ``close[t+1 : t+h]`` (h bars strictly after entry).
 * **First-touch ordering**: scan bars in order, take the earliest of
   {profit-take, stop-loss, vertical}.
 * **Drop events without a full ``h``-bar forward window** (no peeking past

@@ -103,7 +103,7 @@ def _slice_class(features: pd.DataFrame, asset_class: str) -> pd.DataFrame:
 
 
 def _restrict_modelling(features: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
-    """Keep only the train partition (Jay-CSV).
+    """Keep only the train partition.
 
     Val is held out for honest evaluation. Test is sealed.
     """

@@ -129,7 +129,7 @@ def _add_instrument_onehot(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _split_modelling_and_test(features: pd.DataFrame, cfg: PipelineConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Final-deliverable split (Jay-CSV partition):
+    """Final-deliverable split using the labels-CSV `partition` column:
 
       * **modelling = train + val combined** — used for the final per-
         instrument model refit + the OOF generation that drives Platt /
@@ -145,7 +145,8 @@ def _split_modelling_and_test(features: pd.DataFrame, cfg: PipelineConfig) -> tu
     if "partition" not in df.columns:
         raise KeyError(
             "feature matrix is missing the 'partition' column; "
-            "re-run make_labels + make_features after the Jay-CSV switch."
+            "re-run make_labels + make_features so the per-event "
+            "partition is attached."
         )
     modelling = df.loc[df["partition"].isin(["train", "val"])].reset_index(drop=True)
     test = df.loc[df["partition"] == "test"].reset_index(drop=True)

@@ -151,7 +151,7 @@ def drift_filter(
     if "partition" not in feature_matrix.columns:
         raise KeyError(
             "feature_matrix is missing the 'partition' column; re-run "
-            "make_labels + make_features after the Jay-CSV switch."
+            "make_labels + make_features so the per-event partition is attached."
         )
     train_mask = feature_matrix["partition"] == "train"
     train_df = feature_matrix.loc[train_mask].copy()

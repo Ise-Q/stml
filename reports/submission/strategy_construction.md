@@ -312,4 +312,4 @@ the noise floor for any metric.
 - Geometry summary matches PDF's recommended picks exactly
 - ho1s positive rate = 0.667, rb1s positive rate = 0.263 (asymmetric pt consequences)
 
-**157 total experimental tests pass** (13 new Jay-loader + 144 pre-existing).
+**157 total experimental tests pass** (13 new labels-loader + 144 pre-existing).

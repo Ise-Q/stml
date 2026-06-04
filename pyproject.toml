@@ -24,22 +24,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Optional extras for Harry's branch. Install with:
-#   uv sync --extra harry-features
-# Currently only the wavelet module needs an extra wheel; TDA (ripser) is
-# deferred. See reports/harry/SETUP.md.
-harry-features = ["pywavelets>=1.4"]
-# Sreeram_experimental S4 multi-task neural network (plan §3.1 Family B).
-# Kept out of the base install because the pytorch-cpu wheels are not built for
-# macOS x86_64 past 2.2; the macOS user installs from the PyPI default index
-# with `uv sync --extra multitask` once S4 is reached. The base build of
-# S0/S1/S2/S3 + S6/S7 does not depend on torch.
+# Optional feature-engineering extras (wavelet multiscale energy via PyWavelets).
+# Install with:
+#   uv sync --extra features-extra-wavelet
+features-extra-wavelet = ["pywavelets>=1.4"]
+# Multi-task neural network (notebook §3 NN family). Kept out of the base
+# install because the pytorch-cpu wheels are not built for macOS x86_64 past
+# 2.2; install with `uv sync --extra multitask` to retrain the NN family.
 multitask = ["torch>=2.2.0,<2.3"]
-# Sreeram_experimental S5 cluster importance (plan §3.6).
-# shap pulls numba/llvmlite which need either a binary wheel for the platform
-# (some macOS x86_64 builds fail without LLVM toolchain) or a working compile.
-# Kept optional so the rest of the pipeline can build cleanly; install with
-# `uv sync --extra importance` when S5 is reached.
+# Cluster-importance SHAP. shap pulls numba/llvmlite which need a binary wheel
+# or a working compile. Kept optional so the rest of the pipeline can build
+# cleanly; install with `uv sync --extra importance` to regenerate SHAP values.
 importance = ["shap>=0.46.0", "numba>=0.60", "llvmlite>=0.43"]
 
 [build-system]
@@ -72,9 +67,9 @@ calendars = [
     "holidays>=0.40",
 ]
 # Optional: third-party libraries required only by two fitted/engineered
-# feature families ported from teammate branches:
-#   * F13 wavelet multiscale energy  -> pywavelets   (Harry)
-#   * F17 HMM regime posteriors       -> hmmlearn      (Sreeram)
+# feature families:
+#   * F13 wavelet multiscale energy  -> pywavelets
+#   * F17 HMM regime posteriors      -> hmmlearn
 # The full feature matrix build (stml.metamodel.build_features) needs these.
 # Install with:
 #   uv sync --group features-extra
