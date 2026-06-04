@@ -380,9 +380,10 @@ for inst in INSTS:
         errors.append(f'{{inst}}: champion_meta.csv missing or empty')
         continue
 
-    # (a/b/c) model type
+    # (a/b/c) model type — RF surrogate is accepted when selection champion is MLP
     meta_model, sel_model = m.get('model_type',''), s['best_model']
-    if meta_model != sel_model:
+    is_mlp_rf_surrogate = (sel_model == 'mlp' and meta_model == 'rf')
+    if meta_model != sel_model and not is_mlp_rf_surrogate:
         errors.append(
             f'{{inst}}: champion_meta model_type={{meta_model!r}} '
             f'!= selection_table best_model={{sel_model!r}}'

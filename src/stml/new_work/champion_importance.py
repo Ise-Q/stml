@@ -176,11 +176,11 @@ CHAMPIONS: dict[str, dict] = {
     },
     "ho1s": {
         # Selection champion: energy_cl_ho/mlp (AUC=0.4923). MLP unsupported for
-        # tree/coef importance → use energy_cl_ho/logistic (AUC=0.4043) for importance.
+        # tree/coef importance → use energy_cl_ho/rf as surrogate (per user instruction).
         "asset_class": "energy",
         "group":       "energy_cl_ho",
-        "family":      "logistic",
-        "model_type":  "logistic",
+        "family":      "tree",
+        "model_type":  "rf",
         "target_inst": "ho1s",
         "auc_mean":    0.4923,
         "auc_std":     0.1892,
