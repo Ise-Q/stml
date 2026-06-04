@@ -1,6 +1,6 @@
 # Methodology & Results Summary
 
-A single-document rubric-facing summary of the pipeline, key statistics, and the
+A single-document methodology summary of the pipeline, key statistics, and the
 verdict on the H1 2022 out-of-sample slice. All numbers in this report reproduce
 from CSV artefacts shipped under `results/`.
 
@@ -11,7 +11,7 @@ from CSV artefacts shipped under `results/`.
 | Stage | Purpose | Code | Key artefact |
 |---|---|---|---|
 | 1 | Triple-barrier meta-labels (per-instrument geometry) | `make_labels.py` | `data/triple_barrier_labels.csv` |
-| 2 | Feature engineering (18 families, 105 features) | `make_features.py` | `data/bloomberg/cleaned/*.parquet` (PIT-aligned macro) |
+| 2 | Feature engineering (16 families, ~80 features) | `make_features.py` | `data/bloomberg/cleaned/*.parquet` (PIT-aligned macro) |
 | 3 | Per-class baseline + per-instrument CPCV(6, 2) + 1-SE champion | `make_baseline.py`, `make_champions.py` | `champions_summary.csv` |
 | 4 | Cluster-level feature importance (MDA + MDI + SHAP) | `make_importance.py` | `results/importance/{class}/*` |
 | 5 | Per-instrument Platt calibration on CPCV OOF | `calibration.py` | `oof_calibrated_predictions.csv` |
@@ -19,7 +19,7 @@ from CSV artefacts shipped under `results/`.
 | 7 | Significance: t-stat, bootstrap CI, PSR, MinTRL, DSR, PT, Henriksson-Merton | `significance.py`, `make_significance.py` | `significance_summary.csv`, `deflation_ladder.csv` |
 
 The pipeline runs end-to-end in ≈ 60 min on CPU; the notebook reads the cached
-artefacts and renders the rubric narrative in seconds.
+artefacts and renders the brief narrative in seconds.
 
 ---
 
