@@ -1,0 +1,18 @@
+{
+  "asset_class": "energy",
+  "n_pruned": 5,
+  "features": [
+    "f7_oi_level",
+    "f5_participation_60",
+    "f10_oc_ret",
+    "f7_overnight_gap",
+    "f11_vix_chg5"
+  ],
+  "reasons": {
+    "f7_oi_level": "cluster 8: PC1+PC2 84% -> two reps",
+    "f5_participation_60": "cluster 8: PC1+PC2 84% -> two reps",
+    "f10_oc_ret": "global SHAP top-5",
+    "f7_overnight_gap": "global SHAP top-5",
+    "f11_vix_chg5": "global SHAP top-5"
+  }
+}

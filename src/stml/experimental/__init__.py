@@ -25,10 +25,11 @@ Submodule layout (see plan §6 for the canonical map):
     models           ElasticNet + XGBoost
     multitask        multi-task NN with instrument heads
     importance       Mantegna + clustered MDI / MDA / SHAP (four bug fixes)
-    calibration      per-class Platt
-    sizing           fractional Kelly + vol target
-    cost_model       Grinold-Kahn
-    backtest         barrier-exact + cost-aware (Sortino full-T)
+    calibration      per-class Platt (fit on OOF CPCV pairs)
+    threshold        bootstrap p* = L / (G + L) -- Madmoun slide 21
+    sizing           six lectured methods (slide 33-34) + vol-target (slide 40)
+    cost_model       Grinold-Kahn (1/K_active aggregation)
+    backtest         barrier-exact + cross-sectional 1/K_active (slide 41)
     significance     studentised stationary block-bootstrap + PT + MinTRL
     deflation        DSR ladder + CSCV-PBO + MinBTL
     signal_analysis  Pesaran-Timmermann + TM + H-M proxy

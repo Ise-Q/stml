@@ -102,11 +102,13 @@ def test_pipeline_config_defaults_match_plan() -> None:
     # Plan §4.19 — clean global cut + embargo.
     assert cfg.global_train_cut == "2021-10-06"
     assert cfg.embargo_end == "2021-10-20"
-    # Plan §3.7 + R7 — 8 % target vol under 10 % cap; flat kappa = 0.25.
-    assert cfg.target_vol == 0.08
-    assert cfg.kappa == 0.25
-    assert cfg.confidence_floor == 0.55
-    # Plan §3.7 — Grinold-Kahn cost model.
+    # Madmoun Optional Session 3 -- 10 % target vol (slide 40); default
+    # sizing = SOPS (slide 34); p* gate enabled by default (slide 21).
+    assert cfg.target_vol == 0.10
+    assert cfg.sizing_method == "sops"
+    assert cfg.use_pstar_threshold is True
+    assert cfg.ewma_sigma_span == 60
+    # Grinold-Kahn cost model unchanged.
     assert cfg.half_spread_bps == 2.0
     assert cfg.impact_bps == 10.0
 

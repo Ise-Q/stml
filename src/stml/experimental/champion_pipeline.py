@@ -104,6 +104,11 @@ MIN_INDIVIDUAL_EVENTS = 250
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
+    # Jay's per-instrument geometry + partition (carried through features but
+    # not for training — partition is a string and pt/sl/h are constant per
+    # instrument so they'd leak the per-instrument identity beyond the
+    # one-hot dummy.).
+    "pt", "sl", "h", "partition",
 })
 
 _BBG_FAMILY_PREFIXES = ("f18_", "f19_", "f22_")
@@ -134,11 +139,19 @@ def _add_instrument_onehot(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _restrict_modelling(features: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
-    train_cut = pd.Timestamp(cfg.global_train_cut)
+    """Keep ONLY the train partition for CPCV / champion selection.
+
+    Val is held out for honest pruned-vs-full evaluation + NN early-stop.
+    Test is fully sealed for the final read.
+    """
     df = features.copy()
     df["t_signal"] = pd.to_datetime(df["t_signal"])
     df["t_end"] = pd.to_datetime(df["t_end"])
-    return df.loc[df["t_signal"] <= train_cut].reset_index(drop=True)
+    if "partition" not in df.columns:
+        raise KeyError(
+            "features missing 'partition'; re-run make_labels + make_features."
+        )
+    return df.loc[df["partition"] == "train"].reset_index(drop=True)
 
 
 def _slice_pool(features: pd.DataFrame, pool: str) -> pd.DataFrame:

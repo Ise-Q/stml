@@ -21,8 +21,8 @@ expected_max_sharpe_n_eff,0.010395
 expected_max_sharpe_n_raw,0.051882
 min_btl,0.657380
 cscv_pbo_combinations_n16,12870.000000
-pesaran_timmermann_stat,
-pesaran_timmermann_p,
+pesaran_timmermann_stat,3.484392
+pesaran_timmermann_p,0.000247
 treynor_mazuy_gamma,0.003298
 treynor_mazuy_t,1.049160
 henriksson_merton_hit,0.549925

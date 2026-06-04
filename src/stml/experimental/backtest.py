@@ -1,12 +1,18 @@
-"""Barrier-exact + cost-aware backtest — plan §3.7 / §8 S6.
+"""Barrier-exact + cost-aware backtest — Madmoun Optional Session 3 recipe.
 
-Per-instrument position held from `t_start` to actual `t_end` (first-touch),
-overlapping labels on the same instrument are NETTED (alken convention).
-Sortino computed with the **Sortino-Price 1994 full-T form** (denominator
-is full sample length with target 0, NOT just negative observations —
-that's the common mis-implementation that inflates Sortino).
+Per-instrument position held from ``t_start`` to actual ``t_end`` (first-touch);
+weights are stamped on each held day. Portfolio aggregation follows the
+lecturer's slide 41:
 
-Lifted from ``metamodel-apb/src/alken_metamodel/backtest.py`` (alken parity).
+    R^port_{t+1} = (1 / K_active(t)) · Σ_k w_{t,k} · r_{t+1,k}
+
+with ``K_active(t)`` the number of instruments carrying a non-zero weight at
+``t`` (i.e. equal risk-capital allocation across the active universe at each
+day). Transaction costs use the same Grinold-Kahn (half-spread + linear
+impact) model, applied per asset and aggregated under the same 1/K scheme.
+
+Sortino is the **Sortino-Price 1994 full-T form** (denominator is full sample
+length with target 0; NOT std-of-negatives).
 """
 
 from __future__ import annotations
@@ -80,13 +86,24 @@ def build_position_panel(
 def strategy_returns(
     weights: pd.DataFrame, returns_panel: pd.DataFrame
 ) -> pd.Series:
-    """``∑_i w_t,i × r_{t+1,i}`` — held weight × NEXT-day return."""
+    """Cross-sectional risk-budgeted portfolio return -- slide 41.
+
+    ``R^port_{t+1} = (1/K_active(t)) · Σ_k w_{t,k} · r_{t+1,k}`` with
+    ``K_active(t) = #{k : w_{t,k} != 0}``. If no asset is active on a day,
+    that day's return is 0.
+    """
     aligned = returns_panel.reindex(weights.index).reindex(
         columns=weights.columns
     )
     # Shift returns BACKWARD by 1 so r_{t+1} aligns to w_t.
     fwd = aligned.shift(-1).fillna(0.0)
-    out = (weights.fillna(0.0) * fwd).sum(axis=1).rename("strategy_ret")
+    w = weights.fillna(0.0)
+    raw = (w * fwd).sum(axis=1)
+    k_active = (w != 0.0).sum(axis=1).clip(lower=1)
+    out = (raw / k_active).rename("strategy_ret")
+    # Zero out days with no active assets (clip set them to /1, so check w).
+    no_active = (weights.fillna(0.0).abs().sum(axis=1) == 0.0)
+    out = out.where(~no_active, 0.0)
     # Drop last row (no forward return).
     return out.iloc[:-1]
 

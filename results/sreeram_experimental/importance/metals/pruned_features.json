@@ -1,0 +1,20 @@
+{
+  "asset_class": "metals",
+  "n_pruned": 6,
+  "features": [
+    "f19_atm_iv_3m",
+    "f7_overnight_gap",
+    "f12_hurst_100",
+    "f12_efficiency_ratio_21",
+    "f1_rsi_14",
+    "f19_skew_1m"
+  ],
+  "reasons": {
+    "f19_atm_iv_3m": "cluster 1: PC1 99% -> single rep",
+    "f7_overnight_gap": "global SHAP top-5",
+    "f12_hurst_100": "global SHAP top-5",
+    "f12_efficiency_ratio_21": "global SHAP top-5",
+    "f1_rsi_14": "global SHAP top-5",
+    "f19_skew_1m": "global SHAP top-5"
+  }
+}

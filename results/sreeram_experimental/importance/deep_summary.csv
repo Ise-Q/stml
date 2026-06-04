@@ -1,0 +1,4 @@
+asset_class,n_significant_clusters,n_pruned_features,full_auc,pruned_auc,delta_auc
+equity,2,5,0.531975,0.600906,0.068931
+energy,2,5,0.625125,0.608187,-0.016938
+metals,2,6,0.529869,0.528003,-0.001866

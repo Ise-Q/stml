@@ -1,0 +1,13 @@
+{
+  "winner": "nn_vlstm",
+  "selection_criterion": "max validation Sharpe (slide 51)",
+  "val_sharpe": 0.5467401742935181,
+  "test_sharpe": -2.571417022123187,
+  "test_ann_vol": 0.011815729910974923,
+  "test_ann_ret_net": -0.030383169021891004,
+  "test_sortino": -3.101542241856802,
+  "test_max_dd": -0.015541011368285562,
+  "hidden_dim": 16.0,
+  "n_epochs": 9,
+  "lookback": 21
+}

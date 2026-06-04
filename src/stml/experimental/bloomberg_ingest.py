@@ -198,8 +198,10 @@ def _eia_release_calendar(eia_change: pd.DataFrame) -> pd.DataFrame:
     if eia_change.empty:
         return pd.DataFrame()
     release_dates = eia_change.index  # already lagged by +5d in _read_block_e_eia
-    # Build a daily flag, defaulting to 0 elsewhere.
-    full_bd = pd.bdate_range(release_dates.min(), pd.Timestamp("2022-06-30"))
+    # Build a daily flag, defaulting to 0 elsewhere. End boundary is the
+    # LAST release date the EIA file carries (data-driven; not hard-coded
+    # so the marker's H2-2022 re-run still produces a valid flag).
+    full_bd = pd.bdate_range(release_dates.min(), release_dates.max())
     flag = pd.Series(0, index=full_bd, dtype=int)
     # If the release day fell on a holiday, snap to the next business day so
     # the flag still fires on a tradeable calendar date.

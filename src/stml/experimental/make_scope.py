@@ -119,6 +119,15 @@ def build_scope(events: pd.DataFrame) -> dict[str, dict]:
         span_p90 = int(np.percentile(spans, 90))
         span_med = int(np.percentile(spans, 50))
 
+        # Worst-case held window from Jay's per-instrument geometry: the label
+        # could be held for up to h trading days even if most events close
+        # early at PT or SL. The embargo must cover this so events starting
+        # right after a test fold cannot have their t_end overlap the test
+        # block via the forward leak window.
+        h_max = int(sub["h"].max()) if "h" in sub.columns else 0
+        # Take the MAX of (data-driven p90, Jay's worst-case h, AFML default 10).
+        embargo = int(max(span_p90, h_max, 10))
+
         n_events = int(len(sub))
         uniq = sub["uniqueness_weight"].astype(float)
         median_uniq = float(uniq.median())
@@ -129,11 +138,12 @@ def build_scope(events: pd.DataFrame) -> dict[str, dict]:
             "instrument": inst,
             "asset_class": ASSET_CLASS_SHORT.get(INSTRUMENT_TO_CLASS[inst], "??"),
             "n_events": n_events,
-            "embargo_p90": span_p90,
+            "embargo_p90": embargo,
             "n_eff_gate": n_eff,
             "low_power": low_power,
             "p90_label_span": span_p90,
             "median_label_span": span_med,
+            "h_max": h_max,
             "median_uniqueness": median_uniq,
         }
     return out

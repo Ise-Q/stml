@@ -35,14 +35,14 @@ Source data: `results/sreeram_experimental/strategy_daily_net_returns.csv` (n = 
 
 | Test | Value | Reading |
 |---|---:|---|
-| **Pesaran-Timmermann (PRIMARY)** | S = nan, p = nan | NO positive directional skill |
+| **Pesaran-Timmermann (PRIMARY)** | S = 3.4844, p = 0.0002 | positive directional skill |
 | Treynor-Mazuy γ | 0.0033 (t = 1.05) | no significant convexity |
 | Henriksson-Merton hit rate (proxy) | 0.5499 (z = 3.66, p = 0.0001) | BASE-RATE SENSITIVE — read with caveat |
 
 ## Five-lens verdict
 
-Lens 1 — AUC (per class, §8 S3): equity 0.554 | energy 0.602 | metals 0.554 (vs alken 0.579/0.525/0.530).
+Lens 1 — AUC (per class, §8 S3): equity 0.554 | energy 0.602 | metals 0.554.
 Lens 2 — cluster MDA (§8 S5): equity 0.022 PASS | energy 0.036 PASS | metals 0.016 CHECK.
 Lens 3 — Sharpe significance (this section): per-period bootstrap CI EXCLUDES 0, t = 2.70, PSR(0) = 1.00.
 Lens 4 — deflation: DSR at N_eff = 0.996, at 4·N_raw = 0.976.
-Lens 5 — Pesaran-Timmermann: S = nan, p = nan.
+Lens 5 — Pesaran-Timmermann: S = 3.48, p = 0.00.

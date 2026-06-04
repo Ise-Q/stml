@@ -55,6 +55,7 @@ def _find_repo_root() -> Path:
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
+    "pt", "sl", "h", "partition",
 })
 
 
@@ -71,9 +72,12 @@ def run_class(
     df = features.loc[features["instrument"].isin(members)].copy()
     df["t_signal"] = pd.to_datetime(df["t_signal"])
     df["t_end"] = pd.to_datetime(df["t_end"])
-    # Modelling sample only (plan §11.3).
-    train_cut = pd.Timestamp(cfg.global_train_cut)
-    df = df.loc[df["t_signal"] <= train_cut].reset_index(drop=True)
+    # Modelling sample = TRAIN partition only. Val held out. Test sealed.
+    if "partition" not in df.columns:
+        raise KeyError(
+            "features missing 'partition'; re-run make_labels + make_features."
+        )
+    df = df.loc[df["partition"] == "train"].reset_index(drop=True)
 
     feature_cols = [c for c in df.columns if c not in _SCHEMA_COLS]
     X = df.loc[:, feature_cols].copy()

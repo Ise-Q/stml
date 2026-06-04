@@ -1,0 +1,3 @@
+model,n_features,n_val,val_auc,val_sem
+full,74,380,0.529869,0.029980
+pruned,6,380,0.528003,0.029982

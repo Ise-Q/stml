@@ -1,0 +1,4 @@
+feature,cluster,mean_shap_mag,pc1_loading,pca_pc1_var_explained,pc2_loading,pca_pc2_var_explained,pc3_loading,pca_pc3_var_explained
+f7_oi_level,14,0.632650,-0.534123,0.578922,0.821941,0.238348,0.197803,0.182730
+f5_participation_60,14,0.183079,0.611314,0.578922,0.213888,0.238348,0.761936,0.182730
+ewma_hmm_prob_highvol,14,0.025728,0.583959,0.578922,0.527887,0.238348,-0.616707,0.182730

@@ -1,4 +1,4 @@
 asset_class,n_clusters,n_features,top_mda_mean,n_clusters_mda_above_002
-equity,16,70,0.022303,1
-energy,8,72,0.036360,1
-metals,16,72,0.015507,0
+equity,16,66,0.013251,0
+energy,16,68,0.117782,1
+metals,16,67,0.008231,0

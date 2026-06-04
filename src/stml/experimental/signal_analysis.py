@@ -2,10 +2,8 @@
 
 * Pesaran-Timmermann (PRIMARY directional skill test, base-rate aware)
 * Treynor-Mazuy convexity timing
-* Henriksson-Merton (base-rate-sensitive proxy, alken §5.21 caveat)
+* Henriksson-Merton (base-rate-sensitive proxy)
 * Information Coefficient + Grinold's Fundamental Law (IR = IC·√BR)
-
-Lifted from ``metamodel-apb/src/alken_metamodel/signal_analysis.py`` (alken parity).
 """
 
 from __future__ import annotations
@@ -46,19 +44,15 @@ def pesaran_timmermann(
     P_star = Py * Px + (1.0 - Py) * (1.0 - Px)
 
     var_P_hat = (P_star * (1.0 - P_star)) / n
-    # var(P*) = ((2Py-1)² · Px(1-Px) + (2Px-1)² · Py(1-Py) +
-    #          4·Py·Px·(1-Py)·(1-Px)) / n  — Pesaran-Timmermann 1992 eq.4
+    # Pesaran-Timmermann 1992 Theorem 4.1: first two terms are O(1/n);
+    # the cross term is O(1/n²) — NOT 1/n.
     var_P_star = (
-        (2.0 * Py - 1.0) ** 2 * Px * (1.0 - Px)
-        + (2.0 * Px - 1.0) ** 2 * Py * (1.0 - Py)
-        + 4.0 * Py * Px * (1.0 - Py) * (1.0 - Px)
-    ) / n
+        (2.0 * Py - 1.0) ** 2 * Px * (1.0 - Px) / n
+        + (2.0 * Px - 1.0) ** 2 * Py * (1.0 - Py) / n
+        + 4.0 * Py * Px * (1.0 - Py) * (1.0 - Px) / (n ** 2)
+    )
 
     denom = var_P_hat - var_P_star
-    # PT is undefined when var(P̂) ≈ var(P̂*) — happens for some Px/Py
-    # configurations on small finite samples (see alken §5.21 caveat).
-    # Return NaN cleanly; the Henriksson-Merton proxy still provides a
-    # base-rate-sensitive directional read.
     if denom < 1e-10:
         return (float("nan"), float("nan"))
     S = (P_hat - P_star) / np.sqrt(denom)

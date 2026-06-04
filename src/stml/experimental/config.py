@@ -103,10 +103,19 @@ class PipelineConfig:
     importance_max_clusters: int = 16
 
     # --------------------------------------------------------- S6 sizing / vol
-    kappa: float = 0.25  # fractional Kelly (Maclean-Ziemba-Blazenko 1992)
-    confidence_floor: float = 0.55  # hard floor; smooth taper rejected by CER gate
-    target_vol: float = 0.08  # plan R7 — 2 % headroom under 10 % constraint
-    max_leverage: float = 5.0
+    # Madmoun Optional Session 3 recipe (slides 32-34, 39-40).
+    # sizing_method is one of: model_confidence, all_or_nothing, ncdf,
+    # linear_scaling, ecdf, sops. Default SOPS — the only method that fits
+    # the sigmoid shape to in-sample Sharpe directly.
+    sizing_method: str = "sops"
+    # Bootstrap-estimate p* per instrument; if False, use 0.5 baseline gate.
+    use_pstar_threshold: bool = True
+    pstar_bootstrap: int = 2000
+    # Volatility targeting -- lecturer's slide 40 prescribes 10 % annualised.
+    target_vol: float = 0.10
+    max_leverage: float = 10.0  # defensive clamp; not in the lecture.
+    # EWMA σ̂ for the position-weight denominator (slide 39).
+    ewma_sigma_span: int = 60
 
     # ---------------------------------------------------- S6 cost model
     half_spread_bps: float = 2.0  # Grinold-Kahn, alken parity

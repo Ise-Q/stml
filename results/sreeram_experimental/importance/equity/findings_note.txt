@@ -1,0 +1,31 @@
+=== EQUITY — feature importance findings ===
+
+Modelling sample: 1083 events; 66 features after hygiene.
+Significant clusters (MDA mean > 1 sigma): 2 of 16.
+
+Top significant clusters (by MDA):
+  C16: 4 members, MDA +0.0097 +/- 0.0000, top SHAP member = f10_oc_ret, PC1 var = 27%
+  C14: 3 members, MDA +0.0039 +/- 0.0000, top SHAP member = ?, PC1 var = 0%
+
+Top 10 global features by mean |SHAP|:
+  f1_rsi_14                           |SHAP| = 0.1793
+  f10_oc_ret                          |SHAP| = 0.1639
+  f7_overnight_gap                    |SHAP| = 0.1455
+  f18_term_chg5                       |SHAP| = 0.1301
+  f11_dxy_chg5                        |SHAP| = 0.1267
+  f12_variance_ratio_5_21             |SHAP| = 0.1168
+  f15_semi_vol_ratio_20               |SHAP| = 0.1109
+  f7_oi_level                         |SHAP| = 0.1074
+  f6_ts_momentum_20                   |SHAP| = 0.1027
+  f7_volume_trend_20                  |SHAP| = 0.1018
+
+Pruned feature set (5 features):
+  - f10_oc_ret  (cluster 16: PC1 27% multi-dim -> top-2 by SHAP)
+  - f7_overnight_gap  (cluster 16: PC1 27% multi-dim -> top-2 by SHAP)
+  - f1_rsi_14  (global SHAP top-5)
+  - f18_term_chg5  (global SHAP top-5)
+  - f11_dxy_chg5  (global SHAP top-5)
+
+CPCV(6,2) AUC, full vs pruned:
+  full     n_features =  74  AUC = 0.5320 +/- 0.0302
+  pruned   n_features =   5  AUC = 0.6009 +/- 0.0296

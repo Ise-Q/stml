@@ -1,17 +1,32 @@
 """S6 runner — refit champions, predict, calibrate, size, backtest, emit.
 
-Per plan §8 S6. Produces the submission-ready deliverables:
+Implements the Madmoun Optional Session 3 strategy-construction recipe:
+
+  1. Per instrument: refit champion on full modelling sample.
+  2. Per instrument: purged-OOF predictions used for Platt calibration
+     (slide 31) AND for bootstrap p* threshold + sizing-policy fit.
+  3. Per instrument: bootstrap p* = L/(G+L) from OOF TP/FP returns (slide 21).
+  4. Per instrument: fit chosen sizing policy from {model_confidence,
+     all_or_nothing, ncdf, linear_scaling, ecdf, sops} (default SOPS,
+     slide 34).
+  5. Per event in the sealed test slice: predict, Platt-transform, gate by
+     p*, size via the policy, scale by σ_tgt / σ^ann_{t,k} (slide 40).
+  6. Aggregate cross-sectionally as (1/K_active) Σ_k w_{t,k} · r_{t+1,k}
+     (slide 41), charge Grinold-Kahn costs, write the deliverable CSVs.
+
+Outputs:
 
     outputs/metamodel_predictions.csv          (calibrated)
     outputs/metamodel_predictions_raw.csv      (uncalibrated)
-    outputs/strategy_weights.csv               (vol-targeted Kelly sized)
+    outputs/strategy_weights.csv               (lecturer's vol-targeted)
     outputs/coverage_caveat.csv                (per-instrument flags)
     outputs/experiment_log.csv                 (per-class deterministic log)
     results/sreeram_experimental/backtest_metrics.csv
+    results/sreeram_experimental/threshold_summary.csv
 
-Acceptance gates (plan §8 S6):
-* Calibration: Platt monotone → AUC invariant (test).
-* Realised ann vol ∈ [0.06, 0.10] (the R7 10 % cap with headroom).
+Acceptance gates:
+* Calibration: Platt monotone → AUC invariant (unit test).
+* Realised ann vol ≤ 10 % (the lecturer's σ_tgt cap with headroom).
 * Byte-identical re-emit verified.
 """
 
@@ -51,12 +66,18 @@ from stml.experimental.make_scope import embargo_days_map
 from stml.experimental.models import balanced_sample_weight
 from stml.experimental.pipeline import _fresh_estimator
 from stml.experimental.sizing import (
-    CONFIDENCE_FLOOR,
     MAX_LEVERAGE,
     TARGET_VOL,
+    TRADING_DAYS,
+    SizingPolicy,
+    fit_sizing_policy,
     position_weight,
 )
-from stml.experimental.volatility import ewma_daily_sigma
+from stml.experimental.threshold import (
+    ThresholdEstimate,
+    estimate_threshold,
+)
+from stml.experimental.volatility import ewma_daily_sigma, ewma_lecturer
 
 
 def _find_repo_root() -> Path:
@@ -70,6 +91,7 @@ def _find_repo_root() -> Path:
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
+    "pt", "sl", "h", "partition",  # Jay's geometry + partition.
 })
 
 
@@ -107,13 +129,26 @@ def _add_instrument_onehot(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _split_modelling_and_test(features: pd.DataFrame, cfg: PipelineConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Final-deliverable split (Jay-CSV partition):
+
+      * **modelling = train + val combined** — used for the final per-
+        instrument model refit + the OOF generation that drives Platt /
+        threshold / SOPS. This is the maximum-data fit before the sealed
+        test window. (Champion *selection* upstream uses train only with
+        val as honest scoreboard; that's a separate methodology step in
+        ``champion_pipeline.py``.)
+      * test = sealed (H1-2022, read once at the end)
+    """
     df = features.copy()
     df["t_signal"] = pd.to_datetime(df["t_signal"])
     df["t_end"] = pd.to_datetime(df["t_end"])
-    train_cut = pd.Timestamp(cfg.global_train_cut)
-    embargo_end = pd.Timestamp(cfg.embargo_end)
-    modelling = df.loc[df["t_signal"] <= train_cut].reset_index(drop=True)
-    test = df.loc[df["t_signal"] > embargo_end].reset_index(drop=True)
+    if "partition" not in df.columns:
+        raise KeyError(
+            "feature matrix is missing the 'partition' column; "
+            "re-run make_labels + make_features after the Jay-CSV switch."
+        )
+    modelling = df.loc[df["partition"].isin(["train", "val"])].reset_index(drop=True)
+    test = df.loc[df["partition"] == "test"].reset_index(drop=True)
     return modelling, test
 
 
@@ -204,23 +239,26 @@ def _per_event_weight(
     *,
     test_events: pd.DataFrame,
     calibrated_proba: np.ndarray,
-    realised_vol: pd.Series,
+    daily_sigma: pd.Series,
+    policy: SizingPolicy,
     cfg: PipelineConfig,
 ) -> np.ndarray:
-    """Convert per-event probability + side + realised vol to position weight."""
+    """Lecturer-spec weight: ``w = side · g(p̂) · σ_tgt / σ^ann_{t,k}``.
+
+    ``daily_sigma`` is the per-instrument causal EWMA daily σ̂ keyed by date;
+    ``policy`` is a fitted :class:`SizingPolicy` (one of six lectured methods).
+    """
     weights = np.zeros(len(test_events), dtype=float)
     for i, row in test_events.iterrows():
-        sigma = float(realised_vol.get(row["t_start"], float("nan")))
-        # Annualise daily sigma.
-        ann_sigma = sigma * np.sqrt(252.0) if np.isfinite(sigma) else float("nan")
+        sigma_d = float(daily_sigma.get(row["t_start"], float("nan")))
         w = position_weight(
             side=int(row["side"]),
             p=float(calibrated_proba[i]),
-            realised_vol=ann_sigma,
-            kappa=cfg.kappa,
-            floor=cfg.confidence_floor,
+            daily_sigma=sigma_d,
+            policy=policy,
             target_vol=cfg.target_vol,
             max_leverage=cfg.max_leverage,
+            trading_days=TRADING_DAYS,
         )
         weights[i] = w
     return weights
@@ -256,6 +294,7 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     # Per-instrument deliverables.
     deliverables: dict[str, InstrumentDeliverable] = {}
     calibrators: dict[str, PlattCalibrator] = {}
+    oof_records: list[dict] = []  # for NN portfolio model (slide 48).
     ohlcv, _signals = load_panel()
     returns_panel = _returns_panel(ohlcv)
 
@@ -299,29 +338,81 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
         if test_events.empty:
             continue
 
-        # Per-class Platt fit on OOF.
+        # ----- 1. Calibration: Platt fit on OOF (slide 31).
         platt = PlattCalibrator()
         if not oof.empty:
             platt.fit(oof["proba"].values, oof["label"].values)
         calibrators[inst] = platt
         calibrated = platt.transform(raw_proba)
+        oof_cal = platt.transform(oof["proba"].values) if not oof.empty else np.empty(0)
 
-        # Position weights per event.
-        ewma_vol = ewma_daily_sigma(
-            ohlcv.loc[ohlcv["instrument"] == inst].set_index("date")["close"], span=21
+        # Persist OOF calibrated predictions for downstream consumers (NN
+        # portfolio model, slide 48 channel layout).
+        modelling_inst_for_oof = modelling.loc[modelling["instrument"] == inst].reset_index(drop=True)
+        if oof_cal.size and len(modelling_inst_for_oof) == len(oof_cal):
+            oof_records.extend([
+                {"date": ts, "instrument": inst, "calibrated_proba": float(p)}
+                for ts, p in zip(modelling_inst_for_oof["t_signal"], oof_cal)
+            ])
+
+        # ----- 2. Threshold gate p* (slide 21), bootstrapped on OOF training trades.
+        # Per-instrument OOF needs the realised return aligned to label/proba.
+        # We pull it from the modelling sample of THIS instrument.
+        modelling_inst = modelling.loc[modelling["instrument"] == inst].reset_index(drop=True)
+        # `oof` is indexed by row_idx INSIDE the pool slice; the per-instrument
+        # row alignment is preserved via .groupby("row_idx")["y_true"] earlier.
+        if not oof.empty and len(oof) == len(modelling_inst):
+            r_oof = modelling_inst["ret"].astype(float).values
+            y_oof = oof["label"].values.astype(int)
+            p_oof = oof_cal  # use CALIBRATED OOF probabilities for p*
+            p_star_est = estimate_threshold(
+                p_oof, y_oof, r_oof,
+                base_gate=0.5, n_bootstrap=cfg.pstar_bootstrap, seed=cfg.seed,
+            )
+        else:
+            p_star_est = ThresholdEstimate(
+                p_star=0.5, ci_low=0.5, ci_high=0.5, n_tp=0, n_fp=0,
+                rG_mean=float("nan"), rL_mean=float("nan"),
+                bootstrap_p_stars=np.empty(0, dtype=float),
+            )
+        threshold = p_star_est.p_star if cfg.use_pstar_threshold else 0.5
+
+        # ----- 3. Sizing policy: fit on OOF (slide 34, default SOPS).
+        policy = fit_sizing_policy(
+            cfg.sizing_method,
+            p_tr=oof_cal if oof_cal.size else None,
+            r_tr=modelling_inst["ret"].astype(float).values
+                  if (oof_cal.size and "ret" in modelling_inst.columns) else None,
+            threshold=threshold,
         )
+
+        # ----- 4. Causal EWMA daily σ̂ (slide 39).
+        close = ohlcv.loc[ohlcv["instrument"] == inst].set_index("date")["close"]
+        daily_returns = np.log(close / close.shift(1)).dropna()
+        ewma_sigma = ewma_lecturer(daily_returns, span=cfg.ewma_sigma_span)
+        # Re-key by date for lookup at each event's t_start.
+        ewma_sigma.index = pd.to_datetime(ewma_sigma.index)
+
+        # ----- 5. Per-event sized weight (slide 40).
         weights = _per_event_weight(
             test_events=test_events, calibrated_proba=calibrated,
-            realised_vol=ewma_vol, cfg=cfg,
+            daily_sigma=ewma_sigma, policy=policy, cfg=cfg,
         )
 
         deliverables[inst] = InstrumentDeliverable(
             instrument=inst, pool=pool, model_name=model_name,
             test_events=test_events.assign(
                 raw_proba=raw_proba, calibrated_proba=calibrated, weight=weights,
+                p_star=threshold,
+                sizing_method=cfg.sizing_method,
             ),
             raw_proba=raw_proba, calibrated_proba=calibrated, weight_per_event=weights,
         )
+        if verbose:
+            print(f"    p* = {threshold:.4f} (CI [{p_star_est.ci_low:.4f},"
+                  f" {p_star_est.ci_high:.4f}], TP={p_star_est.n_tp},"
+                  f" FP={p_star_est.n_fp})   sizer={cfg.sizing_method}"
+                  f"   n_active = {(weights != 0.0).sum()} / {len(weights)}")
 
     # Assemble deliverable frames.
     pred_rows_raw = []
@@ -400,6 +491,35 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     pd.Series(report.metrics).to_csv(results_dir / "backtest_metrics.csv",
                                        header=["value"])
 
+    # OOF calibrated predictions (for the NN portfolio model, slide 48).
+    if oof_records:
+        oof_df = pd.DataFrame(oof_records).sort_values(["date", "instrument"])
+        oof_df.to_csv(
+            results_dir / "oof_calibrated_predictions.csv",
+            index=False, float_format="%.10f",
+        )
+
+    # Threshold + sizing-policy summary per instrument (audit deliverable).
+    thr_rows = []
+    for inst, d in deliverables.items():
+        sub = d.test_events
+        if sub.empty:
+            continue
+        thr_rows.append({
+            "instrument": inst,
+            "sizing_method": cfg.sizing_method,
+            "p_star": float(sub["p_star"].iloc[0]),
+            "n_oos": int(len(sub)),
+            "n_oos_taken": int((sub["weight"] != 0.0).sum()),
+            "mean_abs_weight": float(np.abs(sub["weight"]).mean()),
+            "max_abs_weight": float(np.abs(sub["weight"]).max()),
+        })
+    if thr_rows:
+        pd.DataFrame(thr_rows).to_csv(
+            results_dir / "threshold_summary.csv", index=False,
+            float_format="%.6f",
+        )
+
     # Persist daily returns for S7 significance.
     report.net_returns.to_csv(results_dir / "strategy_daily_net_returns.csv",
                                 header=["net_ret"])
@@ -420,12 +540,16 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     }.items()])
     exp_log.to_csv(outputs_dir / "experiment_log.csv", index=False)
 
-    # Print acceptance gates.
-    print("\n=== Plan §8 S6 acceptance gates ===")
+    # Print acceptance gates (Optional Session 3 recipe).
+    print("\n=== Strategy acceptance gates (Optional Session 3) ===")
     m = report.metrics
-    print(f"  events with weight !=0: {(events_full['weight'] != 0).sum()} / {len(events_full)}")
-    print(f"  realised ann vol      : {m['ann_vol']:.4f}  (target ∈ [0.06, 0.10])  "
-          f"{'PASS' if 0.06 <= m['ann_vol'] <= 0.10 else 'CHECK'}")
+    n_taken = (events_full["weight"] != 0).sum()
+    print(f"  sizing method         : {cfg.sizing_method}")
+    print(f"  target ann vol        : {cfg.target_vol:.2%}")
+    print(f"  events taken (w != 0) : {n_taken} / {len(events_full)} "
+          f"({100*n_taken/max(len(events_full),1):.1f}%)")
+    print(f"  realised ann vol      : {m['ann_vol']:.4f}  (cap = {cfg.target_vol:.2f})  "
+          f"{'PASS' if m['ann_vol'] <= cfg.target_vol + 1e-3 else 'CHECK'}")
     print(f"  realised ann return   : {m['ann_return']:.4f}")
     print(f"  Sharpe ann            : {m['sharpe']:.4f}")
     print(f"  Sortino (full-T)      : {m['sortino']:.4f}")

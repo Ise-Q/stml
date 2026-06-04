@@ -232,6 +232,59 @@ def cross_val_evaluate(
 # ---------------------------------------------------------------------------
 
 
+def primary_vs_meta_evaluation(
+    proba: np.ndarray,
+    label: np.ndarray,
+    *,
+    threshold: float = 0.5,
+) -> dict:
+    """Primary-alone vs primary+meta filter -- Madmoun slide 22.
+
+    The lecturer's prescribed evaluation: ``does my meta-model improve on
+    following the primary blindly?``. Two confusion matrices on the same
+    out-of-fold predictions:
+
+      * primary alone: take every signal -> recall = 1, precision = base rate.
+      * primary + meta filter: take only when ``proba >= threshold``.
+
+    Returns a dict with both confusion counts, precision / recall / F1 for
+    each, and the false-positive avoidance / true-positive cost.
+    """
+    proba = np.asarray(proba, dtype=float)
+    label = np.asarray(label, dtype=int)
+
+    take_meta = proba >= threshold
+    primary_tp = int(label.sum())
+    primary_fp = int((1 - label).sum())
+    meta_tp = int(((take_meta) & (label == 1)).sum())
+    meta_fp = int(((take_meta) & (label == 0)).sum())
+    meta_fn = int(((~take_meta) & (label == 1)).sum())
+    meta_tn = int(((~take_meta) & (label == 0)).sum())
+
+    def _prec_rec_f1(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
+        prec = tp / (tp + fp) if (tp + fp) else float("nan")
+        rec = tp / (tp + fn) if (tp + fn) else float("nan")
+        f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) else float("nan")
+        return prec, rec, f1
+
+    p_prec, p_rec, p_f1 = _prec_rec_f1(primary_tp, primary_fp, 0)
+    m_prec, m_rec, m_f1 = _prec_rec_f1(meta_tp, meta_fp, meta_fn)
+
+    return {
+        "threshold": float(threshold),
+        "n": int(len(label)),
+        "primary_tp": primary_tp, "primary_fp": primary_fp,
+        "primary_precision": p_prec, "primary_recall": p_rec, "primary_f1": p_f1,
+        "meta_tp": meta_tp, "meta_fp": meta_fp,
+        "meta_fn": meta_fn, "meta_tn": meta_tn,
+        "meta_precision": m_prec, "meta_recall": m_rec, "meta_f1": m_f1,
+        "delta_precision": m_prec - p_prec,
+        "delta_recall": m_rec - p_rec,
+        "false_positives_avoided": primary_fp - meta_fp,
+        "true_positives_missed": primary_tp - meta_tp,
+    }
+
+
 def per_instrument_breakdown(
     instruments: pd.Series,
     oos_predictions: pd.DataFrame,

@@ -26,19 +26,25 @@ def transaction_costs(
     impact_bps: float = IMPACT_BPS,
     impact_exponent: float = IMPACT_EXPONENT,
 ) -> pd.Series:
-    """Per-day total cost as a fraction of NAV.
+    """Per-day total cost as a fraction of NAV under the lecturer's 1/K_active
+    risk-budget aggregation (slide 41).
 
-    ``weights`` : DataFrame (date × instrument) of positions; rows are dates.
+    Per-asset cost is ``(half_spread + impact·|Δw|^exp) · |Δw|``; aggregated as
+    ``(1/K_active(t)) · Σ_k`` to stay consistent with how gross/net returns
+    are computed in :func:`strategy_returns`.
     """
     delta = weights.fillna(0.0).diff().abs()
     # Day-0 turnover (open from flat) = |w_0|.
     delta.iloc[0] = weights.iloc[0].abs()
-    # bps → fraction.
     hs = half_spread_bps / 10_000.0
     im = impact_bps / 10_000.0
     spread_cost = hs * delta.sum(axis=1)
     impact_cost = im * (delta ** impact_exponent).sum(axis=1)
-    return (spread_cost + impact_cost).rename("daily_cost")
+    raw = spread_cost + impact_cost
+    k_active = (weights.fillna(0.0) != 0.0).sum(axis=1).clip(lower=1)
+    out = (raw / k_active).rename("daily_cost")
+    no_active = (weights.fillna(0.0).abs().sum(axis=1) == 0.0)
+    return out.where(~no_active, 0.0)
 
 
 def annualised_turnover(weights: pd.DataFrame, ann: float = 252.0) -> float:

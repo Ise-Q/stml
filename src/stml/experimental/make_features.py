@@ -1,24 +1,28 @@
 """S2 runner — build the per-event feature matrix + drift-filter audit.
 
-Plan §8 Stage 2 / R9 / R10.
+Plan §8 Stage 2 / R9 / R10. Migrated to Jay's per-instrument labels CSV:
+the train/test split is driven by the ``partition`` column from the events
+parquet, not by a global cut date.
 
 Sequence:
 1. Load OHLCV + signals → per-instrument frames (via data_loader).
-2. Load events.parquet (from S1) so we know which (instrument, date) rows are
-   labelled and therefore deserve a feature row.
+2. Load events.parquet (from S1 / Jay's CSV) so we know which
+   (instrument, date) rows are labelled and therefore deserve a feature row.
 3. Run :func:`stml.experimental.features.assemble_features` to compute every
    registered feature for every instrument's full trading-day calendar.
 4. Inner-join the feature matrix to the event index — one feature row per
-   labelled event.
-5. Apply the drift filter (plan §3.3): per feature compute KS(train, test)
-   train ≤ ``global_train_cut`` (2021-10-06), test > ``embargo_end`` (2021-10-20);
-   compute simple sign-flip-aware val_AUC; drop features that fail both gates.
+   labelled event, carrying the (pt, sl, h, partition) columns through.
+5. Apply the drift filter (plan §3.3): per feature compute KS between an
+   early-train (first 70% chronologically) and late-train (last 30%) slice;
+   compute sign-flip-aware single-feature AUC on the late-train slice; drop
+   features that fail both gates. **Val and test partitions stay fully
+   sealed** so they can be used as honest evaluators downstream.
 6. Persist ``data/sreeram_experimental_features.parquet`` (kept features)
    + ``results/sreeram_experimental/feature_drift_audit.csv`` (every feature's
    KS / val_AUC / decision).
 
 Acceptance gates (plan §8 S2):
-* ≥ 80 % of features have train→test KS < 0.20
+* ≥ 80 % of kept features have train→val KS < 0.20
 * ≥ 15 features have val_AUC > 0.55
 * Final matrix has 80-120 columns
 """
@@ -131,17 +135,36 @@ def drift_filter(
     removed, and ``audit`` is a per-feature DataFrame summarising the decision.
     """
     cfg = cfg or PipelineConfig()
-    train_cut = pd.Timestamp(cfg.global_train_cut)
-    embargo_end = pd.Timestamp(cfg.embargo_end)
 
-    feature_cols = [
-        c for c in feature_matrix.columns
-        if c not in ("instrument", "t_signal", "t_start", "t_end", "side",
-                     "ret", "label", "uniqueness_weight", "sigma_at_t", "barrier_hit")
-    ]
+    # Reserved columns -- include Jay's geometry + partition.
+    _reserved = {
+        "instrument", "t_signal", "t_start", "t_end", "side",
+        "ret", "label", "uniqueness_weight", "sigma_at_t", "barrier_hit",
+        "pt", "sl", "h", "partition",
+    }
+    feature_cols = [c for c in feature_matrix.columns if c not in _reserved]
 
-    is_train = feature_matrix[date_col] <= train_cut
-    is_test = feature_matrix[date_col] > embargo_end
+    # Drift filter compares an EARLY vs LATE chronological split of the TRAIN
+    # partition only. Val and test stay fully held out so they can be used as
+    # honest evaluators downstream (no double-use of val for feature
+    # selection + model evaluation).
+    if "partition" not in feature_matrix.columns:
+        raise KeyError(
+            "feature_matrix is missing the 'partition' column; re-run "
+            "make_labels + make_features after the Jay-CSV switch."
+        )
+    train_mask = feature_matrix["partition"] == "train"
+    train_df = feature_matrix.loc[train_mask].copy()
+    train_df[date_col] = pd.to_datetime(train_df[date_col])
+    train_df = train_df.sort_values(date_col)
+    # Internal chronological 70/30 split of train (the late slice is the held-
+    # out comparator for KS + val_AUC).
+    n_train = len(train_df)
+    split_idx = int(n_train * 0.70)
+    early_idx = train_df.index[:split_idx]
+    late_idx = train_df.index[split_idx:]
+    is_train = feature_matrix.index.isin(early_idx)
+    is_test = feature_matrix.index.isin(late_idx)  # late-train (held-out within train)
     rows = []
     for col in feature_cols:
         train_vals = feature_matrix.loc[is_train, col]
@@ -191,7 +214,8 @@ def drift_filter(
     schema_cols = [
         c for c in (
             "instrument", "t_signal", "t_start", "t_end", "side", "ret",
-            "label", "uniqueness_weight", "sigma_at_t", "barrier_hit"
+            "label", "uniqueness_weight", "sigma_at_t", "barrier_hit",
+            "pt", "sl", "h", "partition",  # Jay's per-instrument geometry + partition.
         )
         if c in feature_matrix.columns
     ]
