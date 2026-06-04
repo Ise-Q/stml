@@ -1,22 +1,22 @@
 # BUSI70575 — Meta-Model on a Primary Trading Signal
 
-A submission for the Imperial College / Alken Asset Management coursework
-(50 % of the final grade). The meta-model takes the supplied primary signal
-`s ∈ {−1, 0, +1}` for **11 futures across three asset classes** and predicts,
-for each non-zero signal, the **probability that following the trade is
-profitable** under a triple-barrier exit. The optional strategy-construction
-track converts the calibrated probabilities into vol-targeted position weights.
+A meta-model that takes the supplied primary signal `s ∈ {−1, 0, +1}` for
+**11 futures across three asset classes** and predicts, for each non-zero
+signal, the **probability that following the trade is profitable** under a
+triple-barrier exit. The optional strategy-construction track converts the
+calibrated probabilities into vol-targeted position weights.
 
-The submission is organised so that everything the rubric asks for can be
-found in one place: a single notebook for the narrative + charts and a
-single set of deliverable CSVs for the marking pipeline.
+The submission is organised so that the narrative + charts live in a single
+notebook (`submission.ipynb`) and the two deliverable CSVs live under
+`outputs/`. Every numerical claim made in the notebook reproduces from the
+CSV artefacts under `results/submission/`.
 
 ---
 
 ## 1. Start here
 
 ```
-submission.ipynb                     ← run top-to-bottom; one section per rubric item
+submission.ipynb                     ← run top-to-bottom; one section per brief section
 outputs/metamodel_predictions.csv    ← REQUIRED deliverable (H1 2022)
 outputs/strategy_weights.csv         ← Optional (bonus track) deliverable (H1 2022)
 ```
@@ -95,7 +95,7 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 
 ## 4. H2 2022 rerun
 
-The brief states the marker will rerun the code on the held-out H2 2022 window.
+The brief states the held-out H2 2022 window is the hidden test set.
 
 1. Replace `data/ohlcv_data.csv` and `data/primary_signals.csv` with versions
    extended through Dec 2022.
@@ -115,9 +115,9 @@ The brief states the marker will rerun the code on the held-out H2 2022 window.
 
 ---
 
-## 5. Where each rubric item is addressed
+## 5. Brief coverage
 
-| Rubric section | Marks | Notebook section | Code | Result artefacts |
+| Brief section | Marks | Notebook section | Code | Result artefacts |
 |---|---:|---|---|---|
 | Feature Engineering | 20 | §1 | `src/stml/experimental/features/`, `make_features.py` | 105 features over 18 families |
 | Triple-Barrier Labeling | 20 | §2 | `data/triple_barrier_labels.csv`, `make_labels.py` | Per-instrument geometry summary |
@@ -131,7 +131,7 @@ The brief states the marker will rerun the code on the held-out H2 2022 window.
 ## 6. Repository layout
 
 ```
-submission.ipynb                Notebook — one section per rubric item, runs top-to-bottom
+submission.ipynb                Notebook — one section per brief section, runs top-to-bottom
 README.md                       This file
 scripts/
 └── build_submission_deliverables.py   Deterministic CSV emitter
@@ -195,5 +195,5 @@ tests/experimental/             150+ tests covering leakage, determinism, schema
   `partition` column (`train` 60 % / `val` 21 % / `test` 19 %); the pipeline
   honours it everywhere. The H1 2022 deliverable is the `test` partition.
 - **Determinism on H2 2022 rerun.** The H2 2022 macro context CSV is shipped
-  pre-computed; the pipeline does not need to re-fit anything at marker time
+  pre-computed; the pipeline does not need to re-fit anything at rerun time
   beyond predicting on the extended axis.
