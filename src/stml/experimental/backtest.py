@@ -4,12 +4,13 @@ Per-instrument position held from ``t_start`` to actual ``t_end`` (first-touch);
 weights are stamped on each held day. Portfolio aggregation follows the
 lecturer's slide 41:
 
-    R^port_{t+1} = (1 / K_active(t)) · Σ_k w_{t,k} · r_{t+1,k}
+    R^port_{t+1} = (1 / K) · Σ_k w_{t,k} · r_{t+1,k}
 
-with ``K_active(t)`` the number of instruments carrying a non-zero weight at
-``t`` (i.e. equal risk-capital allocation across the active universe at each
-day). Transaction costs use the same Grinold-Kahn (half-spread + linear
-impact) model, applied per asset and aggregated under the same 1/K scheme.
+where K is the total instrument universe (number of columns in the weight
+panel = 11). Flat/unselected instruments contribute 0 to the numerator but
+are counted in K (sit-outs show up as cash). Transaction costs use the same
+Grinold-Kahn (half-spread + linear impact) model, aggregated under the same
+1/K scheme.
 
 Sortino is the **Sortino-Price 1994 full-T form** (denominator is full sample
 length with target 0; NOT std-of-negatives).
@@ -88,9 +89,10 @@ def strategy_returns(
 ) -> pd.Series:
     """Cross-sectional risk-budgeted portfolio return -- slide 41.
 
-    ``R^port_{t+1} = (1/K_active(t)) · Σ_k w_{t,k} · r_{t+1,k}`` with
-    ``K_active(t) = #{k : w_{t,k} != 0}``. If no asset is active on a day,
-    that day's return is 0.
+    ``R^port_{t+1} = (1/K) · Σ_k w_{t,k} · r_{t+1,k}`` where K is the
+    total instrument universe (number of columns in the weight panel).
+    Flat/unselected instruments contribute 0 to the numerator but are
+    counted in the denominator (sit-outs show up as cash).
     """
     aligned = returns_panel.reindex(weights.index).reindex(
         columns=weights.columns
@@ -99,11 +101,8 @@ def strategy_returns(
     fwd = aligned.shift(-1).fillna(0.0)
     w = weights.fillna(0.0)
     raw = (w * fwd).sum(axis=1)
-    k_active = (w != 0.0).sum(axis=1).clip(lower=1)
-    out = (raw / k_active).rename("strategy_ret")
-    # Zero out days with no active assets (clip set them to /1, so check w).
-    no_active = (weights.fillna(0.0).abs().sum(axis=1) == 0.0)
-    out = out.where(~no_active, 0.0)
+    k_universe = weights.shape[1]
+    out = (raw / k_universe).rename("strategy_ret")
     # Drop last row (no forward return).
     return out.iloc[:-1]
 

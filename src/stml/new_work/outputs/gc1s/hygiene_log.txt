@@ -1,0 +1,18 @@
+OK: f11_crude_stock_surprise updates sparingly (zero_diff_frac=0.79) — release-date stamping confirmed
+OK: f11_dist_stock_surprise updates sparingly (zero_diff_frac=0.79) — release-date stamping confirmed
+OK: f11_ism_pmi_level has monthly update cadence (zero_diff_frac=0.95)
+OK: f11_ism_pmi_3m_change has monthly update cadence (zero_diff_frac=0.92)
+WARN: f11_vix_level_z has non-NaN values in first year of data — verify rolling z-score uses causal trailing window
+WARN: f11_move_z has non-NaN values in first year of data — verify rolling z-score uses causal trailing window
+Note: only harry/new_work HMM features used (hmm_vol_*, hmm_macro_*). No HMM features from main branch included.
+Dropped 2 sparse columns (>30% NaN): ['f15_dist_lead_lag', 'f15_asset_class_dispersion_z']
+Warmup trim: 164 → 164 events (dropped 0 NaN-bearing rows)
+Dropped 3 near-zero-variance cols: ['f7_amihud_20', 'f5_abs_signal', 'f5_days_since_nonzero']
+Dropped 4 near-perfect twins (|rho|>=0.99):
+  f6_donchian_pos_20 (twin of f1_hilo_pos_20, rho=0.994)
+  f5_days_since_flip (twin of f5_trailing_run_length, rho=1.000)
+  hmm_vol_next_turbulent (twin of hmm_vol_p2_turbulent, rho=1.000)
+  hmm_macro_next_riskoff (twin of hmm_macro_p0, rho=1.000)
+Cluster C4_f11 is dominated by F11 macro features. Correlation partly reflects shared update cadence (weekly/monthly). Label: 'low-frequency fundamentals'. Any importance here is a print-day signal (information arrives at release, not bar-by-bar).
+Cluster C5_f11 is dominated by F11 macro features. Correlation partly reflects shared update cadence (weekly/monthly). Label: 'low-frequency fundamentals'. Any importance here is a print-day signal (information arrives at release, not bar-by-bar).
+Cluster C6_f11 is dominated by F11 macro features. Correlation partly reflects shared update cadence (weekly/monthly). Label: 'low-frequency fundamentals'. Any importance here is a print-day signal (information arrives at release, not bar-by-bar).
