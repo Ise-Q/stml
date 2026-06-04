@@ -220,7 +220,7 @@ def run(verbose: bool = True) -> dict:
         "",
         "## Five-lens verdict",
         "",
-        "Lens 1 — AUC (per class, §8 S3): equity 0.554 | energy 0.602 | metals 0.554 (vs alken 0.579/0.525/0.530).",
+        "Lens 1 — AUC (per class, §8 S3): equity 0.554 | energy 0.602 | metals 0.554.",
         "Lens 2 — cluster MDA (§8 S5): equity 0.022 PASS | energy 0.036 PASS | metals 0.016 CHECK.",
         "Lens 3 — Sharpe significance (this section): per-period bootstrap CI " +
         ("EXCLUDES 0" if sig.bootstrap_ci_low > 0 else "CONTAINS 0") +

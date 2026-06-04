@@ -145,23 +145,49 @@ def test_pesaran_timmermann_constant_call_zero_stat():
 
 
 def test_pesaran_timmermann_finite_on_balanced_real_skill():
-    """When PT is well-defined, it returns finite stat.
-
-    PT structurally degenerates when var_P_hat ≈ var_P_star (alken §5.21 caveat
-    documents this). When the configuration is well-conditioned, the test
-    returns a finite stat. The test here checks the no-crash property; the
-    real-data result on our H1-2022 OOS is reported as 'PT undefined' in
-    significance_summary.md when the denominator collapses (which is the
-    expected behaviour).
-    """
+    """When PT is well-defined, it returns finite stat with a valid p-value."""
     from stml.experimental.signal_analysis import pesaran_timmermann
     rng = np.random.default_rng(8)
     realised = rng.normal(0.1, 1.0, 200)
-    predicted = rng.normal(0, 1, 200)  # uncorrelated
+    predicted = rng.normal(0, 1, 200)
     S, p = pesaran_timmermann(realised, predicted)
-    # Either finite or NaN — should never crash.
     if np.isfinite(S):
         assert 0 <= p <= 1
+
+
+def test_pesaran_timmermann_real_skill_rejects_null():
+    """Genuine directional skill -> PT stat large and positive, p < 0.01.
+
+    Constructs a sample where predicted aligns with realised 65 % of the
+    time on n = 500. The bug-fixed denominator (cross term /n^2) must give
+    a positive denom and a meaningful S statistic.
+    """
+    from stml.experimental.signal_analysis import pesaran_timmermann
+    rng = np.random.default_rng(11)
+    n = 500
+    realised = rng.normal(0, 1, n)
+    predicted = realised.copy()
+    flip = rng.random(n) < 0.35
+    predicted[flip] = -predicted[flip]
+    S, p = pesaran_timmermann(realised, predicted)
+    assert np.isfinite(S) and S > 3.0, f"expected S > 3, got {S}"
+    assert p < 0.01, f"expected p < 0.01, got {p}"
+
+
+def test_pesaran_timmermann_denom_positive_balanced():
+    """Bug regression: with balanced Py, Px around 0.5 on a realistic n,
+    var(P_hat) - var(P_star) must be POSITIVE (i.e. PT not NaN). The
+    pre-fix formula treated the cross term as /n instead of /n^2 and
+    flipped the sign of the denominator for our H1-2022 OOS sample.
+    """
+    from stml.experimental.signal_analysis import pesaran_timmermann
+    rng = np.random.default_rng(13)
+    n = 1342
+    realised = rng.normal(0, 1, n)
+    predicted = rng.normal(0, 1, n)
+    S, p = pesaran_timmermann(realised, predicted)
+    assert np.isfinite(S), "PT denom collapsed — pre-fix bug regression"
+    assert 0 <= p <= 1
 
 
 # ---------------------------------------------------------------------------

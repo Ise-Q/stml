@@ -97,16 +97,18 @@ def _slice_class(features: pd.DataFrame, asset_class: str) -> pd.DataFrame:
 
 
 def _restrict_modelling(features: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
-    """Keep only modelling-period rows (date ≤ global_train_cut).
+    """Keep only the train partition (Jay-CSV).
 
-    The held-out test slice (> embargo_end) is sealed and consumed only by
-    the simulated-missingness ablation and by the S8 final OOS read.
+    Val is held out for honest evaluation. Test is sealed.
     """
-    train_cut = pd.Timestamp(cfg.global_train_cut)
     df = features.copy()
     df["t_signal"] = pd.to_datetime(df["t_signal"])
     df["t_end"] = pd.to_datetime(df["t_end"])
-    return df.loc[df["t_signal"] <= train_cut].reset_index(drop=True)
+    if "partition" not in df.columns:
+        raise KeyError(
+            "features missing 'partition'; re-run make_labels + make_features."
+        )
+    return df.loc[df["partition"] == "train"].reset_index(drop=True)
 
 
 def run_asset_class(

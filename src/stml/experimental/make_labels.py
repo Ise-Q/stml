@@ -1,38 +1,57 @@
-"""S1 runner — produce ``data/sreeram_experimental_events.parquet`` +
-``results/sreeram_experimental/label_outcome_audit.csv`` for plan §8 acceptance.
+"""S1 runner — load Jay's per-instrument triple-barrier labels into the
+canonical events parquet.
 
-Run via:
+Replaces the previous GARCH(1,1) + global ``pt=sl=0.5, h=10`` label
+generator. The new labelling methodology is documented in
+``triple-barrier-label.pdf`` (Jay): per-instrument ``(pt, sl, h)`` geometry
+selected by adjusted-Sharpe over a 343-geometry grid with a held-out
+2022-H1 validation slice.
+
+Inputs:
+
+    data/triple_barrier_labels.csv
+        Columns: instrument, date, t1, partition, side, sigma, pt, sl, h,
+        ret, label, touch.
+
+Outputs:
+
+    data/sreeram_experimental_events.parquet
+        Canonical events schema (instrument, t_signal, t_start, t_end, side,
+        ret, label, uniqueness_weight, sigma_at_t, barrier_hit) + Jay's
+        per-instrument geometry columns (pt, sl, h) + `partition` column
+        that controls the train/val/test split downstream.
+
+    results/sreeram_experimental/label_outcome_audit.csv
+        Per-instrument composition: n_events, n_long/n_short, pos_rate,
+        PT/SL/vert counts and fractions, mean_uniqueness, plus the
+        adopted (pt, sl, h) geometry.
+
+    results/sreeram_experimental/jay_geometry_summary.csv
+        Per-instrument (pt, sl, h) + adjusted-Sharpe context — the "what
+        geometry was picked for each instrument and why".
+
+Run:
 
     uv run python -m stml.experimental.make_labels
 
-Sequence:
+Notes:
 
-1. Load cleaned OHLCV + wide signals via :func:`stml.experimental.data_loader.load_panel`.
-2. Per instrument:
-   a) Compute daily one-step-ahead GARCH(1,1) σ̂ over the close series (truncated
-      to ~10y before the first signal date for tractable wall-clock).
-   b) Run :func:`stml.experimental.labels.triple_barrier_labels` at the plan §3.2
-      default ``pt=sl=0.5, h=10``.
-3. Concatenate events into one frame.
-4. Compute the label-outcome audit (PT / SL / VERT composition per instrument).
-5. Persist ``data/sreeram_experimental_events.parquet`` and
-   ``results/sreeram_experimental/label_outcome_audit.csv``.
-
-Plan §8 S1 acceptance gates (verified at the end):
-   * Total event count matches Harry's ``events.csv`` (4886) to within ±50.
-   * Vertical-barrier fraction < 65 % per instrument at ``pt=sl=0.5``.
-
-If the GARCH fit fails for a particular instrument, the runner falls back to
-the EWMA-σ̂ surrogate (``ewma_daily_sigma`` with span 100) for that instrument
-and notes the substitution in the audit CSV.
+  * ``t_start`` is the next trading day after ``date`` on the instrument's
+    own calendar (entry-at-t+1 convention preserved).
+  * ``t_end`` is the CSV's ``t1`` column (first barrier touch or vertical).
+  * ``uniqueness_weight`` is computed per instrument as the mean of
+    ``1 / concurrency[bar]`` over the held window ``[t_start, t_end]`` —
+    AFML Ch.4, recomputed on Jay's spans.
+  * The CSV's ``touch`` column uses ``vert``; we rename to ``vertical`` to
+    match the downstream consumers (backtest, evaluation).
+  * The ``partition`` column drives the train/val/test split in Phase B;
+    no global cut is used.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-import time
-from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -40,8 +59,6 @@ import pandas as pd
 
 from stml.experimental.config import INSTRUMENTS, PipelineConfig
 from stml.experimental.data_loader import load_panel, per_instrument_frames
-from stml.experimental.labels import LabelConfig, triple_barrier_labels
-from stml.experimental.volatility import ewma_daily_sigma, garch_sigma
 
 
 def _find_repo_root() -> Path:
@@ -52,218 +69,308 @@ def _find_repo_root() -> Path:
     raise FileNotFoundError(f"Could not locate repo root from {here}")
 
 
-def _compute_sigma(
-    close: pd.Series,
-    *,
-    signal_dates: pd.DatetimeIndex,
-    cfg: PipelineConfig,
-    verbose: bool = True,
-) -> tuple[pd.Series, str]:
-    """Compute the per-instrument daily σ̂, falling back to EWMA on GARCH failure.
+# ---------------------------------------------------------------------------
+# Helpers.
+# ---------------------------------------------------------------------------
 
-    Truncates the close series to start ~10 years before the first signal date
-    so the GARCH fits remain tractable (the modelling window is 2.5y so 10y of
-    warm-up dwarfs it).
 
-    Returns
-    -------
-    (sigma, method) where method is 'garch' on success, 'ewma' on fallback.
+_REQUIRED_COLS = (
+    "instrument", "date", "t1", "partition",
+    "side", "sigma", "pt", "sl", "h", "ret", "label", "touch",
+)
+
+_VALID_PARTITIONS = ("train", "val", "test")
+_VALID_TOUCHES = ("pt", "sl", "vert")
+
+
+def _validate_raw(df: pd.DataFrame) -> None:
+    missing = [c for c in _REQUIRED_COLS if c not in df.columns]
+    if missing:
+        raise ValueError(f"Jay CSV missing columns: {missing}")
+    parts = set(df["partition"].dropna().unique())
+    bad_parts = parts - set(_VALID_PARTITIONS)
+    if bad_parts:
+        raise ValueError(f"unknown partition values: {bad_parts}")
+    touches = set(df["touch"].dropna().unique())
+    bad_touches = touches - set(_VALID_TOUCHES)
+    if bad_touches:
+        raise ValueError(f"unknown touch values: {bad_touches}")
+    if not df["instrument"].isin(INSTRUMENTS).all():
+        bad = sorted(set(df["instrument"]) - set(INSTRUMENTS))
+        raise ValueError(f"Unknown instruments in CSV: {bad}")
+
+
+def _per_instrument_uniqueness(
+    inst_events: pd.DataFrame, trading_days: pd.DatetimeIndex,
+) -> np.ndarray:
+    """AFML Ch.4 uniqueness weights on [t_start, t_end] per instrument.
+
+    Vectorised diff/cumsum trick. Days outside ``trading_days`` are dropped
+    from the span (defensive — shouldn't occur if t_start / t_end come from
+    the instrument's own calendar).
     """
-    if signal_dates.empty:
-        return ewma_daily_sigma(close), "ewma"
+    n = len(inst_events)
+    if n == 0:
+        return np.zeros(0, dtype=float)
+    pos_map = {ts: i for i, ts in enumerate(trading_days)}
+    pos_starts = np.empty(n, dtype=int)
+    pos_ends = np.empty(n, dtype=int)
+    for i, (ts, te) in enumerate(zip(inst_events["t_start"], inst_events["t_end"])):
+        if ts not in pos_map or te not in pos_map:
+            # Fallback: clip to nearest available day.
+            ts_idx = trading_days.searchsorted(ts, side="left")
+            te_idx = trading_days.searchsorted(te, side="right") - 1
+            ts_idx = int(np.clip(ts_idx, 0, len(trading_days) - 1))
+            te_idx = int(np.clip(te_idx, 0, len(trading_days) - 1))
+            pos_starts[i] = ts_idx
+            pos_ends[i] = max(te_idx, ts_idx)
+        else:
+            pos_starts[i] = pos_map[ts]
+            pos_ends[i] = pos_map[te]
+            if pos_ends[i] < pos_starts[i]:
+                pos_ends[i] = pos_starts[i]
+    # HALF-OPEN convention [pos_start, pos_end) — matches Jay's t1 semantics
+    # and ``backtest.build_position_panel``'s ``< t_end`` clipping. A h=1
+    # event has span_len = 1 (just the entry bar t); consecutive h=1 events
+    # are disjoint.
+    n_bars = len(trading_days)
+    delta = np.zeros(n_bars + 1, dtype=int)
+    for i in range(n):
+        # Defensive: if pos_end <= pos_start, treat as a 1-bar event on the
+        # entry bar (so uniqueness is well defined).
+        end_excl = max(pos_ends[i], pos_starts[i] + 1)
+        delta[pos_starts[i]] += 1
+        delta[end_excl] -= 1
+    concurrency = np.cumsum(delta)[:n_bars]
+    concurrency = np.maximum(concurrency, 1)
+    inv_conc = 1.0 / concurrency.astype(float)
+    inv_cumsum = np.concatenate([[0.0], np.cumsum(inv_conc)])
+    weights = np.empty(n, dtype=float)
+    for i in range(n):
+        end_excl = max(pos_ends[i], pos_starts[i] + 1)
+        span_len = end_excl - pos_starts[i]
+        s = inv_cumsum[end_excl] - inv_cumsum[pos_starts[i]]
+        weights[i] = s / max(span_len, 1)
+    return weights
 
-    first_signal = pd.Timestamp(signal_dates.min())
-    warm_start = first_signal - pd.DateOffset(years=10)
-    close_trimmed = close.loc[close.index >= warm_start]
-    # Need at least min_obs bars to attempt the GARCH fit.
-    if len(close_trimmed) < cfg.garch_min_obs + 50:
-        # Too thin for GARCH — surrogate.
-        return ewma_daily_sigma(close), "ewma"
 
-    if cfg.sigma_source == "garch":
-        try:
-            t0 = time.time()
-            sigma = garch_sigma(
-                close_trimmed,
-                refit=cfg.garch_refit_every,
-                min_obs=cfg.garch_min_obs,
-                max_window=cfg.garch_max_window,
-            )
-            if verbose:
-                print(f"    GARCH fit time: {time.time() - t0:.1f}s "
-                      f"(over {len(close_trimmed)} bars)")
-            # Reindex to full close.index — pre-warm-start σ̂ is NaN.
-            sigma = sigma.reindex(close.index)
-            # Defensive: any NaN inside the modelling window is filled with EWMA.
-            if sigma.loc[signal_dates].isna().any():
-                ewma = ewma_daily_sigma(close)
-                sigma = sigma.fillna(ewma)
-            return sigma, "garch"
-        except Exception as exc:
-            if verbose:
-                print(f"    GARCH failed ({exc.__class__.__name__}: {exc}); EWMA fallback.")
-            return ewma_daily_sigma(close), "ewma"
-
-    return ewma_daily_sigma(close), "ewma"
+# ---------------------------------------------------------------------------
+# Public API.
+# ---------------------------------------------------------------------------
 
 
 def build_events(
     cfg: PipelineConfig | None = None,
     *,
+    csv_path: Path | str | None = None,
     verbose: bool = True,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Build the canonical events frame + per-instrument audit table.
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Load Jay's CSV, map to the canonical events schema, compute uniqueness.
 
     Returns
     -------
     events : pd.DataFrame
-        One row per labelled event, with the schema from
-        :func:`stml.experimental.labels.triple_barrier_labels`.
+        Canonical events frame plus ``pt, sl, h, partition``.
     audit : pd.DataFrame
-        Per-instrument composition: n_events, n_long, n_short, n_label_1,
-        pt / sl / vertical counts and fractions, sigma_source used.
+        Per-instrument composition.
+    geometry : pd.DataFrame
+        Per-instrument adopted geometry.
     """
     cfg = cfg or PipelineConfig()
-    label_cfg = LabelConfig(
-        pt_mult=cfg.pt_mult, sl_mult=cfg.sl_mult, max_holding=cfg.max_holding
-    )
+    root = _find_repo_root()
+    csv_path = Path(csv_path) if csv_path else (root / "data" / "triple_barrier_labels.csv")
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Jay's labels CSV not found at {csv_path}")
 
     if verbose:
-        print(f"S1 make_labels — pt={cfg.pt_mult}, sl={cfg.sl_mult}, h={cfg.max_holding}, "
-              f"sigma_source={cfg.sigma_source}")
+        print(f"S1 make_labels — loading Jay's per-instrument labels from {csv_path.name}")
 
-    ohlcv, signals = load_panel()
-    panel = per_instrument_frames(ohlcv, signals)
+    raw = pd.read_csv(csv_path)
+    _validate_raw(raw)
+    raw["date"] = pd.to_datetime(raw["date"])
+    raw["t1"] = pd.to_datetime(raw["t1"])
+
+    # Per-instrument calendars from OHLCV (entry-at-t+1 requires the
+    # instrument's own trading-day index, not a global calendar).
+    ohlcv, _signals = load_panel()
+    panel = per_instrument_frames(ohlcv, _signals)
 
     parts = []
     audit_rows = []
+    geo_rows = []
+
     for inst in INSTRUMENTS:
-        if inst not in panel:
+        sub = raw.loc[raw["instrument"] == inst].copy()
+        if sub.empty:
             continue
+        if inst not in panel:
+            if verbose:
+                print(f"  [WARN] {inst}: no OHLCV calendar; skipping")
+            continue
+
         frame = panel[inst]
-        close = frame["close"].dropna()
-        signal = frame["signal"].reindex(close.index).fillna(0).astype(int)
-        signal_dates = close.index[signal != 0]
+        trading_days = pd.DatetimeIndex(frame.index)
 
-        if verbose:
-            print(f"  {inst}: {len(close)} bars, {len(signal_dates)} non-zero signal dates")
+        # Jay's convention (PDF): signal observed at close of `date`, position
+        # entered at close of `date`, exited at close of `t1`. The "first
+        # tradeable bar" is lag-1 = u_{t+1} = log(close_{t+1}/close_t), which
+        # requires entry at close(t). So t_start = t_signal (not next-trading-
+        # day) — this matches the realised `ret` column in Jay's CSV.
+        sub = sub.sort_values("date").reset_index(drop=True)
+        sub["t_signal"] = sub["date"]
+        sub["t_start"] = sub["date"]
+        sub["t_end"] = sub["t1"]
+        # Defensive: drop any rows whose date is past the instrument's history.
+        in_calendar = sub["t_signal"].isin(trading_days)
+        if not in_calendar.all():
+            dropped = int((~in_calendar).sum())
+            if verbose:
+                print(f"  [WARN] {inst}: dropping {dropped} events whose date is outside the OHLCV calendar")
+            sub = sub.loc[in_calendar].reset_index(drop=True)
 
-        sigma, method = _compute_sigma(
-            close=close, signal_dates=pd.DatetimeIndex(signal_dates), cfg=cfg, verbose=verbose
+        # Schema mapping.
+        events_inst = pd.DataFrame({
+            "instrument": inst,
+            "t_signal": sub["t_signal"],
+            "t_start": sub["t_start"],
+            "t_end": sub["t_end"],
+            "side": sub["side"].astype(int),
+            "ret": sub["ret"].astype(float),
+            "label": sub["label"].astype(int),
+            "sigma_at_t": sub["sigma"].astype(float),
+            "barrier_hit": sub["touch"].map({"pt": "pt", "sl": "sl", "vert": "vertical"}),
+            "pt": sub["pt"].astype(float),
+            "sl": sub["sl"].astype(float),
+            "h": sub["h"].astype(int),
+            "partition": sub["partition"].astype(str),
+        })
+
+        # Uniqueness weights on this instrument's calendar.
+        events_inst["uniqueness_weight"] = _per_instrument_uniqueness(
+            events_inst, trading_days,
         )
 
-        events = triple_barrier_labels(
-            close=close, signal=signal, sigma=sigma, instrument=inst, config=label_cfg
-        )
+        parts.append(events_inst)
 
-        n = len(events)
-        if n:
-            parts.append(events)
-            pt = int((events["barrier_hit"] == "pt").sum())
-            sl = int((events["barrier_hit"] == "sl").sum())
-            vert = int((events["barrier_hit"] == "vertical").sum())
-            n_long = int((events["side"] == +1).sum())
-            n_short = int((events["side"] == -1).sum())
-            n_label_1 = int(events["label"].sum())
-        else:
-            pt = sl = vert = n_long = n_short = n_label_1 = 0
+        # Audit row.
+        n = len(events_inst)
+        pt_n = int((events_inst["barrier_hit"] == "pt").sum())
+        sl_n = int((events_inst["barrier_hit"] == "sl").sum())
+        vert_n = int((events_inst["barrier_hit"] == "vertical").sum())
+        n_long = int((events_inst["side"] == 1).sum())
+        n_short = int((events_inst["side"] == -1).sum())
+        n_label_1 = int(events_inst["label"].sum())
+        audit_rows.append({
+            "instrument": inst,
+            "sigma_source": "f2_vol_20",  # Jay's methodology.
+            "n_events": n,
+            "n_long": n_long,
+            "n_short": n_short,
+            "n_label_1": n_label_1,
+            "pos_rate": n_label_1 / n if n else float("nan"),
+            "n_pt": pt_n, "n_sl": sl_n, "n_vertical": vert_n,
+            "frac_pt": pt_n / n if n else float("nan"),
+            "frac_sl": sl_n / n if n else float("nan"),
+            "frac_vertical": vert_n / n if n else float("nan"),
+            "mean_uniqueness": float(events_inst["uniqueness_weight"].mean()) if n else float("nan"),
+            "pt_mult": float(events_inst["pt"].iloc[0]),
+            "sl_mult": float(events_inst["sl"].iloc[0]),
+            "h": int(events_inst["h"].iloc[0]),
+            "n_train": int((events_inst["partition"] == "train").sum()),
+            "n_val": int((events_inst["partition"] == "val").sum()),
+            "n_test": int((events_inst["partition"] == "test").sum()),
+        })
 
-        audit_rows.append(
-            {
-                "instrument": inst,
-                "sigma_source": method,
-                "n_events": n,
-                "n_long": n_long,
-                "n_short": n_short,
-                "n_label_1": n_label_1,
-                "pos_rate": (n_label_1 / n) if n else float("nan"),
-                "n_pt": pt,
-                "n_sl": sl,
-                "n_vertical": vert,
-                "frac_pt": (pt / n) if n else float("nan"),
-                "frac_sl": (sl / n) if n else float("nan"),
-                "frac_vertical": (vert / n) if n else float("nan"),
-                "mean_uniqueness": (
-                    float(events["uniqueness_weight"].mean()) if n else float("nan")
-                ),
-            }
-        )
+        geo_rows.append({
+            "instrument": inst,
+            "pt": float(events_inst["pt"].iloc[0]),
+            "sl": float(events_inst["sl"].iloc[0]),
+            "h": int(events_inst["h"].iloc[0]),
+            "n_events": n,
+            "n_train": int((events_inst["partition"] == "train").sum()),
+            "n_val": int((events_inst["partition"] == "val").sum()),
+            "n_test": int((events_inst["partition"] == "test").sum()),
+            "pos_rate": n_label_1 / n if n else float("nan"),
+            "frac_pt": pt_n / n if n else float("nan"),
+            "frac_sl": sl_n / n if n else float("nan"),
+            "frac_vert": vert_n / n if n else float("nan"),
+        })
 
-    events_all = (
-        pd.concat(parts, ignore_index=True)
-        if parts
-        else triple_barrier_labels(
-            close=pd.Series(dtype=float),
-            signal=pd.Series(dtype=int),
-            sigma=pd.Series(dtype=float),
-            instrument="x",
-        )
-    )
+    if not parts:
+        raise RuntimeError("Jay CSV produced 0 events for every instrument")
+
+    events_all = pd.concat(parts, ignore_index=True)
     events_all = events_all.sort_values(["instrument", "t_signal"]).reset_index(drop=True)
     audit = pd.DataFrame(audit_rows)
-    return events_all, audit
+    geometry = pd.DataFrame(geo_rows)
+    return events_all, audit, geometry
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="S1 runner — build triple-barrier events with t+1 entry "
-                    "(plan §8 Stage 1 deliverable)."
+        description="S1 runner — load Jay's per-instrument triple-barrier "
+                    "labels into the canonical events parquet.",
     )
-    ap.add_argument("--pt-mult", type=float, default=PipelineConfig().pt_mult)
-    ap.add_argument("--sl-mult", type=float, default=PipelineConfig().sl_mult)
-    ap.add_argument("--h", type=int, default=PipelineConfig().max_holding)
-    ap.add_argument(
-        "--sigma-source", choices=["garch", "ewma"], default=PipelineConfig().sigma_source
-    )
-    ap.add_argument("--no-persist", action="store_true", help="Don't write parquet/CSV.")
+    ap.add_argument("--csv", type=str, default=None,
+                     help="Path to Jay's labels CSV (default: data/triple_barrier_labels.csv).")
+    ap.add_argument("--no-persist", action="store_true",
+                     help="Don't write parquet/CSV.")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
 
-    cfg = PipelineConfig(
-        pt_mult=args.pt_mult,
-        sl_mult=args.sl_mult,
-        max_holding=args.h,
-        sigma_source=args.sigma_source,
+    events, audit, geometry = build_events(
+        csv_path=args.csv, verbose=not args.quiet,
     )
-    events, audit = build_events(cfg, verbose=not args.quiet)
 
     print("\n=== Per-instrument audit ===")
-    with pd.option_context("display.max_columns", None, "display.width", 200):
+    with pd.option_context("display.max_columns", None, "display.width", 220):
         print(audit.to_string(index=False))
-    print(f"\n=== Totals ===")
+
+    print("\n=== Per-instrument geometry (Jay) ===")
+    with pd.option_context("display.max_columns", None, "display.width", 200):
+        print(geometry.to_string(index=False))
+
+    print("\n=== Totals ===")
     print(f"Total events: {len(events)}")
     print(f"Pos rate: {events['label'].mean():.3f}")
     print(f"PT fraction: {(events['barrier_hit'] == 'pt').mean():.3f}")
     print(f"SL fraction: {(events['barrier_hit'] == 'sl').mean():.3f}")
     print(f"Vertical fraction: {(events['barrier_hit'] == 'vertical').mean():.3f}")
+    print(f"Partition: train={int((events['partition']=='train').sum())}  "
+          f"val={int((events['partition']=='val').sum())}  "
+          f"test={int((events['partition']=='test').sum())}")
 
-    # Acceptance gates.
-    print("\n=== Plan §8 S1 acceptance gates ===")
-    target_n = 4886
+    # Acceptance gates — adapted to Jay's spec.
+    print("\n=== S1 acceptance gates ===")
     n_obs = len(events)
-    delta_n = n_obs - target_n
-    gate1 = abs(delta_n) <= 50
-    print(f"[{'PASS' if gate1 else 'CHECK'}] event count = {n_obs} (target {target_n} ±50, "
-          f"delta = {delta_n:+d})")
-    vert_frac = (events["barrier_hit"] == "vertical").mean()
-    max_inst_vert = audit["frac_vertical"].max()
-    gate2 = float(max_inst_vert) < 0.65
-    print(f"[{'PASS' if gate2 else 'CHECK'}] per-instrument vertical fraction max = "
-          f"{max_inst_vert:.3f} (< 0.65 target)")
-    print(f"        pooled vertical fraction = {vert_frac:.3f}")
+    gate1 = 4800 <= n_obs <= 5000
+    print(f"[{'PASS' if gate1 else 'CHECK'}] event count = {n_obs} (target ~4917 from CSV)")
+    coverage = sorted(events["instrument"].unique())
+    gate2 = set(coverage) == set(INSTRUMENTS)
+    print(f"[{'PASS' if gate2 else 'CHECK'}] all 11 instruments present = {gate2}")
+    bad_partition = (~events["partition"].isin(("train", "val", "test"))).sum()
+    gate3 = bad_partition == 0
+    print(f"[{'PASS' if gate3 else 'CHECK'}] no rogue partitions = {gate3}")
+    bad_uniq = ((events["uniqueness_weight"] <= 0) | (events["uniqueness_weight"] > 1)).sum()
+    gate4 = bad_uniq == 0
+    print(f"[{'PASS' if gate4 else 'CHECK'}] uniqueness in (0, 1] for all events = {gate4}")
 
     if not args.no_persist:
         root = _find_repo_root()
         events_path = root / "data" / "sreeram_experimental_events.parquet"
         audit_path = root / "results" / "sreeram_experimental" / "label_outcome_audit.csv"
+        geo_path = root / "results" / "sreeram_experimental" / "jay_geometry_summary.csv"
         events_path.parent.mkdir(parents=True, exist_ok=True)
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         events.to_parquet(events_path, index=False)
         audit.to_csv(audit_path, index=False, float_format="%.6f")
+        geometry.to_csv(geo_path, index=False, float_format="%.6f")
         print(f"\nWrote {events_path.relative_to(root)} ({len(events)} rows)")
         print(f"Wrote {audit_path.relative_to(root)} ({len(audit)} rows)")
+        print(f"Wrote {geo_path.relative_to(root)} ({len(geometry)} rows)")
 
-    return 0 if (gate1 and gate2) else 1
+    all_gates = gate1 and gate2 and gate3 and gate4
+    return 0 if all_gates else 1
 
 
 if __name__ == "__main__":

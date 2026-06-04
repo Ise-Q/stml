@@ -132,6 +132,43 @@ def ewma_daily_sigma(close: pd.Series, span: int = 100, min_periods: int = 20) -
     return log_ret.ewm(span=span, min_periods=min_periods, adjust=False).std()
 
 
+def ewma_lecturer(returns: pd.Series, span: int = 60) -> pd.Series:
+    """Causal EWMA daily σ̂ following Madmoun Optional Session 3, slide 39.
+
+    Recurrence (exactly as written in the lecture):
+        λ = 2 / (span + 1)
+        μ_t = λ · r_t + (1 − λ) · μ_{t-1}
+        σ²_t = λ · (r_t − μ_t)² + (1 − λ) · σ²_{t-1}
+
+    Initialised with μ_0 = r_0 and σ²_0 = Var(r_{0:21}) (variance of the first
+    21 observations, matching the lecture). Returns the standard-deviation
+    series σ_t (per-bar, daily-frequency, *not* annualised).
+
+    Used by :mod:`stml.experimental.sizing` for the position-weight formula
+    ``w_{t,k} = ŷ_{t,k} · σ_tgt / σ_{t,k}``.
+    """
+    r = returns.astype(float).dropna()
+    if r.empty:
+        return pd.Series(dtype=float)
+    lam = 2.0 / (float(span) + 1.0)
+    n = len(r)
+    mu = np.empty(n, dtype=float)
+    var = np.empty(n, dtype=float)
+    mu[0] = float(r.iloc[0])
+    # Variance of the first 21 obs (or all if fewer).
+    seed_window = min(21, n)
+    var[0] = float(np.var(r.iloc[:seed_window].values, ddof=1)) if seed_window > 1 else 0.0
+    if var[0] <= 0:
+        var[0] = 1e-12
+    for t in range(1, n):
+        rt = float(r.iloc[t])
+        mu[t] = lam * rt + (1.0 - lam) * mu[t - 1]
+        var[t] = lam * (rt - mu[t]) ** 2 + (1.0 - lam) * var[t - 1]
+    sigma = np.sqrt(np.maximum(var, 0.0))
+    out = pd.Series(sigma, index=r.index, name="sigma_ewma_lecturer")
+    return out.reindex(returns.index).ffill()
+
+
 # ---------------------------------------------------------------------------
 # GARCH(1,1) — the plan §3.2 default barrier scale.
 # ---------------------------------------------------------------------------

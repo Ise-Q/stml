@@ -69,48 +69,181 @@ def test_ece_formula_on_perfect_calibration():
 
 
 # ---------------------------------------------------------------------------
-# Sizing.
+# Sizing — Madmoun Optional Session 3, slides 33-34.
 # ---------------------------------------------------------------------------
 
 
-def test_kelly_fraction_symmetric():
-    """Symmetric Kelly: f* = 2p - 1."""
-    from stml.experimental.sizing import kelly_fraction
-    assert kelly_fraction(0.6) == pytest.approx(0.2, abs=1e-9)
-    assert kelly_fraction(0.5) == pytest.approx(0.0, abs=1e-9)
-    assert kelly_fraction(0.4) == pytest.approx(-0.2, abs=1e-9)
+# 3 fixed methods
 
 
-def test_fractional_kelly_hard_floor():
-    """Probability below floor → zero weight."""
-    from stml.experimental.sizing import fractional_kelly
-    assert fractional_kelly(0.50) == 0.0  # below 0.55 floor
-    assert fractional_kelly(0.54) == 0.0
-    # Above floor — kappa * (2p-1) * 1.
-    val = fractional_kelly(0.70, kappa=0.25)
-    assert val == pytest.approx(0.25 * 0.4, abs=1e-9)
+def test_model_confidence_below_half_is_zero():
+    """ModelConfidence(p) = p · 1{p > 0.5}."""
+    from stml.experimental.sizing import model_confidence
+    assert model_confidence(0.30) == 0.0
+    assert model_confidence(0.50) == 0.0
+    assert model_confidence(0.70) == pytest.approx(0.70, abs=1e-12)
 
 
-def test_vol_target_leverage_clips():
-    """Realised vol > target → leverage <= 1; realised < target → leverage > 1
-    but clipped to max_leverage."""
+def test_all_or_nothing_binary():
+    """AllOrNothing(p) = 1{p > 0.5}."""
+    from stml.experimental.sizing import all_or_nothing
+    assert all_or_nothing(0.49) == 0.0
+    assert all_or_nothing(0.50) == 0.0
+    assert all_or_nothing(0.51) == 1.0
+    assert all_or_nothing(0.99) == 1.0
+
+
+def test_ncdf_below_half_is_zero():
+    """NCDF returns 0 below 0.5 and Φ(z) above."""
+    from stml.experimental.sizing import ncdf
+    assert ncdf(0.40) == 0.0
+    assert ncdf(0.50) == 0.0
+    # At p slightly above 0.5: z is small and positive → output > 0.5.
+    val = float(np.atleast_1d(ncdf(0.55)).ravel()[0])
+    assert val > 0.5
+    # At p = 1.0: z = ∞, Φ(z) → 1.
+    val = float(np.atleast_1d(ncdf(0.999)).ravel()[0])
+    assert val > 0.95
+
+
+def test_ncdf_monotone_above_half():
+    """NCDF is monotone non-decreasing above 0.5."""
+    from stml.experimental.sizing import ncdf
+    p = np.linspace(0.51, 0.99, 25)
+    vals = np.asarray(ncdf(p)).ravel()
+    assert (np.diff(vals) >= -1e-9).all()
+
+
+# 3 estimated methods
+
+
+def test_linear_scaling_stretches_training_range():
+    """LinearScaling stretches [min p_tr, max p_tr] to [0, 1]."""
+    from stml.experimental.sizing import fit_linear_scaling
+    p_tr = np.array([0.55, 0.65, 0.75])
+    fit = fit_linear_scaling(p_tr)
+    # Min maps to 0, max maps to 1.
+    assert float(fit.transform(np.array([0.55]))[0]) == pytest.approx(0.0, abs=1e-9)
+    assert float(fit.transform(np.array([0.75]))[0]) == pytest.approx(1.0, abs=1e-9)
+    # Below 0.5 always zero.
+    assert float(fit.transform(np.array([0.40]))[0]) == 0.0
+
+
+def test_ecdf_percentile_above_half():
+    """ECDF gives 0/N for the min and N/N for the max of the training set."""
+    from stml.experimental.sizing import fit_ecdf
+    p_tr = np.array([0.51, 0.60, 0.70, 0.80, 0.90])
+    fit = fit_ecdf(p_tr)
+    # Query > max → CDF = 1.
+    assert float(fit.transform(np.array([0.95]))[0]) == pytest.approx(1.0, abs=1e-9)
+    # Below 0.5 always zero (the lecturer's "return 0 when p ≤ 0.5").
+    assert float(fit.transform(np.array([0.40]))[0]) == 0.0
+
+
+def test_sops_fits_a_sigmoid_that_separates_profitable_trades():
+    """SOPS should give larger sizes to higher-probability trades when those
+    trades are profitable on training data."""
+    from stml.experimental.sizing import fit_sops
+    rng = np.random.default_rng(0)
+    n = 400
+    p_tr = rng.uniform(0.45, 0.95, n)
+    # Mean return increases linearly with p — the kind of structure SOPS
+    # is designed to exploit.
+    r_tr = (p_tr - 0.5) * 0.05 + 0.005 * rng.standard_normal(n)
+    fit = fit_sops(p_tr, r_tr, refine=False)
+    # Larger sizes for larger probabilities.
+    sizes = np.asarray(fit.transform(np.array([0.55, 0.80, 0.95]))).ravel()
+    assert (np.diff(sizes) > 0).all()
+    # Below 0.5 → zero.
+    assert float(np.asarray(fit.transform(np.array([0.40]))).ravel()[0]) == 0.0
+
+
+def test_sizing_policy_dispatch_for_all_six_methods():
+    """fit_sizing_policy + transform smoke-checks all six methods."""
+    from stml.experimental.sizing import fit_sizing_policy
+    rng = np.random.default_rng(1)
+    p_tr = rng.uniform(0.45, 0.90, 100)
+    r_tr = rng.standard_normal(100) * 0.01
+    for m in ("model_confidence", "all_or_nothing", "ncdf",
+              "linear_scaling", "ecdf", "sops"):
+        pol = fit_sizing_policy(m, p_tr=p_tr, r_tr=r_tr)
+        b = pol.transform(np.array([0.30, 0.55, 0.85]))
+        b = np.asarray(b).ravel()
+        # Below 0.5 always zero across all six methods.
+        assert b[0] == 0.0
+        # Range is [0, 1].
+        assert (b >= 0.0).all() and (b <= 1.0 + 1e-9).all()
+
+
+def test_vol_target_leverage_lecturer_formula():
+    """Daily σ̂ annualised by √252; leverage = target / ann_σ, clipped."""
     from stml.experimental.sizing import vol_target_leverage
-    # Realised 0.2, target 0.08 → 0.4
-    assert vol_target_leverage(0.20, target_vol=0.08) == pytest.approx(0.4, abs=1e-9)
-    # Realised tiny → clipped to max_leverage=5.
-    assert vol_target_leverage(0.001, target_vol=0.08, max_leverage=5.0) == 5.0
-    # Zero vol → 0.
+    # Daily σ̂ = 0.0126 → annualised ≈ 0.20; target 0.10 → leverage ≈ 0.5.
+    val = vol_target_leverage(0.0126, target_vol=0.10, max_leverage=10.0)
+    assert val == pytest.approx(0.10 / (0.0126 * np.sqrt(252.0)), rel=1e-6)
+    # Pathological tiny σ̂ → clipped to max_leverage.
+    assert vol_target_leverage(1e-6, target_vol=0.10, max_leverage=10.0) == 10.0
+    # NaN / zero / negative → 0.
     assert vol_target_leverage(0.0) == 0.0
+    assert vol_target_leverage(float("nan")) == 0.0
 
 
-def test_position_weight_sign_follows_side():
-    """side = +1 → positive weight; side = -1 → negative weight."""
-    from stml.experimental.sizing import position_weight
-    long_w = position_weight(+1, 0.7, realised_vol=0.10)
-    short_w = position_weight(-1, 0.7, realised_vol=0.10)
+def test_position_weight_sign_follows_side_lecturer():
+    """side = +1 → positive weight; side = -1 → negative; equal magnitudes."""
+    from stml.experimental.sizing import fit_sizing_policy, position_weight
+    pol = fit_sizing_policy("model_confidence")
+    long_w = position_weight(+1, 0.70, daily_sigma=0.012, policy=pol)
+    short_w = position_weight(-1, 0.70, daily_sigma=0.012, policy=pol)
     assert long_w > 0
     assert short_w < 0
-    assert long_w == -short_w
+    assert long_w == pytest.approx(-short_w, abs=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# Threshold p* = L / (G + L).
+# ---------------------------------------------------------------------------
+
+
+def test_threshold_p_star_basic():
+    """Hand-crafted G/L: rG=+0.02, rL=-0.01 → p* = 0.01 / 0.03 = 1/3."""
+    from stml.experimental.threshold import estimate_threshold
+    # 50 TP with ret +0.02; 50 FP with ret -0.01; all with proba > 0.5.
+    n = 100
+    proba = np.linspace(0.51, 0.99, n)
+    label = np.array([1] * 50 + [0] * 50)
+    ret = np.where(label == 1, 0.02, -0.01)
+    est = estimate_threshold(proba, label, ret, n_bootstrap=200, seed=0)
+    assert est.p_star == pytest.approx(1.0 / 3.0, abs=1e-9)
+    assert est.n_tp == 50 and est.n_fp == 50
+    # CI brackets the point estimate.
+    assert est.ci_low <= est.p_star <= est.ci_high
+
+
+def test_threshold_clamps_to_unit_interval():
+    """If rG ≤ rL the formula degenerates → defensive p* = 0.5."""
+    from stml.experimental.threshold import estimate_threshold
+    n = 60
+    proba = np.linspace(0.55, 0.95, n)
+    label = np.array([1] * 30 + [0] * 30)
+    ret = np.where(label == 1, -0.01, 0.02)  # inverted: TP loses, FP wins
+    est = estimate_threshold(proba, label, ret, n_bootstrap=50, seed=0)
+    assert est.p_star == 0.5  # default clamp
+
+
+def test_primary_vs_meta_evaluation():
+    """Primary-alone vs primary+meta filter -- expected counts."""
+    from stml.experimental.evaluation import primary_vs_meta_evaluation
+    proba = np.array([0.4, 0.6, 0.7, 0.3, 0.8, 0.55, 0.45, 0.9])
+    label = np.array([0, 1, 1, 0, 1, 0, 0, 1])  # base rate = 4/8 = 0.5
+    out = primary_vs_meta_evaluation(proba, label, threshold=0.55)
+    assert out["primary_tp"] == 4
+    assert out["primary_fp"] == 4
+    # Meta-filter takes proba >= 0.55: rows 1,2,4,5,7 → labels 1,1,1,0,1.
+    assert out["meta_tp"] == 4
+    assert out["meta_fp"] == 1
+    assert out["meta_fn"] == 0
+    assert out["false_positives_avoided"] == 3
+    assert out["delta_precision"] > 0
 
 
 # ---------------------------------------------------------------------------
