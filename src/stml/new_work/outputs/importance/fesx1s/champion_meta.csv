@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+fesx1s,equity,fesx1s,tree,rf,0.4964,0.0242,0.4722,False,15,0

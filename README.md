@@ -4,9 +4,14 @@
 trading signal `s ∈ {−1, 0, +1}` for 11 futures and predicts, for each non-zero signal, the
 **probability that following the trade is profitable** under a triple-barrier exit.
 
-This submission covers **Part I — the feature-engineering foundation** end-to-end: it regenerates the
-full F1–F17 feature matrix **from raw OHLCV + signals**, including for the hidden Jul–Dec 2022 window.
-(Labelling, model fitting and position-sizing are Part II.)
+The notebook has two parts. **Part I — the feature-engineering foundation** regenerates the full F1–F17
+feature matrix **from raw OHLCV + signals**, including for the hidden Jul–Dec 2022 window. **Part II —
+the meta-model** fits the model under purged CPCV, selects a champion per instrument, extracts the
+cluster-level **weight vector** (feature importance), and saves the **hyper-parameter / champion cache**
+(`src/stml/new_work/outputs/selected_hps.json`) so re-runs reuse it. Part II **loads the team's
+committed CPCV results by default**; set `FORCE_RECOMPUTE = True` to re-run the real fit. The
+consolidated `date,instrument,prediction` deliverable, the H2-2022 refit, and position-sizing are a
+later step.
 
 ---
 
@@ -15,12 +20,19 @@ full F1–F17 feature matrix **from raw OHLCV + signals**, including for the hid
 ```
 submission.ipynb                       the one notebook — run this top-to-bottom
 src/stml/                              the util package (imported as `import stml`)
+  metamodel/ , model/                  Part I — the F1–F17 feature pipeline
+  harry/ , new_work/                   Part II — meta-model: features, CPCV, importance, hp_cache
+  new_work/outputs/                    Part II committed results (CPCV, finalisation, importance,
+                                       _cache/*.parquet) + selected_hps.json (saved hyper-parameters)
 data/
   ohlcv_data.csv                       raw OHLCV            ← REPLACE with your through-Dec-2022 file
   primary_signals.csv                  raw signals         ← REPLACE with your through-Dec-2022 file
   additional_data.xlsx                 F11 macro workbook (released window)
   OOS_additional_data.xlsx             F11 macro source for Jul–Dec 2022 (provenance)
   features/f11_macro_context_oos.csv   our EXTERNAL features for Jul–Dec 2022 (the shipped CSV)
+  meta/triple_barrier_labels.csv       Part II — canonical triple-barrier meta-labels (team input)
+  meta/macro_features.csv              Part II — macro feature source (HMM)
+  alternate_data_cleaned.csv           Part II — macro feature source (M1–M6)
 requirements.txt                     pinned deps (pip fallback)
 pyproject.toml / uv.lock             project + locked deps (uv)
 ```

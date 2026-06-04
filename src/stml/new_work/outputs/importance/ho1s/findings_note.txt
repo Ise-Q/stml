@@ -1,0 +1,77 @@
+=== Findings note: ho1s ===
+Champion: energy_cl_ho / RF
+Signal context: strong signal but thin; single-class folds dropped; treat as indicative
+CPCV: 15 valid folds, AUC=0.634±0.227
+
+--- Cluster-level MDA (mean ± std, sorted) ---
+    C13_f11                                   +0.0895 ± 0.1534
+    C12_f12                                   +0.0336 ± 0.0751
+    F5_signal                                 +0.0252 ± 0.0368
+    C6_f11_lowfreq_macro                      +0.0199 ± 0.0603
+    F4_latent                                 +0.0154 ± 0.0710
+    C2_f1                                     +0.0136 ± 0.0509
+    C3_f11_lowfreq_macro                      +0.0058 ± 0.0198
+    F8_calendar                               +0.0045 ± 0.0162
+    C11_f7                                    +0.0023 ± 0.0159
+    F_instrument                              +0.0000 ± 0.0000
+    C10_f11_lowfreq_macro                     -0.0009 ± 0.0457
+    C8_f7                                     -0.0009 ± 0.0089
+    C9_f11_lowfreq_macro                      -0.0028 ± 0.0127
+    C4_f2                                     -0.0160 ± 0.0560
+    C7_f11                                    -0.0189 ± 0.0689
+    C1_f1                                     -0.0364 ± 0.0667
+    C5_f2                                     -0.0863 ± 0.1491
+
+Significant clusters (mean > 1σ): none
+Inconclusive clusters (|mean| ≤ 1σ): ['C1_f1', 'C2_f1', 'C3_f11_lowfreq_macro', 'C4_f2', 'C5_f2', 'C6_f11_lowfreq_macro', 'C7_f11', 'C8_f7', 'C9_f11_lowfreq_macro', 'C10_f11_lowfreq_macro', 'C11_f7', 'C12_f12', 'C13_f11', 'F4_latent', 'F5_signal', 'F8_calendar', 'F_instrument']
+
+--- Cross-method rank agreement (Kendall τ) ---
+  MDA-MDI: τ=+0.22  [DISAGREE]
+  MDA-SHAP: τ=+0.24  [DISAGREE]
+  MDI-SHAP: τ=+0.99  [AGREE]
+
+--- Semantic F-group recovery ---
+  C1_f1: dominant=f1 purity=73% (mixed)
+  C2_f1: dominant=f1 purity=40% (mixed)
+  C3_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C4_f2: dominant=f2 purity=62% (mixed)
+  C5_f2: dominant=f2 purity=83% (pure)
+  C6_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C7_f11: dominant=f11 purity=67% (mixed)
+  C8_f7: dominant=f7 purity=100% (pure)
+  C9_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C10_f11_lowfreq_macro: dominant=f11 purity=100% (pure)
+  C11_f7: dominant=f7 purity=100% (pure)
+  C12_f12: dominant=f12 purity=56% (mixed)
+  C13_f11: dominant=f11 purity=50% (mixed)
+  F4_latent: dominant=f4 purity=100% (pure)
+  F5_signal: dominant=f5 purity=100% (pure)
+  F8_calendar: dominant=f8 purity=100% (pure)
+  F_instrument: dominant=inst purity=100% (pure)
+
+--- Within-cluster breakdown (top clusters) ---
+  C13_f11 (PC1 explains 24.1%):
+    mean|SHAP|=0.0349  f11_gasoline_stock_surprise
+    mean|SHAP|=0.0139  f11_move_z
+    mean|SHAP|=0.0116  f11_ng_stock_surprise
+    mean|SHAP|=0.0077  f11_baltic_5d_change
+    mean|SHAP|=0.0076  f11_baltic_dry_z
+    PC1 top loadings: f11_ng_stock_surprise (+0.54), f6_adx_14 (-0.45), f11_baltic_dry_z (+0.44)
+  C12_f12 (PC1 explains 27.5%):
+    mean|SHAP|=0.0105  f11_real_yield_10y
+    mean|SHAP|=0.0073  f11_ism_pmi_3m_change
+    mean|SHAP|=0.0070  f12_mra_energy_D1
+    mean|SHAP|=0.0033  f12_mra_energy_D2
+    mean|SHAP|=0.0026  f11_dist_stock_surprise
+    PC1 top loadings: f11_real_yield_10y (+0.49), f12_mra_energy_D2 (-0.46), f11_skew_z (-0.37)
+  F5_signal (PC1 explains 53.2%):
+    mean|SHAP|=0.0041  f5_signal
+    mean|SHAP|=0.0034  f5_long_bias_20
+    mean|SHAP|=0.0025  f5_participation_20
+    mean|SHAP|=0.0022  f5_sign_agree_mr
+    mean|SHAP|=0.0011  f5_trailing_run_length
+    PC1 top loadings: f5_long_bias_20 (+0.57), f5_participation_20 (+0.53), f5_trailing_run_length (+0.46)
+
+Note: MDI is a train-set statistic (upward-biased for high-cardinality features).
+SHAP uses tree_path_dependent perturbation (corrects for correlated features).
+Clustered MDA uses a shared row permutation across all cluster members.

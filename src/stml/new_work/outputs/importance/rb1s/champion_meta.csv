@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+rb1s,energy,rb1s,logistic,logistic,0.5773,0.071,0.5063,True,15,0

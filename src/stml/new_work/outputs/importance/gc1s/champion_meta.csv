@@ -1,0 +1,2 @@
+instrument,asset_class,group,family,model_type,auc_mean,auc_std,lower_ci,signal,n_folds,n_sig_clusters
+gc1s,metals,precious,tree,rf,0.4866,0.1132,0.3734,False,15,0
