@@ -10,7 +10,7 @@ against a primary-blind baseline; sealed-test results in
 > `(pt, sl, h)` selected by an adjusted-Sharpe grid search over 343
 > configurations on the development partition only (test partition never
 > touched during label selection). Per-instrument winners in
-> `results/submission/jay_geometry_summary.csv`. All downstream
+> `results/submission/per_instrument_geometry_summary.csv`. All downstream
 > stages — champion selection, calibration, sizing, backtest, importance —
 > operate on the same `(events, partition)` schema.
 
