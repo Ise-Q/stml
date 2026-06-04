@@ -7796,12 +7796,16 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7be4f0c9-357b-4271-8f27-65ae79886d60">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ce7d42a4-58e5-44e8-a3ea-d8aada2be344">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<style>
+pre, div.highlight pre, .jp-RenderedText pre { white-space: pre-wrap !important; word-break: break-word; }
+table { font-size: 0.9em; }
+</style>
 <h1 id="Energy-%E2%80%94-metamodel-pipeline">Energy — metamodel pipeline<a class="anchor-link" href="#Energy-%E2%80%94-metamodel-pipeline">¶</a></h1><p>This notebook builds the metamodel for the energy complex — WTI crude, heating oil, RBOB gasoline and Henry Hub natural gas. Energy is the awkward, and most rewarding, corner of the universe. The instruments do not share a single signal character: crude behaves unlike the refined products, and natural gas is thin enough that it must be modelled in a pool rather than alone. Despite that heterogeneity, energy is the engine of the pooled strategy's out-of-sample return. The sections trace how the signal, the labelling and the per-instrument model choices combine into that contribution.</p>
 <p><strong>Universe.</strong> <code>cl1s</code>, <code>ho1s</code>, <code>rb1s</code>, <code>ng1s</code> (4 contracts).</p>
 <p><strong>Reading guide.</strong> The notebook runs top to bottom against committed artifacts; no model is retrained. Each stage loads its result files and embeds the figures already produced by the pipeline. Section order mirrors the marking scheme in <code>reports/harry/00-context.md</code>: data, signal, labelling, features, model selection, cluster importance, evaluation.</p>
@@ -7809,7 +7813,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=af65609c-ec7f-4b1e-807b-129029760e66">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=1caa5c2a-8958-437c-ab18-8c535ee58afb">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7874,7 +7878,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=90893443-eec7-4c87-a88b-f1665a6a76e8">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ef38220f-d37a-43a2-a570-2f8c0a1cd11e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7884,7 +7888,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a998a862-e3fd-4185-b0b3-afb7dbfcd664">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=44cbf909-5c45-4484-b138-e95684e51438">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7912,40 +7916,40 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_ec03a">
+<table id="T_50b8e">
 <caption>Energy — OHLCV coverage (data/ohlcv_data.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_ec03a_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_ec03a_level0_col1">first_date</th>
-<th class="col_heading level0 col2" id="T_ec03a_level0_col2">last_date</th>
-<th class="col_heading level0 col3" id="T_ec03a_level0_col3">n_rows</th>
+<th class="col_heading level0 col0" id="T_50b8e_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_50b8e_level0_col1">first_date</th>
+<th class="col_heading level0 col2" id="T_50b8e_level0_col2">last_date</th>
+<th class="col_heading level0 col3" id="T_50b8e_level0_col3">n_rows</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_ec03a_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_ec03a_row0_col1">1990-01-02</td>
-<td class="data row0 col2" id="T_ec03a_row0_col2">2022-06-30</td>
-<td class="data row0 col3" id="T_ec03a_row0_col3">8171</td>
+<td class="data row0 col0" id="T_50b8e_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_50b8e_row0_col1">1990-01-02</td>
+<td class="data row0 col2" id="T_50b8e_row0_col2">2022-06-30</td>
+<td class="data row0 col3" id="T_50b8e_row0_col3">8171</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_ec03a_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_ec03a_row1_col1">1990-01-02</td>
-<td class="data row1 col2" id="T_ec03a_row1_col2">2022-06-30</td>
-<td class="data row1 col3" id="T_ec03a_row1_col3">8169</td>
+<td class="data row1 col0" id="T_50b8e_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_50b8e_row1_col1">1990-01-02</td>
+<td class="data row1 col2" id="T_50b8e_row1_col2">2022-06-30</td>
+<td class="data row1 col3" id="T_50b8e_row1_col3">8169</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_ec03a_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_ec03a_row2_col1">1990-01-02</td>
-<td class="data row2 col2" id="T_ec03a_row2_col2">2022-06-30</td>
-<td class="data row2 col3" id="T_ec03a_row2_col3">8170</td>
+<td class="data row2 col0" id="T_50b8e_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_50b8e_row2_col1">1990-01-02</td>
+<td class="data row2 col2" id="T_50b8e_row2_col2">2022-06-30</td>
+<td class="data row2 col3" id="T_50b8e_row2_col3">8170</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_ec03a_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_ec03a_row3_col1">1990-04-04</td>
-<td class="data row3 col2" id="T_ec03a_row3_col2">2022-06-30</td>
-<td class="data row3 col3" id="T_ec03a_row3_col3">8104</td>
+<td class="data row3 col0" id="T_50b8e_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_50b8e_row3_col1">1990-04-04</td>
+<td class="data row3 col2" id="T_50b8e_row3_col2">2022-06-30</td>
+<td class="data row3 col3" id="T_50b8e_row3_col3">8104</td>
 </tr>
 </tbody>
 </table>
@@ -7954,7 +7958,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a0363895-72e4-41c2-8ba6-0e8cf92fc6ce">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1e3f95a0-0b92-489d-8813-713672b1681f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7964,7 +7968,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d6ba64f0-fb13-4586-965e-ce71b1c62ef4">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=681fd6a2-64c6-49e9-81d5-a98802343c08">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7992,50 +7996,50 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_03e75">
+<table id="T_309c0">
 <caption>Energy — signal direction (results/harry/signal_direction.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_03e75_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_03e75_level0_col1">n_bets</th>
-<th class="col_heading level0 col2" id="T_03e75_level0_col2">corr_fwd_1</th>
-<th class="col_heading level0 col3" id="T_03e75_level0_col3">corr_fwd_5</th>
-<th class="col_heading level0 col4" id="T_03e75_level0_col4">corr_trail_1</th>
-<th class="col_heading level0 col5" id="T_03e75_level0_col5">corr_contemp_0</th>
+<th class="col_heading level0 col0" id="T_309c0_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_309c0_level0_col1">n_bets</th>
+<th class="col_heading level0 col2" id="T_309c0_level0_col2">corr_fwd_1</th>
+<th class="col_heading level0 col3" id="T_309c0_level0_col3">corr_fwd_5</th>
+<th class="col_heading level0 col4" id="T_309c0_level0_col4">corr_trail_1</th>
+<th class="col_heading level0 col5" id="T_309c0_level0_col5">corr_contemp_0</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_03e75_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_03e75_row0_col1">422</td>
-<td class="data row0 col2" id="T_03e75_row0_col2">0.1207</td>
-<td class="data row0 col3" id="T_03e75_row0_col3">0.0859</td>
-<td class="data row0 col4" id="T_03e75_row0_col4">0.0029</td>
-<td class="data row0 col5" id="T_03e75_row0_col5">0.0005</td>
+<td class="data row0 col0" id="T_309c0_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_309c0_row0_col1">422</td>
+<td class="data row0 col2" id="T_309c0_row0_col2">0.1207</td>
+<td class="data row0 col3" id="T_309c0_row0_col3">0.0859</td>
+<td class="data row0 col4" id="T_309c0_row0_col4">0.0029</td>
+<td class="data row0 col5" id="T_309c0_row0_col5">0.0005</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_03e75_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_03e75_row1_col1">63</td>
-<td class="data row1 col2" id="T_03e75_row1_col2">0.0357</td>
-<td class="data row1 col3" id="T_03e75_row1_col3">-0.0422</td>
-<td class="data row1 col4" id="T_03e75_row1_col4">-0.1143</td>
-<td class="data row1 col5" id="T_03e75_row1_col5">-0.1548</td>
+<td class="data row1 col0" id="T_309c0_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_309c0_row1_col1">63</td>
+<td class="data row1 col2" id="T_309c0_row1_col2">0.0357</td>
+<td class="data row1 col3" id="T_309c0_row1_col3">-0.0422</td>
+<td class="data row1 col4" id="T_309c0_row1_col4">-0.1143</td>
+<td class="data row1 col5" id="T_309c0_row1_col5">-0.1548</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_03e75_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_03e75_row2_col1">628</td>
-<td class="data row2 col2" id="T_03e75_row2_col2">0.0654</td>
-<td class="data row2 col3" id="T_03e75_row2_col3">-0.0269</td>
-<td class="data row2 col4" id="T_03e75_row2_col4">-0.1025</td>
-<td class="data row2 col5" id="T_03e75_row2_col5">-0.0695</td>
+<td class="data row2 col0" id="T_309c0_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_309c0_row2_col1">628</td>
+<td class="data row2 col2" id="T_309c0_row2_col2">0.0654</td>
+<td class="data row2 col3" id="T_309c0_row2_col3">-0.0269</td>
+<td class="data row2 col4" id="T_309c0_row2_col4">-0.1025</td>
+<td class="data row2 col5" id="T_309c0_row2_col5">-0.0695</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_03e75_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_03e75_row3_col1">124</td>
-<td class="data row3 col2" id="T_03e75_row3_col2">0.0933</td>
-<td class="data row3 col3" id="T_03e75_row3_col3">0.0580</td>
-<td class="data row3 col4" id="T_03e75_row3_col4">-0.0400</td>
-<td class="data row3 col5" id="T_03e75_row3_col5">-0.0017</td>
+<td class="data row3 col0" id="T_309c0_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_309c0_row3_col1">124</td>
+<td class="data row3 col2" id="T_309c0_row3_col2">0.0933</td>
+<td class="data row3 col3" id="T_309c0_row3_col3">0.0580</td>
+<td class="data row3 col4" id="T_309c0_row3_col4">-0.0400</td>
+<td class="data row3 col5" id="T_309c0_row3_col5">-0.0017</td>
 </tr>
 </tbody>
 </table>
@@ -8044,19 +8048,20 @@ a.anchor-link {
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4bc6e0f1-66f4-40bb-a81e-021873af9fdd">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b074b14f-0765-4eb2-b6ee-488f903850f8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="3.-Labelling">3. Labelling<a class="anchor-link" href="#3.-Labelling">¶</a></h2><p>Events use the triple-barrier method of López de Prado (2018, ch. 3) with entry at <code>t+1</code>: the signal is observed at the close of bar <code>t</code> and the position is opened the following session, which is justified by the positive next-day correlation shown above. Profit-taking and stop-loss barriers are set in units of a causal volatility estimate, a vertical barrier caps the holding period, and overlapping events are down-weighted by average uniqueness (López de Prado, 2018, ch. 4). The methodology is set out in <code>reports/harry/02-labels.md</code>.</p>
-<p>The summary below is computed from <code>results/harry/events.csv</code> (the event table that feeds the feature and model stages).</p>
-<!-- TODO: verify barrier parameters against the labelling code. reports/harry/02-labels.md states pt=sl=1.0 and h=10, whereas the committed data/meta/triple_barrier_labels.csv carries pt=sl=0.25 and h=1. The two label sets differ; events.csv is used here for the per-class statistics. -->
+<h2 id="3.-Labelling">3. Labelling<a class="anchor-link" href="#3.-Labelling">¶</a></h2><p>Each signal is turned into a binary meta-label by the triple-barrier method of López de Prado (2018, ch. 3): an upper (profit-taking) and lower (stop-loss) barrier are placed in units of a causal volatility estimate, a vertical barrier caps the holding period, and the label records whether taking the bet would have paid. Overlapping events are down-weighted by average uniqueness (López de Prado, 2018, ch. 4).</p>
+<p>The submitted metamodel is trained and scored on the <strong>team-provided labels</strong> in <code>data/meta/triple_barrier_labels.csv</code>. The barrier geometry is tuned per instrument and held constant within each: the stop-loss sits at one quarter of the volatility estimate for every contract (<code>sl = 0.25</code>), while the profit-taking multiple and the vertical-barrier horizon are set per instrument — some contracts take a tight one-day barrier, others a wider profit target held for two to four weeks. The exact geometry is read from the data and shown per instrument below rather than quoted, because the values differ across the universe.</p>
+<p>Provenance is not assumed: every locked out-of-sample prediction in <code>metamodel_predictions.csv</code> matches these labels exactly — 1373 of 1373 rows agree on the binary label after joining on instrument and date — so this file, not any other, is the label set the model was built on.</p>
+<p><em>Provenance note.</em> An earlier exploration documented in <code>reports/harry/02-labels.md</code> and persisted to <code>results/harry/events.csv</code> used a uniform ten-day barrier; it produces the same number of events (one per signal date) but different labels, and it was superseded by the per-instrument team labels used here. The report is retained as a record of that exploration.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=23de25f4-2f50-482b-8931-5171adb25f85">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=35ddabe6-531d-4830-adf5-b0931f915100">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8064,17 +8069,21 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">ev</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">RESULTS</span> <span class="o">/</span> <span class="s2">"harry/events.csv"</span><span class="p">)</span>
-<span class="n">ev</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="n">ev</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)]</span>
-<span class="k">if</span> <span class="ow">not</span> <span class="n">ev</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-    <span class="n">g</span> <span class="o">=</span> <span class="p">(</span><span class="n">ev</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">)</span>
-           <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">n_events</span><span class="o">=</span><span class="p">(</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span>
-                <span class="n">label1_share</span><span class="o">=</span><span class="p">(</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
-                <span class="n">mean_uniqueness</span><span class="o">=</span><span class="p">(</span><span class="s2">"uniqueness_weight"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
-                <span class="n">mean_sigma</span><span class="o">=</span><span class="p">(</span><span class="s2">"sigma"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">))</span>
-           <span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">())</span>
-    <span class="n">table</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CLASS</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="si">}</span><span class="s2"> — triple-barrier events (results/harry/events.csv)"</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total events for </span><span class="si">{</span><span class="n">CLASS</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">  |  label==1 share: </span><span class="si">{</span><span class="n">ev</span><span class="p">[</span><span class="s1">'label'</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">lab</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"meta/triple_barrier_labels.csv"</span><span class="p">)</span>
+<span class="n">lab</span> <span class="o">=</span> <span class="n">lab</span><span class="p">[</span><span class="n">lab</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">lab</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+    <span class="c1"># Per-instrument barrier geometry + event statistics, straight from the team labels.</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="p">(</span><span class="n">lab</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">pt</span><span class="o">=</span><span class="p">(</span><span class="s2">"pt"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span> <span class="n">sl</span><span class="o">=</span><span class="p">(</span><span class="s2">"sl"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span> <span class="n">h</span><span class="o">=</span><span class="p">(</span><span class="s2">"h"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
+                 <span class="n">n_events</span><span class="o">=</span><span class="p">(</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span> <span class="n">label1_share</span><span class="o">=</span><span class="p">(</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
+                 <span class="n">mean_sigma</span><span class="o">=</span><span class="p">(</span><span class="s2">"sigma"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">())</span>
+    <span class="n">table</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CLASS</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="si">}</span><span class="s2"> — per-instrument barriers and labels (data/meta/triple_barrier_labels.csv)"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"partition"</span> <span class="ow">in</span> <span class="n">lab</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">part</span> <span class="o">=</span> <span class="p">(</span><span class="n">lab</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"partition"</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+                   <span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">())</span>
+        <span class="n">table</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">caption</span><span class="o">=</span><span class="s2">"Events per train / validation / test partition"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total labelled events for </span><span class="si">{</span><span class="n">CLASS</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">lab</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">  |  label==1 share: </span><span class="si">{</span><span class="n">lab</span><span class="p">[</span><span class="s1">'label'</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -8089,45 +8098,99 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_6b249">
-<caption>Energy — triple-barrier events (results/harry/events.csv)</caption>
+<table id="T_3ae90">
+<caption>Energy — per-instrument barriers and labels (data/meta/triple_barrier_labels.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_6b249_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_6b249_level0_col1">n_events</th>
-<th class="col_heading level0 col2" id="T_6b249_level0_col2">label1_share</th>
-<th class="col_heading level0 col3" id="T_6b249_level0_col3">mean_uniqueness</th>
-<th class="col_heading level0 col4" id="T_6b249_level0_col4">mean_sigma</th>
+<th class="col_heading level0 col0" id="T_3ae90_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_3ae90_level0_col1">pt</th>
+<th class="col_heading level0 col2" id="T_3ae90_level0_col2">sl</th>
+<th class="col_heading level0 col3" id="T_3ae90_level0_col3">h</th>
+<th class="col_heading level0 col4" id="T_3ae90_level0_col4">n_events</th>
+<th class="col_heading level0 col5" id="T_3ae90_level0_col5">label1_share</th>
+<th class="col_heading level0 col6" id="T_3ae90_level0_col6">mean_sigma</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_6b249_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_6b249_row0_col1">411</td>
-<td class="data row0 col2" id="T_6b249_row0_col2">0.6983</td>
-<td class="data row0 col3" id="T_6b249_row0_col3">0.1470</td>
-<td class="data row0 col4" id="T_6b249_row0_col4">0.0394</td>
+<td class="data row0 col0" id="T_3ae90_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_3ae90_row0_col1">0.2500</td>
+<td class="data row0 col2" id="T_3ae90_row0_col2">0.2500</td>
+<td class="data row0 col3" id="T_3ae90_row0_col3">1</td>
+<td class="data row0 col4" id="T_3ae90_row0_col4">421</td>
+<td class="data row0 col5" id="T_3ae90_row0_col5">0.5986</td>
+<td class="data row0 col6" id="T_3ae90_row0_col6">0.0321</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_6b249_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_6b249_row1_col1">63</td>
-<td class="data row1 col2" id="T_6b249_row1_col2">0.6508</td>
-<td class="data row1 col3" id="T_6b249_row1_col3">0.3750</td>
-<td class="data row1 col4" id="T_6b249_row1_col4">0.0257</td>
+<td class="data row1 col0" id="T_3ae90_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_3ae90_row1_col1">0.2500</td>
+<td class="data row1 col2" id="T_3ae90_row1_col2">0.2500</td>
+<td class="data row1 col3" id="T_3ae90_row1_col3">1</td>
+<td class="data row1 col4" id="T_3ae90_row1_col4">63</td>
+<td class="data row1 col5" id="T_3ae90_row1_col5">0.6667</td>
+<td class="data row1 col6" id="T_3ae90_row1_col6">0.0260</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_6b249_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_6b249_row2_col1">617</td>
-<td class="data row2 col2" id="T_6b249_row2_col2">0.5105</td>
-<td class="data row2 col3" id="T_6b249_row2_col3">0.1143</td>
-<td class="data row2 col4" id="T_6b249_row2_col4">0.0332</td>
+<td class="data row2 col0" id="T_3ae90_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_3ae90_row2_col1">2.5000</td>
+<td class="data row2 col2" id="T_3ae90_row2_col2">0.2500</td>
+<td class="data row2 col3" id="T_3ae90_row2_col3">15</td>
+<td class="data row2 col4" id="T_3ae90_row2_col4">613</td>
+<td class="data row2 col5" id="T_3ae90_row2_col5">0.2626</td>
+<td class="data row2 col6" id="T_3ae90_row2_col6">0.0294</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_6b249_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_6b249_row3_col1">120</td>
-<td class="data row3 col2" id="T_6b249_row3_col2">0.5583</td>
-<td class="data row3 col3" id="T_6b249_row3_col3">0.1999</td>
-<td class="data row3 col4" id="T_6b249_row3_col4">0.0450</td>
+<td class="data row3 col0" id="T_3ae90_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_3ae90_row3_col1">0.2500</td>
+<td class="data row3 col2" id="T_3ae90_row3_col2">0.2500</td>
+<td class="data row3 col3" id="T_3ae90_row3_col3">1</td>
+<td class="data row3 col4" id="T_3ae90_row3_col4">124</td>
+<td class="data row3 col5" id="T_3ae90_row3_col5">0.5242</td>
+<td class="data row3 col6" id="T_3ae90_row3_col6">0.0527</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<style type="text/css">
+</style>
+<table id="T_5cb15">
+<caption>Events per train / validation / test partition</caption>
+<thead>
+<tr>
+<th class="col_heading level0 col0" id="T_5cb15_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_5cb15_level0_col1">test</th>
+<th class="col_heading level0 col2" id="T_5cb15_level0_col2">train</th>
+<th class="col_heading level0 col3" id="T_5cb15_level0_col3">val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="data row0 col0" id="T_5cb15_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_5cb15_row0_col1">88</td>
+<td class="data row0 col2" id="T_5cb15_row0_col2">229</td>
+<td class="data row0 col3" id="T_5cb15_row0_col3">104</td>
+</tr>
+<tr>
+<td class="data row1 col0" id="T_5cb15_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_5cb15_row1_col1">2</td>
+<td class="data row1 col2" id="T_5cb15_row1_col2">34</td>
+<td class="data row1 col3" id="T_5cb15_row1_col3">27</td>
+</tr>
+<tr>
+<td class="data row2 col0" id="T_5cb15_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_5cb15_row2_col1">110</td>
+<td class="data row2 col2" id="T_5cb15_row2_col2">377</td>
+<td class="data row2 col3" id="T_5cb15_row2_col3">126</td>
+</tr>
+<tr>
+<td class="data row3 col0" id="T_5cb15_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_5cb15_row3_col1">56</td>
+<td class="data row3 col2" id="T_5cb15_row3_col2">28</td>
+<td class="data row3 col3" id="T_5cb15_row3_col3">40</td>
 </tr>
 </tbody>
 </table>
@@ -8136,14 +8199,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Total events for energy: 1,211  |  label==1 share: 0.586
+<pre>Total labelled events for energy: 1,221  |  label==1 share: 0.426
 </pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c1056d5a-30e5-4f76-99a9-03c5cdd99fe4">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=154e9472-a940-4a23-bc80-1f391af0b5cf">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8153,7 +8216,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=176aa3f0-48f8-48a2-9736-9990e6602213">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6ed07205-f1a3-48da-9457-8a98045e7f3e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8190,7 +8253,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f030b9ef-bdaa-47c8-b25c-9b2734ad2829">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d814fe9c-577e-47e4-b929-0884a0462bdf">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8201,7 +8264,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=db74d23b-db78-4ae1-aa2e-de7ae583b6f6">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d23a4ead-f7a5-48fa-abce-ff65f1a847a1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8216,7 +8279,10 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <span class="n">oos</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">mc</span> <span class="o">/</span> <span class="s2">"oos_results.csv"</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="ow">not</span> <span class="n">sel</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"best_model"</span><span class="p">,</span> <span class="s2">"best_auc"</span><span class="p">,</span> <span class="s2">"lower_ci"</span><span class="p">,</span> <span class="s2">"signal"</span><span class="p">,</span> <span class="s2">"n_events"</span><span class="p">]</span>
+    <span class="c1"># NB: selection_table's own 'n_events' is a derived training-sample count, not the</span>
+    <span class="c1"># triple-barrier event count reported in section 3, so it is omitted here to avoid a</span>
+    <span class="c1"># misleading clash.</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"best_model"</span><span class="p">,</span> <span class="s2">"best_auc"</span><span class="p">,</span> <span class="s2">"lower_ci"</span><span class="p">,</span> <span class="s2">"signal"</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sel</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
     <span class="n">sc</span> <span class="o">=</span> <span class="n">sel</span><span class="p">[</span><span class="n">sel</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)][</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">INSTS</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
     <span class="n">table</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CLASS</span><span class="o">.</span><span class="n">title</span><span class="p">()</span><span class="si">}</span><span class="s2"> — champion model and signal verdict (selection_table.csv)"</span><span class="p">)</span>
@@ -8250,50 +8316,45 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_ca47b">
+<table id="T_78a67">
 <caption>Energy — champion model and signal verdict (selection_table.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_ca47b_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_ca47b_level0_col1">best_model</th>
-<th class="col_heading level0 col2" id="T_ca47b_level0_col2">best_auc</th>
-<th class="col_heading level0 col3" id="T_ca47b_level0_col3">lower_ci</th>
-<th class="col_heading level0 col4" id="T_ca47b_level0_col4">signal</th>
-<th class="col_heading level0 col5" id="T_ca47b_level0_col5">n_events</th>
+<th class="col_heading level0 col0" id="T_78a67_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_78a67_level0_col1">best_model</th>
+<th class="col_heading level0 col2" id="T_78a67_level0_col2">best_auc</th>
+<th class="col_heading level0 col3" id="T_78a67_level0_col3">lower_ci</th>
+<th class="col_heading level0 col4" id="T_78a67_level0_col4">signal</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_ca47b_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_ca47b_row0_col1">logistic</td>
-<td class="data row0 col2" id="T_ca47b_row0_col2">0.5374</td>
-<td class="data row0 col3" id="T_ca47b_row0_col3">0.4876</td>
-<td class="data row0 col4" id="T_ca47b_row0_col4">False</td>
-<td class="data row0 col5" id="T_ca47b_row0_col5">1435</td>
+<td class="data row0 col0" id="T_78a67_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_78a67_row0_col1">logistic</td>
+<td class="data row0 col2" id="T_78a67_row0_col2">0.5374</td>
+<td class="data row0 col3" id="T_78a67_row0_col3">0.4876</td>
+<td class="data row0 col4" id="T_78a67_row0_col4">False</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_ca47b_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_ca47b_row1_col1">mlp</td>
-<td class="data row1 col2" id="T_ca47b_row1_col2">0.4923</td>
-<td class="data row1 col3" id="T_ca47b_row1_col3">0.3031</td>
-<td class="data row1 col4" id="T_ca47b_row1_col4">False</td>
-<td class="data row1 col5" id="T_ca47b_row1_col5">170</td>
+<td class="data row1 col0" id="T_78a67_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_78a67_row1_col1">mlp</td>
+<td class="data row1 col2" id="T_78a67_row1_col2">0.4923</td>
+<td class="data row1 col3" id="T_78a67_row1_col3">0.3031</td>
+<td class="data row1 col4" id="T_78a67_row1_col4">False</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_ca47b_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_ca47b_row2_col1">logistic</td>
-<td class="data row2 col2" id="T_ca47b_row2_col2">0.5773</td>
-<td class="data row2 col3" id="T_ca47b_row2_col3">0.5063</td>
-<td class="data row2 col4" id="T_ca47b_row2_col4">True</td>
-<td class="data row2 col5" id="T_ca47b_row2_col5">2120</td>
+<td class="data row2 col0" id="T_78a67_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_78a67_row2_col1">logistic</td>
+<td class="data row2 col2" id="T_78a67_row2_col2">0.5773</td>
+<td class="data row2 col3" id="T_78a67_row2_col3">0.5063</td>
+<td class="data row2 col4" id="T_78a67_row2_col4">True</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_ca47b_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_ca47b_row3_col1">mlp</td>
-<td class="data row3 col2" id="T_ca47b_row3_col2">0.6576</td>
-<td class="data row3 col3" id="T_ca47b_row3_col3">0.5187</td>
-<td class="data row3 col4" id="T_ca47b_row3_col4">True</td>
-<td class="data row3 col5" id="T_ca47b_row3_col5">140</td>
+<td class="data row3 col0" id="T_78a67_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_78a67_row3_col1">mlp</td>
+<td class="data row3 col2" id="T_78a67_row3_col2">0.6576</td>
+<td class="data row3 col3" id="T_78a67_row3_col3">0.5187</td>
+<td class="data row3 col4" id="T_78a67_row3_col4">True</td>
 </tr>
 </tbody>
 </table>
@@ -8304,30 +8365,30 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_5cb32">
+<table id="T_23a3e">
 <caption>Locked feature variant per instrument (1SE rule, train-only)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_5cb32_level0_col0">inst</th>
-<th class="col_heading level0 col1" id="T_5cb32_level0_col1">locked_variant</th>
+<th class="col_heading level0 col0" id="T_23a3e_level0_col0">inst</th>
+<th class="col_heading level0 col1" id="T_23a3e_level0_col1">locked_variant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_5cb32_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_5cb32_row0_col1">reduced</td>
+<td class="data row0 col0" id="T_23a3e_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_23a3e_row0_col1">reduced</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_5cb32_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_5cb32_row1_col1">reduced</td>
+<td class="data row1 col0" id="T_23a3e_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_23a3e_row1_col1">reduced</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_5cb32_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_5cb32_row2_col1">reduced_min</td>
+<td class="data row2 col0" id="T_23a3e_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_23a3e_row2_col1">reduced_min</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_5cb32_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_5cb32_row3_col1">reduced</td>
+<td class="data row3 col0" id="T_23a3e_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_23a3e_row3_col1">reduced</td>
 </tr>
 </tbody>
 </table>
@@ -8392,50 +8453,50 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_ea814">
+<table id="T_df95a">
 <caption>Out-of-sample AUC — locked variants only</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_ea814_level0_col0">inst</th>
-<th class="col_heading level0 col1" id="T_ea814_level0_col1">variant</th>
-<th class="col_heading level0 col2" id="T_ea814_level0_col2">auc</th>
-<th class="col_heading level0 col3" id="T_ea814_level0_col3">auc_ci_lo</th>
-<th class="col_heading level0 col4" id="T_ea814_level0_col4">auc_ci_hi</th>
-<th class="col_heading level0 col5" id="T_ea814_level0_col5">n_test</th>
+<th class="col_heading level0 col0" id="T_df95a_level0_col0">inst</th>
+<th class="col_heading level0 col1" id="T_df95a_level0_col1">variant</th>
+<th class="col_heading level0 col2" id="T_df95a_level0_col2">auc</th>
+<th class="col_heading level0 col3" id="T_df95a_level0_col3">auc_ci_lo</th>
+<th class="col_heading level0 col4" id="T_df95a_level0_col4">auc_ci_hi</th>
+<th class="col_heading level0 col5" id="T_df95a_level0_col5">n_test</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_ea814_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_ea814_row0_col1">reduced</td>
-<td class="data row0 col2" id="T_ea814_row0_col2">0.4924</td>
-<td class="data row0 col3" id="T_ea814_row0_col3">0.3920</td>
-<td class="data row0 col4" id="T_ea814_row0_col4">0.5995</td>
-<td class="data row0 col5" id="T_ea814_row0_col5">127</td>
+<td class="data row0 col0" id="T_df95a_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_df95a_row0_col1">reduced</td>
+<td class="data row0 col2" id="T_df95a_row0_col2">0.4924</td>
+<td class="data row0 col3" id="T_df95a_row0_col3">0.3920</td>
+<td class="data row0 col4" id="T_df95a_row0_col4">0.5995</td>
+<td class="data row0 col5" id="T_df95a_row0_col5">127</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_ea814_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_ea814_row1_col1">reduced</td>
-<td class="data row1 col2" id="T_ea814_row1_col2">0.4877</td>
-<td class="data row1 col3" id="T_ea814_row1_col3">0.2527</td>
-<td class="data row1 col4" id="T_ea814_row1_col4">0.7172</td>
-<td class="data row1 col5" id="T_ea814_row1_col5">27</td>
+<td class="data row1 col0" id="T_df95a_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_df95a_row1_col1">reduced</td>
+<td class="data row1 col2" id="T_df95a_row1_col2">0.4877</td>
+<td class="data row1 col3" id="T_df95a_row1_col3">0.2527</td>
+<td class="data row1 col4" id="T_df95a_row1_col4">0.7172</td>
+<td class="data row1 col5" id="T_df95a_row1_col5">27</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_ea814_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_ea814_row2_col1">reduced_min</td>
-<td class="data row2 col2" id="T_ea814_row2_col2">0.7191</td>
-<td class="data row2 col3" id="T_ea814_row2_col3">0.6259</td>
-<td class="data row2 col4" id="T_ea814_row2_col4">0.7957</td>
-<td class="data row2 col5" id="T_ea814_row2_col5">159</td>
+<td class="data row2 col0" id="T_df95a_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_df95a_row2_col1">reduced_min</td>
+<td class="data row2 col2" id="T_df95a_row2_col2">0.7191</td>
+<td class="data row2 col3" id="T_df95a_row2_col3">0.6259</td>
+<td class="data row2 col4" id="T_df95a_row2_col4">0.7957</td>
+<td class="data row2 col5" id="T_df95a_row2_col5">159</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_ea814_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_ea814_row3_col1">reduced</td>
-<td class="data row3 col2" id="T_ea814_row3_col2">0.5795</td>
-<td class="data row3 col3" id="T_ea814_row3_col3">0.4531</td>
-<td class="data row3 col4" id="T_ea814_row3_col4">0.6944</td>
-<td class="data row3 col5" id="T_ea814_row3_col5">84</td>
+<td class="data row3 col0" id="T_df95a_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_df95a_row3_col1">reduced</td>
+<td class="data row3 col2" id="T_df95a_row3_col2">0.5795</td>
+<td class="data row3 col3" id="T_df95a_row3_col3">0.4531</td>
+<td class="data row3 col4" id="T_df95a_row3_col4">0.6944</td>
+<td class="data row3 col5" id="T_df95a_row3_col5">84</td>
 </tr>
 </tbody>
 </table>
@@ -8444,7 +8505,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ebeaa8ec-51f9-4184-8f1b-ea16e0e13c00">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e3a639ec-9e26-46bd-b619-a4267f063342">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8455,7 +8516,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c9f54f98-a2ed-4370-9303-6f55b862ffea">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=79fbe7bf-5986-48bc-ab5d-ecac9b83e6d7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8505,35 +8566,35 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_c3aca">
+<table id="T_17860">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_c3aca_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_c3aca_level0_col1">asset_class</th>
-<th class="col_heading level0 col2" id="T_c3aca_level0_col2">group</th>
-<th class="col_heading level0 col3" id="T_c3aca_level0_col3">family</th>
-<th class="col_heading level0 col4" id="T_c3aca_level0_col4">model_type</th>
-<th class="col_heading level0 col5" id="T_c3aca_level0_col5">auc_mean</th>
-<th class="col_heading level0 col6" id="T_c3aca_level0_col6">auc_std</th>
-<th class="col_heading level0 col7" id="T_c3aca_level0_col7">lower_ci</th>
-<th class="col_heading level0 col8" id="T_c3aca_level0_col8">signal</th>
-<th class="col_heading level0 col9" id="T_c3aca_level0_col9">n_folds</th>
-<th class="col_heading level0 col10" id="T_c3aca_level0_col10">n_sig_clusters</th>
+<th class="col_heading level0 col0" id="T_17860_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_17860_level0_col1">asset_class</th>
+<th class="col_heading level0 col2" id="T_17860_level0_col2">group</th>
+<th class="col_heading level0 col3" id="T_17860_level0_col3">family</th>
+<th class="col_heading level0 col4" id="T_17860_level0_col4">model_type</th>
+<th class="col_heading level0 col5" id="T_17860_level0_col5">auc_mean</th>
+<th class="col_heading level0 col6" id="T_17860_level0_col6">auc_std</th>
+<th class="col_heading level0 col7" id="T_17860_level0_col7">lower_ci</th>
+<th class="col_heading level0 col8" id="T_17860_level0_col8">signal</th>
+<th class="col_heading level0 col9" id="T_17860_level0_col9">n_folds</th>
+<th class="col_heading level0 col10" id="T_17860_level0_col10">n_sig_clusters</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_c3aca_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_c3aca_row0_col1">energy</td>
-<td class="data row0 col2" id="T_c3aca_row0_col2">cl1s</td>
-<td class="data row0 col3" id="T_c3aca_row0_col3">logistic</td>
-<td class="data row0 col4" id="T_c3aca_row0_col4">logistic</td>
-<td class="data row0 col5" id="T_c3aca_row0_col5">0.5374</td>
-<td class="data row0 col6" id="T_c3aca_row0_col6">0.0498</td>
-<td class="data row0 col7" id="T_c3aca_row0_col7">0.4876</td>
-<td class="data row0 col8" id="T_c3aca_row0_col8">False</td>
-<td class="data row0 col9" id="T_c3aca_row0_col9">15</td>
-<td class="data row0 col10" id="T_c3aca_row0_col10">2</td>
+<td class="data row0 col0" id="T_17860_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_17860_row0_col1">energy</td>
+<td class="data row0 col2" id="T_17860_row0_col2">cl1s</td>
+<td class="data row0 col3" id="T_17860_row0_col3">logistic</td>
+<td class="data row0 col4" id="T_17860_row0_col4">logistic</td>
+<td class="data row0 col5" id="T_17860_row0_col5">0.5374</td>
+<td class="data row0 col6" id="T_17860_row0_col6">0.0498</td>
+<td class="data row0 col7" id="T_17860_row0_col7">0.4876</td>
+<td class="data row0 col8" id="T_17860_row0_col8">False</td>
+<td class="data row0 col9" id="T_17860_row0_col9">15</td>
+<td class="data row0 col10" id="T_17860_row0_col10">2</td>
 </tr>
 </tbody>
 </table>
@@ -8556,64 +8617,64 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_dd655">
+<table id="T_85684">
 <caption>Top clusters by mean decrease in accuracy</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_dd655_level0_col0">cluster</th>
-<th class="col_heading level0 col1" id="T_dd655_level0_col1">mean_drop</th>
-<th class="col_heading level0 col2" id="T_dd655_level0_col2">std_drop</th>
-<th class="col_heading level0 col3" id="T_dd655_level0_col3">significant</th>
+<th class="col_heading level0 col0" id="T_85684_level0_col0">cluster</th>
+<th class="col_heading level0 col1" id="T_85684_level0_col1">mean_drop</th>
+<th class="col_heading level0 col2" id="T_85684_level0_col2">std_drop</th>
+<th class="col_heading level0 col3" id="T_85684_level0_col3">significant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_dd655_row0_col0">C2_f11_lowfreq_macro</td>
-<td class="data row0 col1" id="T_dd655_row0_col1">0.0122</td>
-<td class="data row0 col2" id="T_dd655_row0_col2">0.0089</td>
-<td class="data row0 col3" id="T_dd655_row0_col3">True</td>
+<td class="data row0 col0" id="T_85684_row0_col0">C2_f11_lowfreq_macro</td>
+<td class="data row0 col1" id="T_85684_row0_col1">0.0122</td>
+<td class="data row0 col2" id="T_85684_row0_col2">0.0089</td>
+<td class="data row0 col3" id="T_85684_row0_col3">True</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_dd655_row1_col0">C14_f12</td>
-<td class="data row1 col1" id="T_dd655_row1_col1">0.0116</td>
-<td class="data row1 col2" id="T_dd655_row1_col2">0.0100</td>
-<td class="data row1 col3" id="T_dd655_row1_col3">True</td>
+<td class="data row1 col0" id="T_85684_row1_col0">C14_f12</td>
+<td class="data row1 col1" id="T_85684_row1_col1">0.0116</td>
+<td class="data row1 col2" id="T_85684_row1_col2">0.0100</td>
+<td class="data row1 col3" id="T_85684_row1_col3">True</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_dd655_row2_col0">C13_f11</td>
-<td class="data row2 col1" id="T_dd655_row2_col1">0.0102</td>
-<td class="data row2 col2" id="T_dd655_row2_col2">0.0163</td>
-<td class="data row2 col3" id="T_dd655_row2_col3">False</td>
+<td class="data row2 col0" id="T_85684_row2_col0">C13_f11</td>
+<td class="data row2 col1" id="T_85684_row2_col1">0.0102</td>
+<td class="data row2 col2" id="T_85684_row2_col2">0.0163</td>
+<td class="data row2 col3" id="T_85684_row2_col3">False</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_dd655_row3_col0">C9_f2</td>
-<td class="data row3 col1" id="T_dd655_row3_col1">0.0088</td>
-<td class="data row3 col2" id="T_dd655_row3_col2">0.0175</td>
-<td class="data row3 col3" id="T_dd655_row3_col3">False</td>
+<td class="data row3 col0" id="T_85684_row3_col0">C9_f2</td>
+<td class="data row3 col1" id="T_85684_row3_col1">0.0088</td>
+<td class="data row3 col2" id="T_85684_row3_col2">0.0175</td>
+<td class="data row3 col3" id="T_85684_row3_col3">False</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_dd655_row4_col0">C12_f2</td>
-<td class="data row4 col1" id="T_dd655_row4_col1">0.0077</td>
-<td class="data row4 col2" id="T_dd655_row4_col2">0.0209</td>
-<td class="data row4 col3" id="T_dd655_row4_col3">False</td>
+<td class="data row4 col0" id="T_85684_row4_col0">C12_f2</td>
+<td class="data row4 col1" id="T_85684_row4_col1">0.0077</td>
+<td class="data row4 col2" id="T_85684_row4_col2">0.0209</td>
+<td class="data row4 col3" id="T_85684_row4_col3">False</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_dd655_row5_col0">C3_f11</td>
-<td class="data row5 col1" id="T_dd655_row5_col1">0.0067</td>
-<td class="data row5 col2" id="T_dd655_row5_col2">0.0177</td>
-<td class="data row5 col3" id="T_dd655_row5_col3">False</td>
+<td class="data row5 col0" id="T_85684_row5_col0">C3_f11</td>
+<td class="data row5 col1" id="T_85684_row5_col1">0.0067</td>
+<td class="data row5 col2" id="T_85684_row5_col2">0.0177</td>
+<td class="data row5 col3" id="T_85684_row5_col3">False</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_dd655_row6_col0">F8_calendar</td>
-<td class="data row6 col1" id="T_dd655_row6_col1">0.0049</td>
-<td class="data row6 col2" id="T_dd655_row6_col2">0.0054</td>
-<td class="data row6 col3" id="T_dd655_row6_col3">False</td>
+<td class="data row6 col0" id="T_85684_row6_col0">F8_calendar</td>
+<td class="data row6 col1" id="T_85684_row6_col1">0.0049</td>
+<td class="data row6 col2" id="T_85684_row6_col2">0.0054</td>
+<td class="data row6 col3" id="T_85684_row6_col3">False</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_dd655_row7_col0">C11_f11_lowfreq_macro</td>
-<td class="data row7 col1" id="T_dd655_row7_col1">0.0045</td>
-<td class="data row7 col2" id="T_dd655_row7_col2">0.0053</td>
-<td class="data row7 col3" id="T_dd655_row7_col3">False</td>
+<td class="data row7 col0" id="T_85684_row7_col0">C11_f11_lowfreq_macro</td>
+<td class="data row7 col1" id="T_85684_row7_col1">0.0045</td>
+<td class="data row7 col2" id="T_85684_row7_col2">0.0053</td>
+<td class="data row7 col3" id="T_85684_row7_col3">False</td>
 </tr>
 </tbody>
 </table>
@@ -8630,90 +8691,90 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_d1022">
+<table id="T_37729">
 <caption>Top logistic coefficients</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_d1022_level0_col0">feature</th>
-<th class="col_heading level0 col1" id="T_d1022_level0_col1">coef_abs</th>
-<th class="col_heading level0 col2" id="T_d1022_level0_col2">coef_signed</th>
+<th class="col_heading level0 col0" id="T_37729_level0_col0">feature</th>
+<th class="col_heading level0 col1" id="T_37729_level0_col1">coef_abs</th>
+<th class="col_heading level0 col2" id="T_37729_level0_col2">coef_signed</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_d1022_row0_col0">f11_crude_stock_surprise</td>
-<td class="data row0 col1" id="T_d1022_row0_col1">0.1433</td>
-<td class="data row0 col2" id="T_d1022_row0_col2">-0.1433</td>
+<td class="data row0 col0" id="T_37729_row0_col0">f11_crude_stock_surprise</td>
+<td class="data row0 col1" id="T_37729_row0_col1">0.1433</td>
+<td class="data row0 col2" id="T_37729_row0_col2">-0.1433</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_d1022_row1_col0">f2_vol_10</td>
-<td class="data row1 col1" id="T_d1022_row1_col1">0.1377</td>
-<td class="data row1 col2" id="T_d1022_row1_col2">0.1377</td>
+<td class="data row1 col0" id="T_37729_row1_col0">f2_vol_10</td>
+<td class="data row1 col1" id="T_37729_row1_col1">0.1377</td>
+<td class="data row1 col2" id="T_37729_row1_col2">0.1377</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_d1022_row2_col0">f2_ret_skew_60</td>
-<td class="data row2 col1" id="T_d1022_row2_col1">0.1369</td>
-<td class="data row2 col2" id="T_d1022_row2_col2">0.1369</td>
+<td class="data row2 col0" id="T_37729_row2_col0">f2_ret_skew_60</td>
+<td class="data row2 col1" id="T_37729_row2_col1">0.1369</td>
+<td class="data row2 col2" id="T_37729_row2_col2">0.1369</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_d1022_row3_col0">f11_china_pmi_level</td>
-<td class="data row3 col1" id="T_d1022_row3_col1">0.1323</td>
-<td class="data row3 col2" id="T_d1022_row3_col2">-0.1323</td>
+<td class="data row3 col0" id="T_37729_row3_col0">f11_china_pmi_level</td>
+<td class="data row3 col1" id="T_37729_row3_col1">0.1323</td>
+<td class="data row3 col2" id="T_37729_row3_col2">-0.1323</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_d1022_row4_col0">f1_mr_score_10</td>
-<td class="data row4 col1" id="T_d1022_row4_col1">0.1251</td>
-<td class="data row4 col2" id="T_d1022_row4_col2">0.1251</td>
+<td class="data row4 col0" id="T_37729_row4_col0">f1_mr_score_10</td>
+<td class="data row4 col1" id="T_37729_row4_col1">0.1251</td>
+<td class="data row4 col2" id="T_37729_row4_col2">0.1251</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_d1022_row5_col0">f8_dow_cos</td>
-<td class="data row5 col1" id="T_d1022_row5_col1">0.1222</td>
-<td class="data row5 col2" id="T_d1022_row5_col2">0.1222</td>
+<td class="data row5 col0" id="T_37729_row5_col0">f8_dow_cos</td>
+<td class="data row5 col1" id="T_37729_row5_col1">0.1222</td>
+<td class="data row5 col2" id="T_37729_row5_col2">0.1222</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_d1022_row6_col0">f11_dxy_5d_change</td>
-<td class="data row6 col1" id="T_d1022_row6_col1">0.1182</td>
-<td class="data row6 col2" id="T_d1022_row6_col2">0.1182</td>
+<td class="data row6 col0" id="T_37729_row6_col0">f11_dxy_5d_change</td>
+<td class="data row6 col1" id="T_37729_row6_col1">0.1182</td>
+<td class="data row6 col2" id="T_37729_row6_col2">0.1182</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_d1022_row7_col0">hmm_macro_entropy</td>
-<td class="data row7 col1" id="T_d1022_row7_col1">0.1109</td>
-<td class="data row7 col2" id="T_d1022_row7_col2">0.1109</td>
+<td class="data row7 col0" id="T_37729_row7_col0">hmm_macro_entropy</td>
+<td class="data row7 col1" id="T_37729_row7_col1">0.1109</td>
+<td class="data row7 col2" id="T_37729_row7_col2">0.1109</td>
 </tr>
 <tr>
-<td class="data row8 col0" id="T_d1022_row8_col0">f11_move_z</td>
-<td class="data row8 col1" id="T_d1022_row8_col1">0.1087</td>
-<td class="data row8 col2" id="T_d1022_row8_col2">-0.1087</td>
+<td class="data row8 col0" id="T_37729_row8_col0">f11_move_z</td>
+<td class="data row8 col1" id="T_37729_row8_col1">0.1087</td>
+<td class="data row8 col2" id="T_37729_row8_col2">-0.1087</td>
 </tr>
 <tr>
-<td class="data row9 col0" id="T_d1022_row9_col0">f11_baltic_5d_change</td>
-<td class="data row9 col1" id="T_d1022_row9_col1">0.1022</td>
-<td class="data row9 col2" id="T_d1022_row9_col2">0.1022</td>
+<td class="data row9 col0" id="T_37729_row9_col0">f11_baltic_5d_change</td>
+<td class="data row9 col1" id="T_37729_row9_col1">0.1022</td>
+<td class="data row9 col2" id="T_37729_row9_col2">0.1022</td>
 </tr>
 <tr>
-<td class="data row10 col0" id="T_d1022_row10_col0">f1_ret_reversal_10</td>
-<td class="data row10 col1" id="T_d1022_row10_col1">0.1016</td>
-<td class="data row10 col2" id="T_d1022_row10_col2">0.1016</td>
+<td class="data row10 col0" id="T_37729_row10_col0">f1_ret_reversal_10</td>
+<td class="data row10 col1" id="T_37729_row10_col1">0.1016</td>
+<td class="data row10 col2" id="T_37729_row10_col2">0.1016</td>
 </tr>
 <tr>
-<td class="data row11 col0" id="T_d1022_row11_col0">f7_oi_change</td>
-<td class="data row11 col1" id="T_d1022_row11_col1">0.0860</td>
-<td class="data row11 col2" id="T_d1022_row11_col2">-0.0860</td>
+<td class="data row11 col0" id="T_37729_row11_col0">f7_oi_change</td>
+<td class="data row11 col1" id="T_37729_row11_col1">0.0860</td>
+<td class="data row11 col2" id="T_37729_row11_col2">-0.0860</td>
 </tr>
 <tr>
-<td class="data row12 col0" id="T_d1022_row12_col0">f12_mra_energy_D3</td>
-<td class="data row12 col1" id="T_d1022_row12_col1">0.0844</td>
-<td class="data row12 col2" id="T_d1022_row12_col2">-0.0844</td>
+<td class="data row12 col0" id="T_37729_row12_col0">f12_mra_energy_D3</td>
+<td class="data row12 col1" id="T_37729_row12_col1">0.0844</td>
+<td class="data row12 col2" id="T_37729_row12_col2">-0.0844</td>
 </tr>
 <tr>
-<td class="data row13 col0" id="T_d1022_row13_col0">f1_dist_ma_sigma_40</td>
-<td class="data row13 col1" id="T_d1022_row13_col1">0.0828</td>
-<td class="data row13 col2" id="T_d1022_row13_col2">-0.0828</td>
+<td class="data row13 col0" id="T_37729_row13_col0">f1_dist_ma_sigma_40</td>
+<td class="data row13 col1" id="T_37729_row13_col1">0.0828</td>
+<td class="data row13 col2" id="T_37729_row13_col2">-0.0828</td>
 </tr>
 <tr>
-<td class="data row14 col0" id="T_d1022_row14_col0">f12_mra_energy_D1</td>
-<td class="data row14 col1" id="T_d1022_row14_col1">0.0815</td>
-<td class="data row14 col2" id="T_d1022_row14_col2">0.0815</td>
+<td class="data row14 col0" id="T_37729_row14_col0">f12_mra_energy_D1</td>
+<td class="data row14 col1" id="T_37729_row14_col1">0.0815</td>
+<td class="data row14 col2" id="T_37729_row14_col2">0.0815</td>
 </tr>
 </tbody>
 </table>
@@ -8730,35 +8791,35 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_3b5ad">
+<table id="T_955f4">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_3b5ad_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_3b5ad_level0_col1">asset_class</th>
-<th class="col_heading level0 col2" id="T_3b5ad_level0_col2">group</th>
-<th class="col_heading level0 col3" id="T_3b5ad_level0_col3">family</th>
-<th class="col_heading level0 col4" id="T_3b5ad_level0_col4">model_type</th>
-<th class="col_heading level0 col5" id="T_3b5ad_level0_col5">auc_mean</th>
-<th class="col_heading level0 col6" id="T_3b5ad_level0_col6">auc_std</th>
-<th class="col_heading level0 col7" id="T_3b5ad_level0_col7">lower_ci</th>
-<th class="col_heading level0 col8" id="T_3b5ad_level0_col8">signal</th>
-<th class="col_heading level0 col9" id="T_3b5ad_level0_col9">n_folds</th>
-<th class="col_heading level0 col10" id="T_3b5ad_level0_col10">n_sig_clusters</th>
+<th class="col_heading level0 col0" id="T_955f4_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_955f4_level0_col1">asset_class</th>
+<th class="col_heading level0 col2" id="T_955f4_level0_col2">group</th>
+<th class="col_heading level0 col3" id="T_955f4_level0_col3">family</th>
+<th class="col_heading level0 col4" id="T_955f4_level0_col4">model_type</th>
+<th class="col_heading level0 col5" id="T_955f4_level0_col5">auc_mean</th>
+<th class="col_heading level0 col6" id="T_955f4_level0_col6">auc_std</th>
+<th class="col_heading level0 col7" id="T_955f4_level0_col7">lower_ci</th>
+<th class="col_heading level0 col8" id="T_955f4_level0_col8">signal</th>
+<th class="col_heading level0 col9" id="T_955f4_level0_col9">n_folds</th>
+<th class="col_heading level0 col10" id="T_955f4_level0_col10">n_sig_clusters</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_3b5ad_row0_col0">ho1s</td>
-<td class="data row0 col1" id="T_3b5ad_row0_col1">energy</td>
-<td class="data row0 col2" id="T_3b5ad_row0_col2">energy_cl_ho</td>
-<td class="data row0 col3" id="T_3b5ad_row0_col3">tree</td>
-<td class="data row0 col4" id="T_3b5ad_row0_col4">rf</td>
-<td class="data row0 col5" id="T_3b5ad_row0_col5">0.4923</td>
-<td class="data row0 col6" id="T_3b5ad_row0_col6">0.1892</td>
-<td class="data row0 col7" id="T_3b5ad_row0_col7">0.3031</td>
-<td class="data row0 col8" id="T_3b5ad_row0_col8">False</td>
-<td class="data row0 col9" id="T_3b5ad_row0_col9">12</td>
-<td class="data row0 col10" id="T_3b5ad_row0_col10">0</td>
+<td class="data row0 col0" id="T_955f4_row0_col0">ho1s</td>
+<td class="data row0 col1" id="T_955f4_row0_col1">energy</td>
+<td class="data row0 col2" id="T_955f4_row0_col2">energy_cl_ho</td>
+<td class="data row0 col3" id="T_955f4_row0_col3">tree</td>
+<td class="data row0 col4" id="T_955f4_row0_col4">rf</td>
+<td class="data row0 col5" id="T_955f4_row0_col5">0.4923</td>
+<td class="data row0 col6" id="T_955f4_row0_col6">0.1892</td>
+<td class="data row0 col7" id="T_955f4_row0_col7">0.3031</td>
+<td class="data row0 col8" id="T_955f4_row0_col8">False</td>
+<td class="data row0 col9" id="T_955f4_row0_col9">12</td>
+<td class="data row0 col10" id="T_955f4_row0_col10">0</td>
 </tr>
 </tbody>
 </table>
@@ -8781,64 +8842,64 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_ce09f">
+<table id="T_2f7ff">
 <caption>Top clusters by mean decrease in accuracy</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_ce09f_level0_col0">cluster</th>
-<th class="col_heading level0 col1" id="T_ce09f_level0_col1">mean_drop</th>
-<th class="col_heading level0 col2" id="T_ce09f_level0_col2">std_drop</th>
-<th class="col_heading level0 col3" id="T_ce09f_level0_col3">significant</th>
+<th class="col_heading level0 col0" id="T_2f7ff_level0_col0">cluster</th>
+<th class="col_heading level0 col1" id="T_2f7ff_level0_col1">mean_drop</th>
+<th class="col_heading level0 col2" id="T_2f7ff_level0_col2">std_drop</th>
+<th class="col_heading level0 col3" id="T_2f7ff_level0_col3">significant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_ce09f_row0_col0">C8_f11_lowfreq_macro</td>
-<td class="data row0 col1" id="T_ce09f_row0_col1">0.0542</td>
-<td class="data row0 col2" id="T_ce09f_row0_col2">0.0892</td>
-<td class="data row0 col3" id="T_ce09f_row0_col3">False</td>
+<td class="data row0 col0" id="T_2f7ff_row0_col0">C8_f11_lowfreq_macro</td>
+<td class="data row0 col1" id="T_2f7ff_row0_col1">0.0542</td>
+<td class="data row0 col2" id="T_2f7ff_row0_col2">0.0892</td>
+<td class="data row0 col3" id="T_2f7ff_row0_col3">False</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_ce09f_row1_col0">C15_f11</td>
-<td class="data row1 col1" id="T_ce09f_row1_col1">0.0456</td>
-<td class="data row1 col2" id="T_ce09f_row1_col2">0.0468</td>
-<td class="data row1 col3" id="T_ce09f_row1_col3">False</td>
+<td class="data row1 col0" id="T_2f7ff_row1_col0">C15_f11</td>
+<td class="data row1 col1" id="T_2f7ff_row1_col1">0.0456</td>
+<td class="data row1 col2" id="T_2f7ff_row1_col2">0.0468</td>
+<td class="data row1 col3" id="T_2f7ff_row1_col3">False</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_ce09f_row2_col0">C1_f1</td>
-<td class="data row2 col1" id="T_ce09f_row2_col1">0.0410</td>
-<td class="data row2 col2" id="T_ce09f_row2_col2">0.0932</td>
-<td class="data row2 col3" id="T_ce09f_row2_col3">False</td>
+<td class="data row2 col0" id="T_2f7ff_row2_col0">C1_f1</td>
+<td class="data row2 col1" id="T_2f7ff_row2_col1">0.0410</td>
+<td class="data row2 col2" id="T_2f7ff_row2_col2">0.0932</td>
+<td class="data row2 col3" id="T_2f7ff_row2_col3">False</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_ce09f_row3_col0">F4_latent</td>
-<td class="data row3 col1" id="T_ce09f_row3_col1">0.0227</td>
-<td class="data row3 col2" id="T_ce09f_row3_col2">0.0470</td>
-<td class="data row3 col3" id="T_ce09f_row3_col3">False</td>
+<td class="data row3 col0" id="T_2f7ff_row3_col0">F4_latent</td>
+<td class="data row3 col1" id="T_2f7ff_row3_col1">0.0227</td>
+<td class="data row3 col2" id="T_2f7ff_row3_col2">0.0470</td>
+<td class="data row3 col3" id="T_2f7ff_row3_col3">False</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_ce09f_row4_col0">C2_f6</td>
-<td class="data row4 col1" id="T_ce09f_row4_col1">0.0138</td>
-<td class="data row4 col2" id="T_ce09f_row4_col2">0.0336</td>
-<td class="data row4 col3" id="T_ce09f_row4_col3">False</td>
+<td class="data row4 col0" id="T_2f7ff_row4_col0">C2_f6</td>
+<td class="data row4 col1" id="T_2f7ff_row4_col1">0.0138</td>
+<td class="data row4 col2" id="T_2f7ff_row4_col2">0.0336</td>
+<td class="data row4 col3" id="T_2f7ff_row4_col3">False</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_ce09f_row5_col0">F8_calendar</td>
-<td class="data row5 col1" id="T_ce09f_row5_col1">0.0122</td>
-<td class="data row5 col2" id="T_ce09f_row5_col2">0.0235</td>
-<td class="data row5 col3" id="T_ce09f_row5_col3">False</td>
+<td class="data row5 col0" id="T_2f7ff_row5_col0">F8_calendar</td>
+<td class="data row5 col1" id="T_2f7ff_row5_col1">0.0122</td>
+<td class="data row5 col2" id="T_2f7ff_row5_col2">0.0235</td>
+<td class="data row5 col3" id="T_2f7ff_row5_col3">False</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_ce09f_row6_col0">C14_f7</td>
-<td class="data row6 col1" id="T_ce09f_row6_col1">0.0104</td>
-<td class="data row6 col2" id="T_ce09f_row6_col2">0.0388</td>
-<td class="data row6 col3" id="T_ce09f_row6_col3">False</td>
+<td class="data row6 col0" id="T_2f7ff_row6_col0">C14_f7</td>
+<td class="data row6 col1" id="T_2f7ff_row6_col1">0.0104</td>
+<td class="data row6 col2" id="T_2f7ff_row6_col2">0.0388</td>
+<td class="data row6 col3" id="T_2f7ff_row6_col3">False</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_ce09f_row7_col0">C3_f1</td>
-<td class="data row7 col1" id="T_ce09f_row7_col1">0.0049</td>
-<td class="data row7 col2" id="T_ce09f_row7_col2">0.0459</td>
-<td class="data row7 col3" id="T_ce09f_row7_col3">False</td>
+<td class="data row7 col0" id="T_2f7ff_row7_col0">C3_f1</td>
+<td class="data row7 col1" id="T_2f7ff_row7_col1">0.0049</td>
+<td class="data row7 col2" id="T_2f7ff_row7_col2">0.0459</td>
+<td class="data row7 col3" id="T_2f7ff_row7_col3">False</td>
 </tr>
 </tbody>
 </table>
@@ -8855,106 +8916,106 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_9222d">
+<table id="T_bb8a2">
 <caption>Top features by |SHAP|</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_9222d_level0_col0">feature</th>
-<th class="col_heading level0 col1" id="T_9222d_level0_col1">shap_magnitude</th>
-<th class="col_heading level0 col2" id="T_9222d_level0_col2">shap_signed</th>
-<th class="col_heading level0 col3" id="T_9222d_level0_col3">mdi</th>
+<th class="col_heading level0 col0" id="T_bb8a2_level0_col0">feature</th>
+<th class="col_heading level0 col1" id="T_bb8a2_level0_col1">shap_magnitude</th>
+<th class="col_heading level0 col2" id="T_bb8a2_level0_col2">shap_signed</th>
+<th class="col_heading level0 col3" id="T_bb8a2_level0_col3">mdi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_9222d_row0_col0">f11_vix_term_slope</td>
-<td class="data row0 col1" id="T_9222d_row0_col1">0.0090</td>
-<td class="data row0 col2" id="T_9222d_row0_col2">-0.0007</td>
-<td class="data row0 col3" id="T_9222d_row0_col3">0.0382</td>
+<td class="data row0 col0" id="T_bb8a2_row0_col0">f11_vix_term_slope</td>
+<td class="data row0 col1" id="T_bb8a2_row0_col1">0.0090</td>
+<td class="data row0 col2" id="T_bb8a2_row0_col2">-0.0007</td>
+<td class="data row0 col3" id="T_bb8a2_row0_col3">0.0382</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_9222d_row1_col0">f4_pc3</td>
-<td class="data row1 col1" id="T_9222d_row1_col1">0.0075</td>
-<td class="data row1 col2" id="T_9222d_row1_col2">-0.0011</td>
-<td class="data row1 col3" id="T_9222d_row1_col3">0.0255</td>
+<td class="data row1 col0" id="T_bb8a2_row1_col0">f4_pc3</td>
+<td class="data row1 col1" id="T_bb8a2_row1_col1">0.0075</td>
+<td class="data row1 col2" id="T_bb8a2_row1_col2">-0.0011</td>
+<td class="data row1 col3" id="T_bb8a2_row1_col3">0.0255</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_9222d_row2_col0">f1_bb_bandwidth_20</td>
-<td class="data row2 col1" id="T_9222d_row2_col1">0.0060</td>
-<td class="data row2 col2" id="T_9222d_row2_col2">0.0010</td>
-<td class="data row2 col3" id="T_9222d_row2_col3">0.0286</td>
+<td class="data row2 col0" id="T_bb8a2_row2_col0">f1_bb_bandwidth_20</td>
+<td class="data row2 col1" id="T_bb8a2_row2_col1">0.0060</td>
+<td class="data row2 col2" id="T_bb8a2_row2_col2">0.0010</td>
+<td class="data row2 col3" id="T_bb8a2_row2_col3">0.0286</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_9222d_row3_col0">f11_vix_5d_change</td>
-<td class="data row3 col1" id="T_9222d_row3_col1">0.0057</td>
-<td class="data row3 col2" id="T_9222d_row3_col2">0.0011</td>
-<td class="data row3 col3" id="T_9222d_row3_col3">0.0267</td>
+<td class="data row3 col0" id="T_bb8a2_row3_col0">f11_vix_5d_change</td>
+<td class="data row3 col1" id="T_bb8a2_row3_col1">0.0057</td>
+<td class="data row3 col2" id="T_bb8a2_row3_col2">0.0011</td>
+<td class="data row3 col3" id="T_bb8a2_row3_col3">0.0267</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_9222d_row4_col0">f11_real_yield_10y</td>
-<td class="data row4 col1" id="T_9222d_row4_col1">0.0050</td>
-<td class="data row4 col2" id="T_9222d_row4_col2">0.0024</td>
-<td class="data row4 col3" id="T_9222d_row4_col3">0.0164</td>
+<td class="data row4 col0" id="T_bb8a2_row4_col0">f11_real_yield_10y</td>
+<td class="data row4 col1" id="T_bb8a2_row4_col1">0.0050</td>
+<td class="data row4 col2" id="T_bb8a2_row4_col2">0.0024</td>
+<td class="data row4 col3" id="T_bb8a2_row4_col3">0.0164</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_9222d_row5_col0">f11_eurusd_5d_change</td>
-<td class="data row5 col1" id="T_9222d_row5_col1">0.0049</td>
-<td class="data row5 col2" id="T_9222d_row5_col2">0.0002</td>
-<td class="data row5 col3" id="T_9222d_row5_col3">0.0241</td>
+<td class="data row5 col0" id="T_bb8a2_row5_col0">f11_eurusd_5d_change</td>
+<td class="data row5 col1" id="T_bb8a2_row5_col1">0.0049</td>
+<td class="data row5 col2" id="T_bb8a2_row5_col2">0.0002</td>
+<td class="data row5 col3" id="T_bb8a2_row5_col3">0.0241</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_9222d_row6_col0">f1_mr_score_20</td>
-<td class="data row6 col1" id="T_9222d_row6_col1">0.0047</td>
-<td class="data row6 col2" id="T_9222d_row6_col2">0.0020</td>
-<td class="data row6 col3" id="T_9222d_row6_col3">0.0217</td>
+<td class="data row6 col0" id="T_bb8a2_row6_col0">f1_mr_score_20</td>
+<td class="data row6 col1" id="T_bb8a2_row6_col1">0.0047</td>
+<td class="data row6 col2" id="T_bb8a2_row6_col2">0.0020</td>
+<td class="data row6 col3" id="T_bb8a2_row6_col3">0.0217</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_9222d_row7_col0">f10_oto_ret</td>
-<td class="data row7 col1" id="T_9222d_row7_col1">0.0045</td>
-<td class="data row7 col2" id="T_9222d_row7_col2">0.0025</td>
-<td class="data row7 col3" id="T_9222d_row7_col3">0.0198</td>
+<td class="data row7 col0" id="T_bb8a2_row7_col0">f10_oto_ret</td>
+<td class="data row7 col1" id="T_bb8a2_row7_col1">0.0045</td>
+<td class="data row7 col2" id="T_bb8a2_row7_col2">0.0025</td>
+<td class="data row7 col3" id="T_bb8a2_row7_col3">0.0198</td>
 </tr>
 <tr>
-<td class="data row8 col0" id="T_9222d_row8_col0">f7_volume_trend_20</td>
-<td class="data row8 col1" id="T_9222d_row8_col1">0.0038</td>
-<td class="data row8 col2" id="T_9222d_row8_col2">0.0007</td>
-<td class="data row8 col3" id="T_9222d_row8_col3">0.0180</td>
+<td class="data row8 col0" id="T_bb8a2_row8_col0">f7_volume_trend_20</td>
+<td class="data row8 col1" id="T_bb8a2_row8_col1">0.0038</td>
+<td class="data row8 col2" id="T_bb8a2_row8_col2">0.0007</td>
+<td class="data row8 col3" id="T_bb8a2_row8_col3">0.0180</td>
 </tr>
 <tr>
-<td class="data row9 col0" id="T_9222d_row9_col0">f11_skew_z</td>
-<td class="data row9 col1" id="T_9222d_row9_col1">0.0038</td>
-<td class="data row9 col2" id="T_9222d_row9_col2">-0.0016</td>
-<td class="data row9 col3" id="T_9222d_row9_col3">0.0237</td>
+<td class="data row9 col0" id="T_bb8a2_row9_col0">f11_skew_z</td>
+<td class="data row9 col1" id="T_bb8a2_row9_col1">0.0038</td>
+<td class="data row9 col2" id="T_bb8a2_row9_col2">-0.0016</td>
+<td class="data row9 col3" id="T_bb8a2_row9_col3">0.0237</td>
 </tr>
 <tr>
-<td class="data row10 col0" id="T_9222d_row10_col0">f7_volume_z_20</td>
-<td class="data row10 col1" id="T_9222d_row10_col1">0.0036</td>
-<td class="data row10 col2" id="T_9222d_row10_col2">0.0008</td>
-<td class="data row10 col3" id="T_9222d_row10_col3">0.0166</td>
+<td class="data row10 col0" id="T_bb8a2_row10_col0">f7_volume_z_20</td>
+<td class="data row10 col1" id="T_bb8a2_row10_col1">0.0036</td>
+<td class="data row10 col2" id="T_bb8a2_row10_col2">0.0008</td>
+<td class="data row10 col3" id="T_bb8a2_row10_col3">0.0166</td>
 </tr>
 <tr>
-<td class="data row11 col0" id="T_9222d_row11_col0">f1_mr_score_40</td>
-<td class="data row11 col1" id="T_9222d_row11_col1">0.0035</td>
-<td class="data row11 col2" id="T_9222d_row11_col2">-0.0000</td>
-<td class="data row11 col3" id="T_9222d_row11_col3">0.0184</td>
+<td class="data row11 col0" id="T_bb8a2_row11_col0">f1_mr_score_40</td>
+<td class="data row11 col1" id="T_bb8a2_row11_col1">0.0035</td>
+<td class="data row11 col2" id="T_bb8a2_row11_col2">-0.0000</td>
+<td class="data row11 col3" id="T_bb8a2_row11_col3">0.0184</td>
 </tr>
 <tr>
-<td class="data row12 col0" id="T_9222d_row12_col0">f11_dxy_5d_change</td>
-<td class="data row12 col1" id="T_9222d_row12_col1">0.0035</td>
-<td class="data row12 col2" id="T_9222d_row12_col2">0.0003</td>
-<td class="data row12 col3" id="T_9222d_row12_col3">0.0150</td>
+<td class="data row12 col0" id="T_bb8a2_row12_col0">f11_dxy_5d_change</td>
+<td class="data row12 col1" id="T_bb8a2_row12_col1">0.0035</td>
+<td class="data row12 col2" id="T_bb8a2_row12_col2">0.0003</td>
+<td class="data row12 col3" id="T_bb8a2_row12_col3">0.0150</td>
 </tr>
 <tr>
-<td class="data row13 col0" id="T_9222d_row13_col0">f1_mr_score_10</td>
-<td class="data row13 col1" id="T_9222d_row13_col1">0.0034</td>
-<td class="data row13 col2" id="T_9222d_row13_col2">0.0014</td>
-<td class="data row13 col3" id="T_9222d_row13_col3">0.0169</td>
+<td class="data row13 col0" id="T_bb8a2_row13_col0">f1_mr_score_10</td>
+<td class="data row13 col1" id="T_bb8a2_row13_col1">0.0034</td>
+<td class="data row13 col2" id="T_bb8a2_row13_col2">0.0014</td>
+<td class="data row13 col3" id="T_bb8a2_row13_col3">0.0169</td>
 </tr>
 <tr>
-<td class="data row14 col0" id="T_9222d_row14_col0">f1_hilo_pos_10</td>
-<td class="data row14 col1" id="T_9222d_row14_col1">0.0033</td>
-<td class="data row14 col2" id="T_9222d_row14_col2">0.0024</td>
-<td class="data row14 col3" id="T_9222d_row14_col3">0.0167</td>
+<td class="data row14 col0" id="T_bb8a2_row14_col0">f1_hilo_pos_10</td>
+<td class="data row14 col1" id="T_bb8a2_row14_col1">0.0033</td>
+<td class="data row14 col2" id="T_bb8a2_row14_col2">0.0024</td>
+<td class="data row14 col3" id="T_bb8a2_row14_col3">0.0167</td>
 </tr>
 </tbody>
 </table>
@@ -8971,35 +9032,35 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_a4589">
+<table id="T_93da7">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_a4589_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_a4589_level0_col1">asset_class</th>
-<th class="col_heading level0 col2" id="T_a4589_level0_col2">group</th>
-<th class="col_heading level0 col3" id="T_a4589_level0_col3">family</th>
-<th class="col_heading level0 col4" id="T_a4589_level0_col4">model_type</th>
-<th class="col_heading level0 col5" id="T_a4589_level0_col5">auc_mean</th>
-<th class="col_heading level0 col6" id="T_a4589_level0_col6">auc_std</th>
-<th class="col_heading level0 col7" id="T_a4589_level0_col7">lower_ci</th>
-<th class="col_heading level0 col8" id="T_a4589_level0_col8">signal</th>
-<th class="col_heading level0 col9" id="T_a4589_level0_col9">n_folds</th>
-<th class="col_heading level0 col10" id="T_a4589_level0_col10">n_sig_clusters</th>
+<th class="col_heading level0 col0" id="T_93da7_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_93da7_level0_col1">asset_class</th>
+<th class="col_heading level0 col2" id="T_93da7_level0_col2">group</th>
+<th class="col_heading level0 col3" id="T_93da7_level0_col3">family</th>
+<th class="col_heading level0 col4" id="T_93da7_level0_col4">model_type</th>
+<th class="col_heading level0 col5" id="T_93da7_level0_col5">auc_mean</th>
+<th class="col_heading level0 col6" id="T_93da7_level0_col6">auc_std</th>
+<th class="col_heading level0 col7" id="T_93da7_level0_col7">lower_ci</th>
+<th class="col_heading level0 col8" id="T_93da7_level0_col8">signal</th>
+<th class="col_heading level0 col9" id="T_93da7_level0_col9">n_folds</th>
+<th class="col_heading level0 col10" id="T_93da7_level0_col10">n_sig_clusters</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_a4589_row0_col0">rb1s</td>
-<td class="data row0 col1" id="T_a4589_row0_col1">energy</td>
-<td class="data row0 col2" id="T_a4589_row0_col2">rb1s</td>
-<td class="data row0 col3" id="T_a4589_row0_col3">logistic</td>
-<td class="data row0 col4" id="T_a4589_row0_col4">logistic</td>
-<td class="data row0 col5" id="T_a4589_row0_col5">0.5773</td>
-<td class="data row0 col6" id="T_a4589_row0_col6">0.0710</td>
-<td class="data row0 col7" id="T_a4589_row0_col7">0.5063</td>
-<td class="data row0 col8" id="T_a4589_row0_col8">True</td>
-<td class="data row0 col9" id="T_a4589_row0_col9">15</td>
-<td class="data row0 col10" id="T_a4589_row0_col10">0</td>
+<td class="data row0 col0" id="T_93da7_row0_col0">rb1s</td>
+<td class="data row0 col1" id="T_93da7_row0_col1">energy</td>
+<td class="data row0 col2" id="T_93da7_row0_col2">rb1s</td>
+<td class="data row0 col3" id="T_93da7_row0_col3">logistic</td>
+<td class="data row0 col4" id="T_93da7_row0_col4">logistic</td>
+<td class="data row0 col5" id="T_93da7_row0_col5">0.5773</td>
+<td class="data row0 col6" id="T_93da7_row0_col6">0.0710</td>
+<td class="data row0 col7" id="T_93da7_row0_col7">0.5063</td>
+<td class="data row0 col8" id="T_93da7_row0_col8">True</td>
+<td class="data row0 col9" id="T_93da7_row0_col9">15</td>
+<td class="data row0 col10" id="T_93da7_row0_col10">0</td>
 </tr>
 </tbody>
 </table>
@@ -9022,64 +9083,64 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_6113a">
+<table id="T_9c75a">
 <caption>Top clusters by mean decrease in accuracy</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_6113a_level0_col0">cluster</th>
-<th class="col_heading level0 col1" id="T_6113a_level0_col1">mean_drop</th>
-<th class="col_heading level0 col2" id="T_6113a_level0_col2">std_drop</th>
-<th class="col_heading level0 col3" id="T_6113a_level0_col3">significant</th>
+<th class="col_heading level0 col0" id="T_9c75a_level0_col0">cluster</th>
+<th class="col_heading level0 col1" id="T_9c75a_level0_col1">mean_drop</th>
+<th class="col_heading level0 col2" id="T_9c75a_level0_col2">std_drop</th>
+<th class="col_heading level0 col3" id="T_9c75a_level0_col3">significant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_6113a_row0_col0">F5_signal</td>
-<td class="data row0 col1" id="T_6113a_row0_col1">0.0292</td>
-<td class="data row0 col2" id="T_6113a_row0_col2">0.0461</td>
-<td class="data row0 col3" id="T_6113a_row0_col3">False</td>
+<td class="data row0 col0" id="T_9c75a_row0_col0">F5_signal</td>
+<td class="data row0 col1" id="T_9c75a_row0_col1">0.0292</td>
+<td class="data row0 col2" id="T_9c75a_row0_col2">0.0461</td>
+<td class="data row0 col3" id="T_9c75a_row0_col3">False</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_6113a_row1_col0">C6_f11_lowfreq_macro</td>
-<td class="data row1 col1" id="T_6113a_row1_col1">0.0152</td>
-<td class="data row1 col2" id="T_6113a_row1_col2">0.0230</td>
-<td class="data row1 col3" id="T_6113a_row1_col3">False</td>
+<td class="data row1 col0" id="T_9c75a_row1_col0">C6_f11_lowfreq_macro</td>
+<td class="data row1 col1" id="T_9c75a_row1_col1">0.0152</td>
+<td class="data row1 col2" id="T_9c75a_row1_col2">0.0230</td>
+<td class="data row1 col3" id="T_9c75a_row1_col3">False</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_6113a_row2_col0">C1_f1</td>
-<td class="data row2 col1" id="T_6113a_row2_col1">0.0111</td>
-<td class="data row2 col2" id="T_6113a_row2_col2">0.0239</td>
-<td class="data row2 col3" id="T_6113a_row2_col3">False</td>
+<td class="data row2 col0" id="T_9c75a_row2_col0">C1_f1</td>
+<td class="data row2 col1" id="T_9c75a_row2_col1">0.0111</td>
+<td class="data row2 col2" id="T_9c75a_row2_col2">0.0239</td>
+<td class="data row2 col3" id="T_9c75a_row2_col3">False</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_6113a_row3_col0">C3_f2</td>
-<td class="data row3 col1" id="T_6113a_row3_col1">0.0104</td>
-<td class="data row3 col2" id="T_6113a_row3_col2">0.0212</td>
-<td class="data row3 col3" id="T_6113a_row3_col3">False</td>
+<td class="data row3 col0" id="T_9c75a_row3_col0">C3_f2</td>
+<td class="data row3 col1" id="T_9c75a_row3_col1">0.0104</td>
+<td class="data row3 col2" id="T_9c75a_row3_col2">0.0212</td>
+<td class="data row3 col3" id="T_9c75a_row3_col3">False</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_6113a_row4_col0">C4_f7</td>
-<td class="data row4 col1" id="T_6113a_row4_col1">0.0095</td>
-<td class="data row4 col2" id="T_6113a_row4_col2">0.0126</td>
-<td class="data row4 col3" id="T_6113a_row4_col3">False</td>
+<td class="data row4 col0" id="T_9c75a_row4_col0">C4_f7</td>
+<td class="data row4 col1" id="T_9c75a_row4_col1">0.0095</td>
+<td class="data row4 col2" id="T_9c75a_row4_col2">0.0126</td>
+<td class="data row4 col3" id="T_9c75a_row4_col3">False</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_6113a_row5_col0">C2_f6</td>
-<td class="data row5 col1" id="T_6113a_row5_col1">0.0081</td>
-<td class="data row5 col2" id="T_6113a_row5_col2">0.0227</td>
-<td class="data row5 col3" id="T_6113a_row5_col3">False</td>
+<td class="data row5 col0" id="T_9c75a_row5_col0">C2_f6</td>
+<td class="data row5 col1" id="T_9c75a_row5_col1">0.0081</td>
+<td class="data row5 col2" id="T_9c75a_row5_col2">0.0227</td>
+<td class="data row5 col3" id="T_9c75a_row5_col3">False</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_6113a_row6_col0">C7_f1</td>
-<td class="data row6 col1" id="T_6113a_row6_col1">0.0040</td>
-<td class="data row6 col2" id="T_6113a_row6_col2">0.0077</td>
-<td class="data row6 col3" id="T_6113a_row6_col3">False</td>
+<td class="data row6 col0" id="T_9c75a_row6_col0">C7_f1</td>
+<td class="data row6 col1" id="T_9c75a_row6_col1">0.0040</td>
+<td class="data row6 col2" id="T_9c75a_row6_col2">0.0077</td>
+<td class="data row6 col3" id="T_9c75a_row6_col3">False</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_6113a_row7_col0">C12_f11</td>
-<td class="data row7 col1" id="T_6113a_row7_col1">0.0034</td>
-<td class="data row7 col2" id="T_6113a_row7_col2">0.0234</td>
-<td class="data row7 col3" id="T_6113a_row7_col3">False</td>
+<td class="data row7 col0" id="T_9c75a_row7_col0">C12_f11</td>
+<td class="data row7 col1" id="T_9c75a_row7_col1">0.0034</td>
+<td class="data row7 col2" id="T_9c75a_row7_col2">0.0234</td>
+<td class="data row7 col3" id="T_9c75a_row7_col3">False</td>
 </tr>
 </tbody>
 </table>
@@ -9096,90 +9157,90 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_5a9bf">
+<table id="T_e5486">
 <caption>Top logistic coefficients</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_5a9bf_level0_col0">feature</th>
-<th class="col_heading level0 col1" id="T_5a9bf_level0_col1">coef_abs</th>
-<th class="col_heading level0 col2" id="T_5a9bf_level0_col2">coef_signed</th>
+<th class="col_heading level0 col0" id="T_e5486_level0_col0">feature</th>
+<th class="col_heading level0 col1" id="T_e5486_level0_col1">coef_abs</th>
+<th class="col_heading level0 col2" id="T_e5486_level0_col2">coef_signed</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_5a9bf_row0_col0">f5_signal</td>
-<td class="data row0 col1" id="T_5a9bf_row0_col1">0.2589</td>
-<td class="data row0 col2" id="T_5a9bf_row0_col2">0.2589</td>
+<td class="data row0 col0" id="T_e5486_row0_col0">f5_signal</td>
+<td class="data row0 col1" id="T_e5486_row0_col1">0.2589</td>
+<td class="data row0 col2" id="T_e5486_row0_col2">0.2589</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_5a9bf_row1_col0">f11_hy_oas_5d_change</td>
-<td class="data row1 col1" id="T_5a9bf_row1_col1">0.1497</td>
-<td class="data row1 col2" id="T_5a9bf_row1_col2">0.1497</td>
+<td class="data row1 col0" id="T_e5486_row1_col0">f11_hy_oas_5d_change</td>
+<td class="data row1 col1" id="T_e5486_row1_col1">0.1497</td>
+<td class="data row1 col2" id="T_e5486_row1_col2">0.1497</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_5a9bf_row2_col0">f12_mra_energy_D2</td>
-<td class="data row2 col1" id="T_5a9bf_row2_col1">0.0846</td>
-<td class="data row2 col2" id="T_5a9bf_row2_col2">0.0846</td>
+<td class="data row2 col0" id="T_e5486_row2_col0">f12_mra_energy_D2</td>
+<td class="data row2 col1" id="T_e5486_row2_col1">0.0846</td>
+<td class="data row2 col2" id="T_e5486_row2_col2">0.0846</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_5a9bf_row3_col0">f11_dist_stock_surprise</td>
-<td class="data row3 col1" id="T_5a9bf_row3_col1">0.0838</td>
-<td class="data row3 col2" id="T_5a9bf_row3_col2">0.0838</td>
+<td class="data row3 col0" id="T_e5486_row3_col0">f11_dist_stock_surprise</td>
+<td class="data row3 col1" id="T_e5486_row3_col1">0.0838</td>
+<td class="data row3 col2" id="T_e5486_row3_col2">0.0838</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_5a9bf_row4_col0">f11_gasoline_stock_surprise</td>
-<td class="data row4 col1" id="T_5a9bf_row4_col1">0.0735</td>
-<td class="data row4 col2" id="T_5a9bf_row4_col2">0.0735</td>
+<td class="data row4 col0" id="T_e5486_row4_col0">f11_gasoline_stock_surprise</td>
+<td class="data row4 col1" id="T_e5486_row4_col1">0.0735</td>
+<td class="data row4 col2" id="T_e5486_row4_col2">0.0735</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_5a9bf_row5_col0">hmm_vol_p0_calm</td>
-<td class="data row5 col1" id="T_5a9bf_row5_col1">0.0720</td>
-<td class="data row5 col2" id="T_5a9bf_row5_col2">-0.0720</td>
+<td class="data row5 col0" id="T_e5486_row5_col0">hmm_vol_p0_calm</td>
+<td class="data row5 col1" id="T_e5486_row5_col1">0.0720</td>
+<td class="data row5 col2" id="T_e5486_row5_col2">-0.0720</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_5a9bf_row6_col0">f11_crude_stock_surprise</td>
-<td class="data row6 col1" id="T_5a9bf_row6_col1">0.0707</td>
-<td class="data row6 col2" id="T_5a9bf_row6_col2">0.0707</td>
+<td class="data row6 col0" id="T_e5486_row6_col0">f11_crude_stock_surprise</td>
+<td class="data row6 col1" id="T_e5486_row6_col1">0.0707</td>
+<td class="data row6 col2" id="T_e5486_row6_col2">0.0707</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_5a9bf_row7_col0">f2_vol_ratio_20_60</td>
-<td class="data row7 col1" id="T_5a9bf_row7_col1">0.0695</td>
-<td class="data row7 col2" id="T_5a9bf_row7_col2">-0.0695</td>
+<td class="data row7 col0" id="T_e5486_row7_col0">f2_vol_ratio_20_60</td>
+<td class="data row7 col1" id="T_e5486_row7_col1">0.0695</td>
+<td class="data row7 col2" id="T_e5486_row7_col2">-0.0695</td>
 </tr>
 <tr>
-<td class="data row8 col0" id="T_5a9bf_row8_col0">f7_oi_level</td>
-<td class="data row8 col1" id="T_5a9bf_row8_col1">0.0589</td>
-<td class="data row8 col2" id="T_5a9bf_row8_col2">-0.0589</td>
+<td class="data row8 col0" id="T_e5486_row8_col0">f7_oi_level</td>
+<td class="data row8 col1" id="T_e5486_row8_col1">0.0589</td>
+<td class="data row8 col2" id="T_e5486_row8_col2">-0.0589</td>
 </tr>
 <tr>
-<td class="data row9 col0" id="T_5a9bf_row9_col0">f11_dxy_z</td>
-<td class="data row9 col1" id="T_5a9bf_row9_col1">0.0563</td>
-<td class="data row9 col2" id="T_5a9bf_row9_col2">0.0563</td>
+<td class="data row9 col0" id="T_e5486_row9_col0">f11_dxy_z</td>
+<td class="data row9 col1" id="T_e5486_row9_col1">0.0563</td>
+<td class="data row9 col2" id="T_e5486_row9_col2">0.0563</td>
 </tr>
 <tr>
-<td class="data row10 col0" id="T_5a9bf_row10_col0">f1_hilo_pos_40</td>
-<td class="data row10 col1" id="T_5a9bf_row10_col1">0.0489</td>
-<td class="data row10 col2" id="T_5a9bf_row10_col2">-0.0489</td>
+<td class="data row10 col0" id="T_e5486_row10_col0">f1_hilo_pos_40</td>
+<td class="data row10 col1" id="T_e5486_row10_col1">0.0489</td>
+<td class="data row10 col2" id="T_e5486_row10_col2">-0.0489</td>
 </tr>
 <tr>
-<td class="data row11 col0" id="T_5a9bf_row11_col0">f2_vol_of_vol_20</td>
-<td class="data row11 col1" id="T_5a9bf_row11_col1">0.0488</td>
-<td class="data row11 col2" id="T_5a9bf_row11_col2">-0.0488</td>
+<td class="data row11 col0" id="T_e5486_row11_col0">f2_vol_of_vol_20</td>
+<td class="data row11 col1" id="T_e5486_row11_col1">0.0488</td>
+<td class="data row11 col2" id="T_e5486_row11_col2">-0.0488</td>
 </tr>
 <tr>
-<td class="data row12 col0" id="T_5a9bf_row12_col0">f7_oi_price_div_20</td>
-<td class="data row12 col1" id="T_5a9bf_row12_col1">0.0474</td>
-<td class="data row12 col2" id="T_5a9bf_row12_col2">-0.0474</td>
+<td class="data row12 col0" id="T_e5486_row12_col0">f7_oi_price_div_20</td>
+<td class="data row12 col1" id="T_e5486_row12_col1">0.0474</td>
+<td class="data row12 col2" id="T_e5486_row12_col2">-0.0474</td>
 </tr>
 <tr>
-<td class="data row13 col0" id="T_5a9bf_row13_col0">f5_participation_20</td>
-<td class="data row13 col1" id="T_5a9bf_row13_col1">0.0435</td>
-<td class="data row13 col2" id="T_5a9bf_row13_col2">0.0435</td>
+<td class="data row13 col0" id="T_e5486_row13_col0">f5_participation_20</td>
+<td class="data row13 col1" id="T_e5486_row13_col1">0.0435</td>
+<td class="data row13 col2" id="T_e5486_row13_col2">0.0435</td>
 </tr>
 <tr>
-<td class="data row14 col0" id="T_5a9bf_row14_col0">f6_ts_momentum_60</td>
-<td class="data row14 col1" id="T_5a9bf_row14_col1">0.0434</td>
-<td class="data row14 col2" id="T_5a9bf_row14_col2">-0.0434</td>
+<td class="data row14 col0" id="T_e5486_row14_col0">f6_ts_momentum_60</td>
+<td class="data row14 col1" id="T_e5486_row14_col1">0.0434</td>
+<td class="data row14 col2" id="T_e5486_row14_col2">-0.0434</td>
 </tr>
 </tbody>
 </table>
@@ -9196,35 +9257,35 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_18744">
+<table id="T_0d5c0">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_18744_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_18744_level0_col1">asset_class</th>
-<th class="col_heading level0 col2" id="T_18744_level0_col2">group</th>
-<th class="col_heading level0 col3" id="T_18744_level0_col3">family</th>
-<th class="col_heading level0 col4" id="T_18744_level0_col4">model_type</th>
-<th class="col_heading level0 col5" id="T_18744_level0_col5">auc_mean</th>
-<th class="col_heading level0 col6" id="T_18744_level0_col6">auc_std</th>
-<th class="col_heading level0 col7" id="T_18744_level0_col7">lower_ci</th>
-<th class="col_heading level0 col8" id="T_18744_level0_col8">signal</th>
-<th class="col_heading level0 col9" id="T_18744_level0_col9">n_folds</th>
-<th class="col_heading level0 col10" id="T_18744_level0_col10">n_sig_clusters</th>
+<th class="col_heading level0 col0" id="T_0d5c0_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_0d5c0_level0_col1">asset_class</th>
+<th class="col_heading level0 col2" id="T_0d5c0_level0_col2">group</th>
+<th class="col_heading level0 col3" id="T_0d5c0_level0_col3">family</th>
+<th class="col_heading level0 col4" id="T_0d5c0_level0_col4">model_type</th>
+<th class="col_heading level0 col5" id="T_0d5c0_level0_col5">auc_mean</th>
+<th class="col_heading level0 col6" id="T_0d5c0_level0_col6">auc_std</th>
+<th class="col_heading level0 col7" id="T_0d5c0_level0_col7">lower_ci</th>
+<th class="col_heading level0 col8" id="T_0d5c0_level0_col8">signal</th>
+<th class="col_heading level0 col9" id="T_0d5c0_level0_col9">n_folds</th>
+<th class="col_heading level0 col10" id="T_0d5c0_level0_col10">n_sig_clusters</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_18744_row0_col0">ng1s</td>
-<td class="data row0 col1" id="T_18744_row0_col1">energy</td>
-<td class="data row0 col2" id="T_18744_row0_col2">energy_all</td>
-<td class="data row0 col3" id="T_18744_row0_col3">tree</td>
-<td class="data row0 col4" id="T_18744_row0_col4">rf</td>
-<td class="data row0 col5" id="T_18744_row0_col5">0.6576</td>
-<td class="data row0 col6" id="T_18744_row0_col6">0.1389</td>
-<td class="data row0 col7" id="T_18744_row0_col7">0.5187</td>
-<td class="data row0 col8" id="T_18744_row0_col8">True</td>
-<td class="data row0 col9" id="T_18744_row0_col9">12</td>
-<td class="data row0 col10" id="T_18744_row0_col10">1</td>
+<td class="data row0 col0" id="T_0d5c0_row0_col0">ng1s</td>
+<td class="data row0 col1" id="T_0d5c0_row0_col1">energy</td>
+<td class="data row0 col2" id="T_0d5c0_row0_col2">energy_all</td>
+<td class="data row0 col3" id="T_0d5c0_row0_col3">tree</td>
+<td class="data row0 col4" id="T_0d5c0_row0_col4">rf</td>
+<td class="data row0 col5" id="T_0d5c0_row0_col5">0.6576</td>
+<td class="data row0 col6" id="T_0d5c0_row0_col6">0.1389</td>
+<td class="data row0 col7" id="T_0d5c0_row0_col7">0.5187</td>
+<td class="data row0 col8" id="T_0d5c0_row0_col8">True</td>
+<td class="data row0 col9" id="T_0d5c0_row0_col9">12</td>
+<td class="data row0 col10" id="T_0d5c0_row0_col10">1</td>
 </tr>
 </tbody>
 </table>
@@ -9247,64 +9308,64 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_b7091">
+<table id="T_1c4a2">
 <caption>Top clusters by mean decrease in accuracy</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_b7091_level0_col0">cluster</th>
-<th class="col_heading level0 col1" id="T_b7091_level0_col1">mean_drop</th>
-<th class="col_heading level0 col2" id="T_b7091_level0_col2">std_drop</th>
-<th class="col_heading level0 col3" id="T_b7091_level0_col3">significant</th>
+<th class="col_heading level0 col0" id="T_1c4a2_level0_col0">cluster</th>
+<th class="col_heading level0 col1" id="T_1c4a2_level0_col1">mean_drop</th>
+<th class="col_heading level0 col2" id="T_1c4a2_level0_col2">std_drop</th>
+<th class="col_heading level0 col3" id="T_1c4a2_level0_col3">significant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_b7091_row0_col0">C15_f7</td>
-<td class="data row0 col1" id="T_b7091_row0_col1">0.1088</td>
-<td class="data row0 col2" id="T_b7091_row0_col2">0.0633</td>
-<td class="data row0 col3" id="T_b7091_row0_col3">True</td>
+<td class="data row0 col0" id="T_1c4a2_row0_col0">C15_f7</td>
+<td class="data row0 col1" id="T_1c4a2_row0_col1">0.1088</td>
+<td class="data row0 col2" id="T_1c4a2_row0_col2">0.0633</td>
+<td class="data row0 col3" id="T_1c4a2_row0_col3">True</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_b7091_row1_col0">C10_f11_lowfreq_macro</td>
-<td class="data row1 col1" id="T_b7091_row1_col1">0.0618</td>
-<td class="data row1 col2" id="T_b7091_row1_col2">0.0992</td>
-<td class="data row1 col3" id="T_b7091_row1_col3">False</td>
+<td class="data row1 col0" id="T_1c4a2_row1_col0">C10_f11_lowfreq_macro</td>
+<td class="data row1 col1" id="T_1c4a2_row1_col1">0.0618</td>
+<td class="data row1 col2" id="T_1c4a2_row1_col2">0.0992</td>
+<td class="data row1 col3" id="T_1c4a2_row1_col3">False</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_b7091_row2_col0">C4_f2</td>
-<td class="data row2 col1" id="T_b7091_row2_col1">0.0551</td>
-<td class="data row2 col2" id="T_b7091_row2_col2">0.0751</td>
-<td class="data row2 col3" id="T_b7091_row2_col3">False</td>
+<td class="data row2 col0" id="T_1c4a2_row2_col0">C4_f2</td>
+<td class="data row2 col1" id="T_1c4a2_row2_col1">0.0551</td>
+<td class="data row2 col2" id="T_1c4a2_row2_col2">0.0751</td>
+<td class="data row2 col3" id="T_1c4a2_row2_col3">False</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_b7091_row3_col0">C2_f1</td>
-<td class="data row3 col1" id="T_b7091_row3_col1">0.0480</td>
-<td class="data row3 col2" id="T_b7091_row3_col2">0.1320</td>
-<td class="data row3 col3" id="T_b7091_row3_col3">False</td>
+<td class="data row3 col0" id="T_1c4a2_row3_col0">C2_f1</td>
+<td class="data row3 col1" id="T_1c4a2_row3_col1">0.0480</td>
+<td class="data row3 col2" id="T_1c4a2_row3_col2">0.1320</td>
+<td class="data row3 col3" id="T_1c4a2_row3_col3">False</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_b7091_row4_col0">F_instrument</td>
-<td class="data row4 col1" id="T_b7091_row4_col1">0.0476</td>
-<td class="data row4 col2" id="T_b7091_row4_col2">0.1089</td>
-<td class="data row4 col3" id="T_b7091_row4_col3">False</td>
+<td class="data row4 col0" id="T_1c4a2_row4_col0">F_instrument</td>
+<td class="data row4 col1" id="T_1c4a2_row4_col1">0.0476</td>
+<td class="data row4 col2" id="T_1c4a2_row4_col2">0.1089</td>
+<td class="data row4 col3" id="T_1c4a2_row4_col3">False</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_b7091_row5_col0">C5_f11</td>
-<td class="data row5 col1" id="T_b7091_row5_col1">0.0468</td>
-<td class="data row5 col2" id="T_b7091_row5_col2">0.0615</td>
-<td class="data row5 col3" id="T_b7091_row5_col3">False</td>
+<td class="data row5 col0" id="T_1c4a2_row5_col0">C5_f11</td>
+<td class="data row5 col1" id="T_1c4a2_row5_col1">0.0468</td>
+<td class="data row5 col2" id="T_1c4a2_row5_col2">0.0615</td>
+<td class="data row5 col3" id="T_1c4a2_row5_col3">False</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_b7091_row6_col0">F5_signal</td>
-<td class="data row6 col1" id="T_b7091_row6_col1">0.0461</td>
-<td class="data row6 col2" id="T_b7091_row6_col2">0.1086</td>
-<td class="data row6 col3" id="T_b7091_row6_col3">False</td>
+<td class="data row6 col0" id="T_1c4a2_row6_col0">F5_signal</td>
+<td class="data row6 col1" id="T_1c4a2_row6_col1">0.0461</td>
+<td class="data row6 col2" id="T_1c4a2_row6_col2">0.1086</td>
+<td class="data row6 col3" id="T_1c4a2_row6_col3">False</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_b7091_row7_col0">C7_f11</td>
-<td class="data row7 col1" id="T_b7091_row7_col1">0.0343</td>
-<td class="data row7 col2" id="T_b7091_row7_col2">0.1162</td>
-<td class="data row7 col3" id="T_b7091_row7_col3">False</td>
+<td class="data row7 col0" id="T_1c4a2_row7_col0">C7_f11</td>
+<td class="data row7 col1" id="T_1c4a2_row7_col1">0.0343</td>
+<td class="data row7 col2" id="T_1c4a2_row7_col2">0.1162</td>
+<td class="data row7 col3" id="T_1c4a2_row7_col3">False</td>
 </tr>
 </tbody>
 </table>
@@ -9321,106 +9382,106 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_400a7">
+<table id="T_f8070">
 <caption>Top features by |SHAP|</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_400a7_level0_col0">feature</th>
-<th class="col_heading level0 col1" id="T_400a7_level0_col1">shap_magnitude</th>
-<th class="col_heading level0 col2" id="T_400a7_level0_col2">shap_signed</th>
-<th class="col_heading level0 col3" id="T_400a7_level0_col3">mdi</th>
+<th class="col_heading level0 col0" id="T_f8070_level0_col0">feature</th>
+<th class="col_heading level0 col1" id="T_f8070_level0_col1">shap_magnitude</th>
+<th class="col_heading level0 col2" id="T_f8070_level0_col2">shap_signed</th>
+<th class="col_heading level0 col3" id="T_f8070_level0_col3">mdi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_400a7_row0_col0">f7_oi_change</td>
-<td class="data row0 col1" id="T_400a7_row0_col1">0.0191</td>
-<td class="data row0 col2" id="T_400a7_row0_col2">0.0135</td>
-<td class="data row0 col3" id="T_400a7_row0_col3">0.0680</td>
+<td class="data row0 col0" id="T_f8070_row0_col0">f7_oi_change</td>
+<td class="data row0 col1" id="T_f8070_row0_col1">0.0191</td>
+<td class="data row0 col2" id="T_f8070_row0_col2">0.0135</td>
+<td class="data row0 col3" id="T_f8070_row0_col3">0.0680</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_400a7_row1_col0">f7_oi_level</td>
-<td class="data row1 col1" id="T_400a7_row1_col1">0.0162</td>
-<td class="data row1 col2" id="T_400a7_row1_col2">0.0162</td>
-<td class="data row1 col3" id="T_400a7_row1_col3">0.0887</td>
+<td class="data row1 col0" id="T_f8070_row1_col0">f7_oi_level</td>
+<td class="data row1 col1" id="T_f8070_row1_col1">0.0162</td>
+<td class="data row1 col2" id="T_f8070_row1_col2">0.0162</td>
+<td class="data row1 col3" id="T_f8070_row1_col3">0.0887</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_400a7_row2_col0">f2_atr_14</td>
-<td class="data row2 col1" id="T_400a7_row2_col1">0.0160</td>
-<td class="data row2 col2" id="T_400a7_row2_col2">-0.0160</td>
-<td class="data row2 col3" id="T_400a7_row2_col3">0.0657</td>
+<td class="data row2 col0" id="T_f8070_row2_col0">f2_atr_14</td>
+<td class="data row2 col1" id="T_f8070_row2_col1">0.0160</td>
+<td class="data row2 col2" id="T_f8070_row2_col2">-0.0160</td>
+<td class="data row2 col3" id="T_f8070_row2_col3">0.0657</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_400a7_row3_col0">inst_rb1s</td>
-<td class="data row3 col1" id="T_400a7_row3_col1">0.0152</td>
-<td class="data row3 col2" id="T_400a7_row3_col2">0.0152</td>
-<td class="data row3 col3" id="T_400a7_row3_col3">0.0860</td>
+<td class="data row3 col0" id="T_f8070_row3_col0">inst_rb1s</td>
+<td class="data row3 col1" id="T_f8070_row3_col1">0.0152</td>
+<td class="data row3 col2" id="T_f8070_row3_col2">0.0152</td>
+<td class="data row3 col3" id="T_f8070_row3_col3">0.0860</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_400a7_row4_col0">f5_signal</td>
-<td class="data row4 col1" id="T_400a7_row4_col1">0.0134</td>
-<td class="data row4 col2" id="T_400a7_row4_col2">-0.0134</td>
-<td class="data row4 col3" id="T_400a7_row4_col3">0.0305</td>
+<td class="data row4 col0" id="T_f8070_row4_col0">f5_signal</td>
+<td class="data row4 col1" id="T_f8070_row4_col1">0.0134</td>
+<td class="data row4 col2" id="T_f8070_row4_col2">-0.0134</td>
+<td class="data row4 col3" id="T_f8070_row4_col3">0.0305</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_400a7_row5_col0">hmm_vol_next_turbulent</td>
-<td class="data row5 col1" id="T_400a7_row5_col1">0.0098</td>
-<td class="data row5 col2" id="T_400a7_row5_col2">0.0098</td>
-<td class="data row5 col3" id="T_400a7_row5_col3">0.0615</td>
+<td class="data row5 col0" id="T_f8070_row5_col0">hmm_vol_next_turbulent</td>
+<td class="data row5 col1" id="T_f8070_row5_col1">0.0098</td>
+<td class="data row5 col2" id="T_f8070_row5_col2">0.0098</td>
+<td class="data row5 col3" id="T_f8070_row5_col3">0.0615</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_400a7_row6_col0">f5_participation_20</td>
-<td class="data row6 col1" id="T_400a7_row6_col1">0.0091</td>
-<td class="data row6 col2" id="T_400a7_row6_col2">0.0091</td>
-<td class="data row6 col3" id="T_400a7_row6_col3">0.0362</td>
+<td class="data row6 col0" id="T_f8070_row6_col0">f5_participation_20</td>
+<td class="data row6 col1" id="T_f8070_row6_col1">0.0091</td>
+<td class="data row6 col2" id="T_f8070_row6_col2">0.0091</td>
+<td class="data row6 col3" id="T_f8070_row6_col3">0.0362</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_400a7_row7_col0">hmm_vol_p2_turbulent</td>
-<td class="data row7 col1" id="T_400a7_row7_col1">0.0061</td>
-<td class="data row7 col2" id="T_400a7_row7_col2">0.0061</td>
-<td class="data row7 col3" id="T_400a7_row7_col3">0.0332</td>
+<td class="data row7 col0" id="T_f8070_row7_col0">hmm_vol_p2_turbulent</td>
+<td class="data row7 col1" id="T_f8070_row7_col1">0.0061</td>
+<td class="data row7 col2" id="T_f8070_row7_col2">0.0061</td>
+<td class="data row7 col3" id="T_f8070_row7_col3">0.0332</td>
 </tr>
 <tr>
-<td class="data row8 col0" id="T_400a7_row8_col0">f5_long_bias_20</td>
-<td class="data row8 col1" id="T_400a7_row8_col1">0.0054</td>
-<td class="data row8 col2" id="T_400a7_row8_col2">-0.0049</td>
-<td class="data row8 col3" id="T_400a7_row8_col3">0.0225</td>
+<td class="data row8 col0" id="T_f8070_row8_col0">f5_long_bias_20</td>
+<td class="data row8 col1" id="T_f8070_row8_col1">0.0054</td>
+<td class="data row8 col2" id="T_f8070_row8_col2">-0.0049</td>
+<td class="data row8 col3" id="T_f8070_row8_col3">0.0225</td>
 </tr>
 <tr>
-<td class="data row9 col0" id="T_400a7_row9_col0">hmm_vol_p0_calm</td>
-<td class="data row9 col1" id="T_400a7_row9_col1">0.0045</td>
-<td class="data row9 col2" id="T_400a7_row9_col2">0.0045</td>
-<td class="data row9 col3" id="T_400a7_row9_col3">0.0381</td>
+<td class="data row9 col0" id="T_f8070_row9_col0">hmm_vol_p0_calm</td>
+<td class="data row9 col1" id="T_f8070_row9_col1">0.0045</td>
+<td class="data row9 col2" id="T_f8070_row9_col2">0.0045</td>
+<td class="data row9 col3" id="T_f8070_row9_col3">0.0381</td>
 </tr>
 <tr>
-<td class="data row10 col0" id="T_400a7_row10_col0">f11_vix_term_slope</td>
-<td class="data row10 col1" id="T_400a7_row10_col1">0.0042</td>
-<td class="data row10 col2" id="T_400a7_row10_col2">0.0013</td>
-<td class="data row10 col3" id="T_400a7_row10_col3">0.0186</td>
+<td class="data row10 col0" id="T_f8070_row10_col0">f11_vix_term_slope</td>
+<td class="data row10 col1" id="T_f8070_row10_col1">0.0042</td>
+<td class="data row10 col2" id="T_f8070_row10_col2">0.0013</td>
+<td class="data row10 col3" id="T_f8070_row10_col3">0.0186</td>
 </tr>
 <tr>
-<td class="data row11 col0" id="T_400a7_row11_col0">f2_ret_kurt_60</td>
-<td class="data row11 col1" id="T_400a7_row11_col1">0.0025</td>
-<td class="data row11 col2" id="T_400a7_row11_col2">-0.0004</td>
-<td class="data row11 col3" id="T_400a7_row11_col3">0.0092</td>
+<td class="data row11 col0" id="T_f8070_row11_col0">f2_ret_kurt_60</td>
+<td class="data row11 col1" id="T_f8070_row11_col1">0.0025</td>
+<td class="data row11 col2" id="T_f8070_row11_col2">-0.0004</td>
+<td class="data row11 col3" id="T_f8070_row11_col3">0.0092</td>
 </tr>
 <tr>
-<td class="data row12 col0" id="T_400a7_row12_col0">hmm_macro_entropy</td>
-<td class="data row12 col1" id="T_400a7_row12_col1">0.0023</td>
-<td class="data row12 col2" id="T_400a7_row12_col2">0.0010</td>
-<td class="data row12 col3" id="T_400a7_row12_col3">0.0111</td>
+<td class="data row12 col0" id="T_f8070_row12_col0">hmm_macro_entropy</td>
+<td class="data row12 col1" id="T_f8070_row12_col1">0.0023</td>
+<td class="data row12 col2" id="T_f8070_row12_col2">0.0010</td>
+<td class="data row12 col3" id="T_f8070_row12_col3">0.0111</td>
 </tr>
 <tr>
-<td class="data row13 col0" id="T_400a7_row13_col0">f2_ret_skew_60</td>
-<td class="data row13 col1" id="T_400a7_row13_col1">0.0022</td>
-<td class="data row13 col2" id="T_400a7_row13_col2">-0.0019</td>
-<td class="data row13 col3" id="T_400a7_row13_col3">0.0071</td>
+<td class="data row13 col0" id="T_f8070_row13_col0">f2_ret_skew_60</td>
+<td class="data row13 col1" id="T_f8070_row13_col1">0.0022</td>
+<td class="data row13 col2" id="T_f8070_row13_col2">-0.0019</td>
+<td class="data row13 col3" id="T_f8070_row13_col3">0.0071</td>
 </tr>
 <tr>
-<td class="data row14 col0" id="T_400a7_row14_col0">f15_ewma_implied_corr_z</td>
-<td class="data row14 col1" id="T_400a7_row14_col1">0.0022</td>
-<td class="data row14 col2" id="T_400a7_row14_col2">0.0010</td>
-<td class="data row14 col3" id="T_400a7_row14_col3">0.0143</td>
+<td class="data row14 col0" id="T_f8070_row14_col0">f15_ewma_implied_corr_z</td>
+<td class="data row14 col1" id="T_f8070_row14_col1">0.0022</td>
+<td class="data row14 col2" id="T_f8070_row14_col2">0.0010</td>
+<td class="data row14 col3" id="T_f8070_row14_col3">0.0143</td>
 </tr>
 </tbody>
 </table>
@@ -9429,7 +9490,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=75f21287-aecc-4ccf-b34a-3d92a6b46dc0">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=be6d87ec-2a50-44cb-a4c8-e6f4e095f628">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9440,7 +9501,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1359e5e4-e065-40ba-8cde-870ab892f523">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d5c6924a-6de6-4fa8-9af4-bace576f8222">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9487,88 +9548,88 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_828c9">
+<table id="T_a12e5">
 <caption>Pooled portfolio — OOS headline (eval_summary.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_828c9_level0_col0">Metric</th>
-<th class="col_heading level0 col1" id="T_828c9_level0_col1">A Benchmark</th>
-<th class="col_heading level0 col2" id="T_828c9_level0_col2">B all_or_nothing</th>
-<th class="col_heading level0 col3" id="T_828c9_level0_col3">B SOPS</th>
+<th class="col_heading level0 col0" id="T_a12e5_level0_col0">Metric</th>
+<th class="col_heading level0 col1" id="T_a12e5_level0_col1">A Benchmark</th>
+<th class="col_heading level0 col2" id="T_a12e5_level0_col2">B all_or_nothing</th>
+<th class="col_heading level0 col3" id="T_a12e5_level0_col3">B SOPS</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_828c9_row0_col0">Ann return</td>
-<td class="data row0 col1" id="T_828c9_row0_col1">+8.62%</td>
-<td class="data row0 col2" id="T_828c9_row0_col2">+4.65%</td>
-<td class="data row0 col3" id="T_828c9_row0_col3">+4.65%</td>
+<td class="data row0 col0" id="T_a12e5_row0_col0">Ann return</td>
+<td class="data row0 col1" id="T_a12e5_row0_col1">+8.62%</td>
+<td class="data row0 col2" id="T_a12e5_row0_col2">+4.65%</td>
+<td class="data row0 col3" id="T_a12e5_row0_col3">+4.65%</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_828c9_row1_col0">Ann vol</td>
-<td class="data row1 col1" id="T_828c9_row1_col1">6.10%</td>
-<td class="data row1 col2" id="T_828c9_row1_col2">2.88%</td>
-<td class="data row1 col3" id="T_828c9_row1_col3">2.88%</td>
+<td class="data row1 col0" id="T_a12e5_row1_col0">Ann vol</td>
+<td class="data row1 col1" id="T_a12e5_row1_col1">6.10%</td>
+<td class="data row1 col2" id="T_a12e5_row1_col2">2.88%</td>
+<td class="data row1 col3" id="T_a12e5_row1_col3">2.88%</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_828c9_row2_col0">Sharpe</td>
-<td class="data row2 col1" id="T_828c9_row2_col1">1.412</td>
-<td class="data row2 col2" id="T_828c9_row2_col2">1.614</td>
-<td class="data row2 col3" id="T_828c9_row2_col3">1.614</td>
+<td class="data row2 col0" id="T_a12e5_row2_col0">Sharpe</td>
+<td class="data row2 col1" id="T_a12e5_row2_col1">1.412</td>
+<td class="data row2 col2" id="T_a12e5_row2_col2">1.614</td>
+<td class="data row2 col3" id="T_a12e5_row2_col3">1.614</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_828c9_row3_col0">t-stat</td>
-<td class="data row3 col1" id="T_828c9_row3_col1">1.19</td>
-<td class="data row3 col2" id="T_828c9_row3_col2">1.36</td>
-<td class="data row3 col3" id="T_828c9_row3_col3">1.36</td>
+<td class="data row3 col0" id="T_a12e5_row3_col0">t-stat</td>
+<td class="data row3 col1" id="T_a12e5_row3_col1">1.19</td>
+<td class="data row3 col2" id="T_a12e5_row3_col2">1.36</td>
+<td class="data row3 col3" id="T_a12e5_row3_col3">1.36</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_828c9_row4_col0">SR 95% CI low</td>
-<td class="data row4 col1" id="T_828c9_row4_col1">-1.559</td>
-<td class="data row4 col2" id="T_828c9_row4_col2">-1.286</td>
-<td class="data row4 col3" id="T_828c9_row4_col3">-1.286</td>
+<td class="data row4 col0" id="T_a12e5_row4_col0">SR 95% CI low</td>
+<td class="data row4 col1" id="T_a12e5_row4_col1">-1.559</td>
+<td class="data row4 col2" id="T_a12e5_row4_col2">-1.286</td>
+<td class="data row4 col3" id="T_a12e5_row4_col3">-1.286</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_828c9_row5_col0">SR 95% CI high</td>
-<td class="data row5 col1" id="T_828c9_row5_col1">3.750</td>
-<td class="data row5 col2" id="T_828c9_row5_col2">3.821</td>
-<td class="data row5 col3" id="T_828c9_row5_col3">3.821</td>
+<td class="data row5 col0" id="T_a12e5_row5_col0">SR 95% CI high</td>
+<td class="data row5 col1" id="T_a12e5_row5_col1">3.750</td>
+<td class="data row5 col2" id="T_a12e5_row5_col2">3.821</td>
+<td class="data row5 col3" id="T_a12e5_row5_col3">3.821</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_828c9_row6_col0">PSR(SR*=0)</td>
-<td class="data row6 col1" id="T_828c9_row6_col1">0.861</td>
-<td class="data row6 col2" id="T_828c9_row6_col2">0.899</td>
-<td class="data row6 col3" id="T_828c9_row6_col3">0.899</td>
+<td class="data row6 col0" id="T_a12e5_row6_col0">PSR(SR*=0)</td>
+<td class="data row6 col1" id="T_a12e5_row6_col1">0.861</td>
+<td class="data row6 col2" id="T_a12e5_row6_col2">0.899</td>
+<td class="data row6 col3" id="T_a12e5_row6_col3">0.899</td>
 </tr>
 <tr>
-<td class="data row7 col0" id="T_828c9_row7_col0">Max DD</td>
-<td class="data row7 col1" id="T_828c9_row7_col1">-3.42%</td>
-<td class="data row7 col2" id="T_828c9_row7_col2">-1.49%</td>
-<td class="data row7 col3" id="T_828c9_row7_col3">-1.49%</td>
+<td class="data row7 col0" id="T_a12e5_row7_col0">Max DD</td>
+<td class="data row7 col1" id="T_a12e5_row7_col1">-3.42%</td>
+<td class="data row7 col2" id="T_a12e5_row7_col2">-1.49%</td>
+<td class="data row7 col3" id="T_a12e5_row7_col3">-1.49%</td>
 </tr>
 <tr>
-<td class="data row8 col0" id="T_828c9_row8_col0">Total cost (bps)</td>
-<td class="data row8 col1" id="T_828c9_row8_col1">416.1</td>
-<td class="data row8 col2" id="T_828c9_row8_col2">188.4</td>
-<td class="data row8 col3" id="T_828c9_row8_col3">188.4</td>
+<td class="data row8 col0" id="T_a12e5_row8_col0">Total cost (bps)</td>
+<td class="data row8 col1" id="T_a12e5_row8_col1">416.1</td>
+<td class="data row8 col2" id="T_a12e5_row8_col2">188.4</td>
+<td class="data row8 col3" id="T_a12e5_row8_col3">188.4</td>
 </tr>
 <tr>
-<td class="data row9 col0" id="T_828c9_row9_col0">Annual turnover</td>
-<td class="data row9 col1" id="T_828c9_row9_col1">48.28</td>
-<td class="data row9 col2" id="T_828c9_row9_col2">21.86</td>
-<td class="data row9 col3" id="T_828c9_row9_col3">21.86</td>
+<td class="data row9 col0" id="T_a12e5_row9_col0">Annual turnover</td>
+<td class="data row9 col1" id="T_a12e5_row9_col1">48.28</td>
+<td class="data row9 col2" id="T_a12e5_row9_col2">21.86</td>
+<td class="data row9 col3" id="T_a12e5_row9_col3">21.86</td>
 </tr>
 <tr>
-<td class="data row10 col0" id="T_828c9_row10_col0">Breakeven ½-spread</td>
-<td class="data row10 col1" id="T_828c9_row10_col1">17.8 bps</td>
-<td class="data row10 col2" id="T_828c9_row10_col2">21.3 bps</td>
-<td class="data row10 col3" id="T_828c9_row10_col3">21.3 bps</td>
+<td class="data row10 col0" id="T_a12e5_row10_col0">Breakeven ½-spread</td>
+<td class="data row10 col1" id="T_a12e5_row10_col1">17.8 bps</td>
+<td class="data row10 col2" id="T_a12e5_row10_col2">21.3 bps</td>
+<td class="data row10 col3" id="T_a12e5_row10_col3">21.3 bps</td>
 </tr>
 <tr>
-<td class="data row11 col0" id="T_828c9_row11_col0">Events taken</td>
-<td class="data row11 col1" id="T_828c9_row11_col1">100%</td>
-<td class="data row11 col2" id="T_828c9_row11_col2">54%</td>
-<td class="data row11 col3" id="T_828c9_row11_col3">54%</td>
+<td class="data row11 col0" id="T_a12e5_row11_col0">Events taken</td>
+<td class="data row11 col1" id="T_a12e5_row11_col1">100%</td>
+<td class="data row11 col2" id="T_a12e5_row11_col2">54%</td>
+<td class="data row11 col3" id="T_a12e5_row11_col3">54%</td>
 </tr>
 </tbody>
 </table>
@@ -9597,50 +9658,50 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_3a78d">
+<table id="T_2a4a8">
 <caption>Energy — attribution within the pooled book (metamodel_predictions.csv)</caption>
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_3a78d_level0_col0">instrument</th>
-<th class="col_heading level0 col1" id="T_3a78d_level0_col1">n_events</th>
-<th class="col_heading level0 col2" id="T_3a78d_level0_col2">events_taken</th>
-<th class="col_heading level0 col3" id="T_3a78d_level0_col3">mean_calib_proba</th>
-<th class="col_heading level0 col4" id="T_3a78d_level0_col4">label1_share</th>
-<th class="col_heading level0 col5" id="T_3a78d_level0_col5">hit_rate_taken</th>
+<th class="col_heading level0 col0" id="T_2a4a8_level0_col0">instrument</th>
+<th class="col_heading level0 col1" id="T_2a4a8_level0_col1">n_events</th>
+<th class="col_heading level0 col2" id="T_2a4a8_level0_col2">events_taken</th>
+<th class="col_heading level0 col3" id="T_2a4a8_level0_col3">mean_calib_proba</th>
+<th class="col_heading level0 col4" id="T_2a4a8_level0_col4">label1_share</th>
+<th class="col_heading level0 col5" id="T_2a4a8_level0_col5">hit_rate_taken</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_3a78d_row0_col0">cl1s</td>
-<td class="data row0 col1" id="T_3a78d_row0_col1">127.0000</td>
-<td class="data row0 col2" id="T_3a78d_row0_col2">127.0000</td>
-<td class="data row0 col3" id="T_3a78d_row0_col3">0.5869</td>
-<td class="data row0 col4" id="T_3a78d_row0_col4">0.6142</td>
-<td class="data row0 col5" id="T_3a78d_row0_col5">0.6142</td>
+<td class="data row0 col0" id="T_2a4a8_row0_col0">cl1s</td>
+<td class="data row0 col1" id="T_2a4a8_row0_col1">127.0000</td>
+<td class="data row0 col2" id="T_2a4a8_row0_col2">127.0000</td>
+<td class="data row0 col3" id="T_2a4a8_row0_col3">0.5869</td>
+<td class="data row0 col4" id="T_2a4a8_row0_col4">0.6142</td>
+<td class="data row0 col5" id="T_2a4a8_row0_col5">0.6142</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_3a78d_row1_col0">ho1s</td>
-<td class="data row1 col1" id="T_3a78d_row1_col1">27.0000</td>
-<td class="data row1 col2" id="T_3a78d_row1_col2">27.0000</td>
-<td class="data row1 col3" id="T_3a78d_row1_col3">0.7159</td>
-<td class="data row1 col4" id="T_3a78d_row1_col4">0.6667</td>
-<td class="data row1 col5" id="T_3a78d_row1_col5">0.6667</td>
+<td class="data row1 col0" id="T_2a4a8_row1_col0">ho1s</td>
+<td class="data row1 col1" id="T_2a4a8_row1_col1">27.0000</td>
+<td class="data row1 col2" id="T_2a4a8_row1_col2">27.0000</td>
+<td class="data row1 col3" id="T_2a4a8_row1_col3">0.7159</td>
+<td class="data row1 col4" id="T_2a4a8_row1_col4">0.6667</td>
+<td class="data row1 col5" id="T_2a4a8_row1_col5">0.6667</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_3a78d_row2_col0">rb1s</td>
-<td class="data row2 col1" id="T_3a78d_row2_col1">159.0000</td>
-<td class="data row2 col2" id="T_3a78d_row2_col2">0.0000</td>
-<td class="data row2 col3" id="T_3a78d_row2_col3">0.2329</td>
-<td class="data row2 col4" id="T_3a78d_row2_col4">0.3333</td>
-<td class="data row2 col5" id="T_3a78d_row2_col5">nan</td>
+<td class="data row2 col0" id="T_2a4a8_row2_col0">rb1s</td>
+<td class="data row2 col1" id="T_2a4a8_row2_col1">159.0000</td>
+<td class="data row2 col2" id="T_2a4a8_row2_col2">0.0000</td>
+<td class="data row2 col3" id="T_2a4a8_row2_col3">0.2329</td>
+<td class="data row2 col4" id="T_2a4a8_row2_col4">0.3333</td>
+<td class="data row2 col5" id="T_2a4a8_row2_col5">nan</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_3a78d_row3_col0">ng1s</td>
-<td class="data row3 col1" id="T_3a78d_row3_col1">84.0000</td>
-<td class="data row3 col2" id="T_3a78d_row3_col2">78.0000</td>
-<td class="data row3 col3" id="T_3a78d_row3_col3">0.5406</td>
-<td class="data row3 col4" id="T_3a78d_row3_col4">0.5357</td>
-<td class="data row3 col5" id="T_3a78d_row3_col5">0.5128</td>
+<td class="data row3 col0" id="T_2a4a8_row3_col0">ng1s</td>
+<td class="data row3 col1" id="T_2a4a8_row3_col1">84.0000</td>
+<td class="data row3 col2" id="T_2a4a8_row3_col2">78.0000</td>
+<td class="data row3 col3" id="T_2a4a8_row3_col3">0.5406</td>
+<td class="data row3 col4" id="T_2a4a8_row3_col4">0.5357</td>
+<td class="data row3 col5" id="T_2a4a8_row3_col5">0.5128</td>
 </tr>
 </tbody>
 </table>
@@ -9649,7 +9710,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=27c200df-b015-43ed-9ef2-323fbfc31514">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c5be0c7e-432b-4b86-a23c-89e4bfd4c725">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9660,7 +9721,7 @@ features_hmm_macro.csv: 2,580 rows for energy instruments | columns: ['date', 'i
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5b3f66e3-58c6-4e34-8a8a-0b40230c91c4">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=25388411-c7ea-4782-a031-885ae52ba532">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>

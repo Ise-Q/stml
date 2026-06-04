@@ -90,10 +90,17 @@ committed data, but the *weights* do not. Choose one and record it in `reports/h
 
 ---
 
-## A note on the labelling parameters (flagged for the methodology)
+## A note on the labelling provenance (resolved)
 
-`data/meta/triple_barrier_labels.csv` carries `pt = sl = 0.25` and `h = 1`, whereas
-`reports/harry/02-labels.md` describes `pt = sl = 1.0` and `h = 10`. The two label sets are not
-the same file; the submission notebooks compute per-class label statistics from
-`results/harry/events.csv` and flag this discrepancy inline. Resolve which parameterisation the
-final metamodel was trained against and reconcile the report before submission.
+Two triple-barrier label sets exist. `data/meta/triple_barrier_labels.csv` (the team labels)
+uses `h = 1`, `pt = sl = 0.25`; `results/harry/events.csv` with `reports/harry/02-labels.md`
+documents an earlier `h = 10` exploration. They carry the same number of events (one per signal
+date) but different labels.
+
+The submitted metamodel uses the **team `h = 1` labels**: every locked out-of-sample row in
+`outputs/metamodel_predictions.csv` matches `data/meta/triple_barrier_labels.csv` exactly
+(1373/1373 rows agree on the binary label after joining on instrument and date). The submission
+notebooks now compute the Labelling section from that file and describe `events.csv` /
+`02-labels.md` as the superseded exploration. No action is required beyond keeping
+`reports/harry/02-labels.md` as a record; consider adding a one-line "superseded by the team
+`h = 1` labels" header to it for clarity.

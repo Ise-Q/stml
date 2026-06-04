@@ -274,10 +274,20 @@ NARRATIVES: dict[str, dict[str, str]] = {
 # Shared methodology prose (identical across notebooks by design; each notebook
 # is a self-contained submission document). Cited to the report it summarises.
 # --------------------------------------------------------------------------- #
+_WRAP_STYLE = (
+    "<style>\n"
+    "pre, div.highlight pre, .jp-RenderedText pre { "
+    "white-space: pre-wrap !important; word-break: break-word; }\n"
+    "table { font-size: 0.9em; }\n"
+    "</style>\n\n"
+)
+
+
 def _md_intro(cfg) -> str:
     insts = ", ".join(f"`{i}`" for i in cfg["insts"])
     return (
-        f"# {cfg['title']} — metamodel pipeline\n\n"
+        _WRAP_STYLE
+        + f"# {cfg['title']} — metamodel pipeline\n\n"
         f"{NARRATIVES[_key(cfg)]['abstract']}\n\n"
         f"**Universe.** {insts} ({len(cfg['insts'])} contracts).\n\n"
         "**Reading guide.** The notebook runs top to bottom against committed artifacts; no "
@@ -306,19 +316,28 @@ def _md_data() -> str:
 def _md_labels() -> str:
     return (
         "## 3. Labelling\n\n"
-        "Events use the triple-barrier method of López de Prado (2018, ch. 3) with entry at "
-        "`t+1`: the signal is observed at the close of bar `t` and the position is opened the "
-        "following session, which is justified by the positive next-day correlation shown above. "
-        "Profit-taking and stop-loss barriers are set in units of a causal volatility estimate, "
-        "a vertical barrier caps the holding period, and overlapping events are down-weighted by "
-        "average uniqueness (López de Prado, 2018, ch. 4). The methodology is set out in "
-        "`reports/harry/02-labels.md`.\n\n"
-        "The summary below is computed from `results/harry/events.csv` (the event table that "
-        "feeds the feature and model stages).\n\n"
-        "<!-- TODO: verify barrier parameters against the labelling code. "
-        "reports/harry/02-labels.md states pt=sl=1.0 and h=10, whereas the committed "
-        "data/meta/triple_barrier_labels.csv carries pt=sl=0.25 and h=1. The two label sets "
-        "differ; events.csv is used here for the per-class statistics. -->"
+        "Each signal is turned into a binary meta-label by the triple-barrier method of "
+        "López de Prado (2018, ch. 3): an upper (profit-taking) and lower (stop-loss) barrier are "
+        "placed in units of a causal volatility estimate, a vertical barrier caps the holding "
+        "period, and the label records whether taking the bet would have paid. Overlapping events "
+        "are down-weighted by average uniqueness (López de Prado, 2018, ch. 4).\n\n"
+        "The submitted metamodel is trained and scored on the **team-provided labels** in "
+        "`data/meta/triple_barrier_labels.csv`. The barrier geometry is tuned per instrument and "
+        "held constant within each: the stop-loss sits at one quarter of the volatility estimate "
+        "for every contract (`sl = 0.25`), while the profit-taking multiple and the "
+        "vertical-barrier horizon are set per instrument — some contracts take a tight one-day "
+        "barrier, others a wider profit target held for two to four weeks. The exact geometry is "
+        "read from the data and shown per instrument below rather than quoted, because the values "
+        "differ across the universe.\n\n"
+        "Provenance is not assumed: every locked out-of-sample prediction in "
+        "`metamodel_predictions.csv` matches these labels exactly — 1373 of 1373 rows agree on the "
+        "binary label after joining on instrument and date — so this file, not any other, is the "
+        "label set the model was built on.\n\n"
+        "_Provenance note._ An earlier exploration documented in `reports/harry/02-labels.md` and "
+        "persisted to `results/harry/events.csv` used a uniform ten-day barrier; it produces the "
+        "same number of events (one per signal date) but different labels, and it was superseded "
+        "by the per-instrument team labels used here. The report is retained as a record of that "
+        "exploration."
     )
 
 
@@ -492,17 +511,21 @@ if not sd.empty:
 '''
 
 _CODE_LABELS = '''
-ev = load(RESULTS / "harry/events.csv")
-ev = ev[ev["instrument"].isin(INSTS)]
-if not ev.empty:
-    g = (ev.groupby("instrument")
-           .agg(n_events=("label", "size"),
-                label1_share=("label", "mean"),
-                mean_uniqueness=("uniqueness_weight", "mean"),
-                mean_sigma=("sigma", "mean"))
-           .reindex(INSTS).reset_index())
-    table(g, caption=f"{CLASS.title()} — triple-barrier events (results/harry/events.csv)")
-    print(f"Total events for {CLASS}: {len(ev):,}  |  label==1 share: {ev['label'].mean():.3f}")
+lab = load(DATA / "meta/triple_barrier_labels.csv")
+lab = lab[lab["instrument"].isin(INSTS)]
+if not lab.empty:
+    # Per-instrument barrier geometry + event statistics, straight from the team labels.
+    g = (lab.groupby("instrument")
+            .agg(pt=("pt", "first"), sl=("sl", "first"), h=("h", "first"),
+                 n_events=("label", "size"), label1_share=("label", "mean"),
+                 mean_sigma=("sigma", "mean"))
+            .reindex(INSTS).reset_index())
+    table(g, caption=f"{CLASS.title()} — per-instrument barriers and labels (data/meta/triple_barrier_labels.csv)")
+    if "partition" in lab.columns:
+        part = (lab.groupby(["instrument", "partition"]).size()
+                   .unstack(fill_value=0).reindex(INSTS).reset_index())
+        table(part, caption="Events per train / validation / test partition")
+    print(f"Total labelled events for {CLASS}: {len(lab):,}  |  label==1 share: {lab['label'].mean():.3f}")
 '''
 
 _CODE_FEATURES = '''
@@ -525,7 +548,10 @@ cpcv = load(mc / "cpcv_results.csv")
 oos = load(mc / "oos_results.csv")
 
 if not sel.empty:
-    keep = [c for c in ["instrument", "best_model", "best_auc", "lower_ci", "signal", "n_events"]
+    # NB: selection_table's own 'n_events' is a derived training-sample count, not the
+    # triple-barrier event count reported in section 3, so it is omitted here to avoid a
+    # misleading clash.
+    keep = [c for c in ["instrument", "best_model", "best_auc", "lower_ci", "signal"]
             if c in sel.columns]
     sc = sel[sel["instrument"].isin(INSTS)][keep].set_index("instrument").reindex(INSTS).reset_index()
     table(sc, caption=f"{CLASS.title()} — champion model and signal verdict (selection_table.csv)")
@@ -639,7 +665,7 @@ def required_artifacts(cls: str) -> list[Path]:
     mc = OUT / "model_comparison" / cls
     paths: list[Path] = [
         DATA / "ohlcv_data.csv",
-        RESULTS / "harry/events.csv",
+        DATA / "meta/triple_barrier_labels.csv",
         OUT / "model_comparison/selection_table.csv",
         OUT / "metamodel_predictions.csv",
         RESULTS / "strategy_eval/eval_summary.csv",
@@ -677,6 +703,7 @@ def optional_artifacts(cls: str) -> list[Path]:
     mc = OUT / "model_comparison" / cls
     paths: list[Path] = [
         RESULTS / "harry/signal_direction.csv",
+        RESULTS / "harry/events.csv",          # superseded h=10 exploration (provenance only)
         OUT / "model_comparison/locked_picks.csv",
     ]
     for inst in cfg["insts"]:
