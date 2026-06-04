@@ -1,10 +1,10 @@
 """F15 conditional risk + F16 concept drift + F17 HMM regimes.
 
 Lifted with attribution from:
-* ``src/stml/harry/features/conditional_risk.py``  → F15 path_tortuosity, semi_vol_ratio
-* ``src/stml/harry/features/concept_drift.py``     → F16 regime_alignment_score
+* ``src/stml/alternative/features/conditional_risk.py``  → F15 path_tortuosity, semi_vol_ratio
+* ``src/stml/alternative/features/concept_drift.py``     → F16 regime_alignment_score
 * ``src/stml/regimes.py`` (Sreeram)                → F17 HMM filtered posteriors
-* ``metamodel-apb/src/alken_metamodel/regime.py``  → EWMA HMM (causal, no CV seam)
+* ````  → EWMA HMM (causal, no CV seam)
 
 F15 / F16 are E-class (no fit). F17 + EWMA HMM are TF-class but fit on a
 contiguous prefix that ends BEFORE the modelling window, so they remain
@@ -32,7 +32,7 @@ from stml.experimental.features.catalog import (
 def _f15_path_tortuosity_20(ctx: FeatureContext) -> pd.Series:
     """Sum(|r|) / |Sum(r)| over a 20-bar window — Markowitz path-tortuosity proxy.
 
-    Identified by the plan §2.5 as the highest-value individual feature
+    Identified by the methodology spec as the highest-value individual feature
     (stable AND informative) in the stack.
     """
     r = log_returns(ctx.frame["close"])
@@ -54,18 +54,18 @@ def _f15_realized_semi_vol_ratio_20(ctx: FeatureContext) -> pd.Series:
     return rms_down / rms_up.replace(0, np.nan)
 
 
-register(FeatureSpec("f15_path_tortuosity_20", "F15", _f15_path_tortuosity_20, "E", 20, "harry"))
-register(FeatureSpec("f15_semi_vol_ratio_20", "F15", _f15_realized_semi_vol_ratio_20, "E", 20, "harry"))
+register(FeatureSpec("f15_path_tortuosity_20", "F15", _f15_path_tortuosity_20, "E", 20, "alternative"))
+register(FeatureSpec("f15_semi_vol_ratio_20", "F15", _f15_realized_semi_vol_ratio_20, "E", 20, "alternative"))
 
 
 # ---------------------------------------------------------------------------
-# F16 — Concept drift score (Harry's harry/features/concept_drift.py).
+# F16 — Concept drift score (the alternative/features/concept_drift.py).
 #
 # A rolling logistic discriminator: how distinguishable the *current* feature
 # vector is from a baseline ("train era") feature vector. The score is the
 # discriminator's probability that the row is "recent" rather than "train era".
 #
-# Per plan §3.3 we use F16 BOTH as a feature AND as an inverse training weight:
+# Per methodology spec we use F16 BOTH as a feature AND as an inverse training weight:
 #   sample_weight_drift = 1 / (1 + 0.5 · f16_score)
 #
 # For the feature side, we compute a simpler proxy here: the standardised
@@ -97,11 +97,11 @@ def _f16_regime_alignment_score(ctx: FeatureContext) -> pd.Series:
     return diff.rolling(252, min_periods=126).rank(pct=True)
 
 
-register(FeatureSpec("f16_regime_alignment_score", "F16", _f16_regime_alignment_score, "E", 252, "harry"))
+register(FeatureSpec("f16_regime_alignment_score", "F16", _f16_regime_alignment_score, "E", 252, "alternative"))
 
 
 # ---------------------------------------------------------------------------
-# F17 — HMM regime posteriors (Sreeram's regimes.py — causal forward filter).
+# F17 — HMM regime posteriors (the regimes.py — causal forward filter).
 #
 # Per-instrument 3-state Gaussian HMM on (daily log return, 21d annualised vol).
 # Fit on data BEFORE the modelling-window start (boundary), then causally
@@ -243,13 +243,13 @@ def _f17_hmm_filtered_state_hi(ctx: FeatureContext) -> pd.Series:
     return pd.Series(posteriors[:, 2], index=ctx.frame.index)
 
 
-register(FeatureSpec("f17_hmm_state_lo", "F17", _f17_hmm_filtered_state_lo, "TF", 200, "sreeram"))
-register(FeatureSpec("f17_hmm_state_mid", "F17", _f17_hmm_filtered_state_mid, "TF", 200, "sreeram"))
-register(FeatureSpec("f17_hmm_state_hi", "F17", _f17_hmm_filtered_state_hi, "TF", 200, "sreeram"))
+register(FeatureSpec("f17_hmm_state_lo", "F17", _f17_hmm_filtered_state_lo, "TF", 200, "engineered"))
+register(FeatureSpec("f17_hmm_state_mid", "F17", _f17_hmm_filtered_state_mid, "TF", 200, "engineered"))
+register(FeatureSpec("f17_hmm_state_hi", "F17", _f17_hmm_filtered_state_hi, "TF", 200, "engineered"))
 
 
 # ---------------------------------------------------------------------------
-# EWMA HMM — alken's regime.py online filter (no CV seam artefact).
+# EWMA HMM — the reference regime.py online filter (no CV seam artefact).
 #
 # A 2-state Gaussian HMM where emission means/variances are recursively updated
 # via EWMA of responsibility-weighted sufficient statistics; the transition
@@ -324,5 +324,5 @@ def _ewma_hmm_switch_prob(ctx: FeatureContext) -> pd.Series:
     return pd.Series(switch, index=ctx.frame.index)
 
 
-register(FeatureSpec("ewma_hmm_prob_highvol", "EWMA_HMM", _ewma_hmm_prob_highvol, "E", 60, "alken"))
-register(FeatureSpec("ewma_hmm_switch_prob", "EWMA_HMM", _ewma_hmm_switch_prob, "E", 60, "alken"))
+register(FeatureSpec("ewma_hmm_prob_highvol", "EWMA_HMM", _ewma_hmm_prob_highvol, "E", 60, "baseline"))
+register(FeatureSpec("ewma_hmm_switch_prob", "EWMA_HMM", _ewma_hmm_switch_prob, "E", 60, "baseline"))

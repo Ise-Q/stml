@@ -1,7 +1,7 @@
 """Pin every native math kernel to a single thread for byte-stable re-runs.
 
-Plan R3 (byte-identical emit) and R5 (determinism). Lifted from
-``metamodel-apb/src/alken_metamodel/_env.py`` (alken parity) with attribution.
+Determinism contract: the deliverable CSV emit step must produce byte-identical
+output on consecutive runs.
 
 The side effects must fire *before* any of {numpy, scipy, scikit-learn, xgboost,
 lightgbm, torch, tensorflow} imports its native backend. The experimental package
@@ -30,7 +30,7 @@ _ENV_VARS = {
     # OpenMP family
     "OMP_NUM_THREADS": "1",
     "OMP_PROC_BIND": "false",
-    # macOS libomp duplicate-load fix — alken parity
+    # macOS libomp duplicate-load fix — adopted convention
     "KMP_DUPLICATE_LIB_OK": "TRUE",
     # Disable hash randomisation so dict iteration order is byte-stable
     "PYTHONHASHSEED": "42",

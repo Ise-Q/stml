@@ -1,4 +1,4 @@
-"""Tests for ``stml.experimental.data_loader`` — plan §8 Stage 1 deliverable.
+"""Tests for ``stml.experimental.data_loader`` — methodology spec Stage 1 deliverable.
 
 Verifies the per-instrument framing of OHLCV + signal data against the released
 CSVs (so this test depends on ``data/ohlcv_data.csv`` + ``data/primary_signals.csv``

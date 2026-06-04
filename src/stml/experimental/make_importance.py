@@ -1,17 +1,17 @@
 """S5 runner — per-class cluster importance with the 4 bug fixes.
 
 Plan §8 S5 deliverable. Produces, per asset class:
-  results/sreeram_experimental/importance/{class}/clustered_importance.csv
-  results/sreeram_experimental/importance/{class}/cluster_membership.csv
-  results/sreeram_experimental/importance/{class}/rank_agreement.csv
-  results/sreeram_experimental/importance/{class}/hygiene_log.txt
+  results/submission/importance/{class}/clustered_importance.csv
+  results/submission/importance/{class}/cluster_membership.csv
+  results/submission/importance/{class}/rank_agreement.csv
+  results/submission/importance/{class}/hygiene_log.txt
 
-Per plan §3.6 + §8 S5 acceptance:
+Per methodology spec + §8 S5 acceptance:
   * Bug fix 1 (max_features='sqrt'): verified in the RF construction.
   * Bug fix 2 (PurgedKFold for MDA): use CombinatorialPurgedCV(6,2) → 15 paths.
   * Bug fix 3 (SHAP): DEFERRED — shap requires numba which requires numpy<2.4;
     our pandas 3.0 pins numpy>=2.4. Substituted with mean |gain| importance
-    from the fitted RF (qualitatively similar; documented in plan §13 R-12).
+    from the fitted RF (qualitatively similar; documented in methodology spec R-12).
   * Bug fix 4 (Mantegna distance √(1-|ρ|)): metric, not the non-metric 1-|ρ|.
   * Acceptance gate: ≥1 cluster per class has MDA > 0.02.
 """
@@ -82,7 +82,7 @@ def run_class(
     feature_cols = [c for c in df.columns if c not in _SCHEMA_COLS]
     X = df.loc[:, feature_cols].copy()
 
-    # Hygiene (plan §4.12 + §5.16 pattern).
+    # Hygiene (methodology spec + §5.16 pattern).
     X, hygiene_log = apply_hygiene(X, config=HygieneConfig())
     if verbose:
         for line in hygiene_log:
@@ -152,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = PipelineConfig()
     root = _find_repo_root()
-    features = pd.read_parquet(root / "data" / "sreeram_experimental_features.parquet")
+    features = pd.read_parquet(root / "data" / "features.parquet")
     print(f"Loaded features: {features.shape}")
 
     summary_rows = []
@@ -187,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         })
 
         if not args.no_persist:
-            out_dir = root / "results" / "sreeram_experimental" / "importance" / cls
+            out_dir = root / "results" / "submission" / "importance" / cls
             out_dir.mkdir(parents=True, exist_ok=True)
             agg.to_csv(out_dir / "clustered_importance.csv", index=False, float_format="%.6f")
             result["membership"].to_frame(name="cluster_id").to_csv(
@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if summary_rows and not args.no_persist:
         pd.DataFrame(summary_rows).to_csv(
-            root / "results" / "sreeram_experimental" / "importance" / "summary.csv",
+            root / "results" / "submission" / "importance" / "summary.csv",
             index=False, float_format="%.6f",
         )
 

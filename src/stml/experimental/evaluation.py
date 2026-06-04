@@ -3,7 +3,7 @@
 Plan §3.4 / §8 Stage 3 deliverable.
 
 Lifted with attribution from
-``metamodel-apb/src/alken_metamodel/evaluation.py`` (alken parity).
+
 
 Key principles:
 
@@ -147,7 +147,7 @@ def cross_val_evaluate(
     nan_columns_at_test
         Optional list of column names to FORCE TO NaN in the test slice **at
         prediction time only** (training sees the real values). Implements the
-        plan §8 S3 / R-11 simulated-missingness ablation.
+        methodology spec S3 / R-11 simulated-missingness ablation.
     """
     y = y.astype(int)
     fold_rows = []

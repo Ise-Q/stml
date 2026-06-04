@@ -1,12 +1,12 @@
-"""Per-instrument scope generator — emits `results/sreeram_experimental/instrument_scope.json`.
+"""Per-instrument scope generator — emits `results/submission/instrument_scope.json`.
 
-Plan §3.4 + §5.2 (alken parity). Each instrument's CV embargo is the p90 of
+Plan §3.4 + §5.2. Each instrument's CV embargo is the p90 of
 that instrument's own label-window length (``t_end - t_signal`` in trading
 days on the instrument's calendar). The wide variation across instruments
 (ng1s 33d, ho1s 26d, equity 8-10d) is what the per-instrument embargo
 machinery in ``cv.py`` consumes.
 
-Schema (mirrors alken's ``results/instrument_scope.json``):
+Schema (mirrors the reference ``results/instrument_scope.json``):
 
     {
         "<inst>": {
@@ -39,7 +39,7 @@ from stml.experimental.data_loader import load_panel, per_instrument_frames
 
 ASSET_CLASS_SHORT = {"equity": "EQ", "energy": "EN", "metals": "ME"}
 
-# Power threshold from alken: any instrument with n_eff < this gets low_power=True.
+# Power threshold from reference: any instrument with n_eff < this gets low_power=True.
 LOW_POWER_THRESHOLD = 15
 
 
@@ -62,7 +62,7 @@ def _trading_day_span(t_signal: pd.Timestamp, t_end: pd.Timestamp, inst_index: p
 def _business_day_span(t_signal: pd.Timestamp, t_end: pd.Timestamp) -> int:
     """Number of POOLED business days (Mon-Fri) between t_signal and t_end.
 
-    This is the embargo_p90 unit alken uses: for thin instruments like ng1s
+    This is the embargo_p90 unit the convention uses: for thin instruments like ng1s
     that only trade ~1 in 3 business days, the on-instrument h=10 window
     stretches over many more business days on the pooled calendar — that's
     where the per-instrument differentiation comes from.
@@ -75,12 +75,12 @@ def build_scope(events: pd.DataFrame) -> dict[str, dict]:
 
     For each instrument:
       * embargo_p90 = 90th percentile of label-window length, **measured in
-        bars on the instrument's own trading calendar**. This is what alken's
+        bars on the instrument's own trading calendar**. This is what the reference
         CV machinery wants (33d for ng1s, 26d for ho1s) — the wide variation
         comes from instruments whose trade calendar has gaps where the h=10
         horizon stretches over more calendar days.
       * n_eff_gate = sum of uniqueness weights (AFML Ch.4 effective sample size).
-      * low_power = n_eff < LOW_POWER_THRESHOLD (alken parity).
+      * low_power = n_eff < LOW_POWER_THRESHOLD.
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ def build_scope(events: pd.DataFrame) -> dict[str, dict]:
             }
             continue
 
-        # POOLED business-day spans (Mon-Fri) — alken's convention. For thin
+        # POOLED business-day spans (Mon-Fri) — the reference convention. For thin
         # instruments like ng1s the on-instrument 11-bar window can stretch
         # over 30+ business days on the pooled calendar, which is what the
         # per-instrument embargo machinery needs to know about.
@@ -119,13 +119,13 @@ def build_scope(events: pd.DataFrame) -> dict[str, dict]:
         span_p90 = int(np.percentile(spans, 90))
         span_med = int(np.percentile(spans, 50))
 
-        # Worst-case held window from Jay's per-instrument geometry: the label
+        # Worst-case held window from the per-instrument geometry: the label
         # could be held for up to h trading days even if most events close
         # early at PT or SL. The embargo must cover this so events starting
         # right after a test fold cannot have their t_end overlap the test
         # block via the forward leak window.
         h_max = int(sub["h"].max()) if "h" in sub.columns else 0
-        # Take the MAX of (data-driven p90, Jay's worst-case h, AFML default 10).
+        # Take the MAX of (data-driven p90, the worst-case h, AFML default 10).
         embargo = int(max(span_p90, h_max, 10))
 
         n_events = int(len(sub))
@@ -153,7 +153,7 @@ def load_scope(path: Path | None = None) -> dict[str, dict]:
     """Load the scope JSON from disk."""
     if path is None:
         root = _find_repo_root()
-        path = root / "results" / "sreeram_experimental" / "instrument_scope.json"
+        path = root / "results" / "submission" / "instrument_scope.json"
     with open(path) as f:
         return json.load(f)
 
@@ -166,20 +166,20 @@ def embargo_days_map(path: Path | None = None) -> dict[str, int]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Generate results/sreeram_experimental/instrument_scope.json"
+        description="Generate results/submission/instrument_scope.json"
     )
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args(argv)
 
     root = _find_repo_root()
-    events_path = root / "data" / "sreeram_experimental_events.parquet"
+    events_path = root / "data" / "events.parquet"
     if not events_path.exists():
         print(f"FATAL: {events_path} missing — run S1 first.")
         return 1
     events = pd.read_parquet(events_path)
 
     scope = build_scope(events)
-    out_path = root / "results" / "sreeram_experimental" / "instrument_scope.json"
+    out_path = root / "results" / "submission" / "instrument_scope.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(scope, f, indent=2, sort_keys=True)

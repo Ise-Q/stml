@@ -1,27 +1,27 @@
 """S2 runner — build the per-event feature matrix + drift-filter audit.
 
-Plan §8 Stage 2 / R9 / R10. Migrated to Jay's per-instrument labels CSV:
+Plan §8 Stage 2 / R9 / R10. Migrated to the per-instrument labels CSV:
 the train/test split is driven by the ``partition`` column from the events
 parquet, not by a global cut date.
 
 Sequence:
 1. Load OHLCV + signals → per-instrument frames (via data_loader).
-2. Load events.parquet (from S1 / Jay's CSV) so we know which
+2. Load events.parquet (from S1 / the CSV) so we know which
    (instrument, date) rows are labelled and therefore deserve a feature row.
 3. Run :func:`stml.experimental.features.assemble_features` to compute every
    registered feature for every instrument's full trading-day calendar.
 4. Inner-join the feature matrix to the event index — one feature row per
    labelled event, carrying the (pt, sl, h, partition) columns through.
-5. Apply the drift filter (plan §3.3): per feature compute KS between an
+5. Apply the drift filter (methodology spec): per feature compute KS between an
    early-train (first 70% chronologically) and late-train (last 30%) slice;
    compute sign-flip-aware single-feature AUC on the late-train slice; drop
    features that fail both gates. **Val and test partitions stay fully
    sealed** so they can be used as honest evaluators downstream.
-6. Persist ``data/sreeram_experimental_features.parquet`` (kept features)
-   + ``results/sreeram_experimental/feature_drift_audit.csv`` (every feature's
+6. Persist ``data/features.parquet`` (kept features)
+   + ``results/submission/feature_drift_audit.csv`` (every feature's
    KS / val_AUC / decision).
 
-Acceptance gates (plan §8 S2):
+Acceptance gates (methodology spec S2):
 * ≥ 80 % of kept features have train→val KS < 0.20
 * ≥ 15 features have val_AUC > 0.55
 * Final matrix has 80-120 columns
@@ -113,9 +113,9 @@ def drift_filter(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Per-feature KS + sign-flip-aware val-AUC, then drop the failures.
 
-    Drop rule (plan §3.3):
+    Drop rule (methodology spec):
         DROP iff KS > 0.25 AND val_AUC < 0.54
-    Keep rule (plan §3.3):
+    Keep rule (methodology spec):
         Otherwise keep (including: KS > 0.25 with val_AUC > 0.58 — informative
         despite drift).
 
@@ -136,7 +136,7 @@ def drift_filter(
     """
     cfg = cfg or PipelineConfig()
 
-    # Reserved columns -- include Jay's geometry + partition.
+    # Reserved columns -- include the geometry + partition.
     _reserved = {
         "instrument", "t_signal", "t_start", "t_end", "side",
         "ret", "label", "uniqueness_weight", "sigma_at_t", "barrier_hit",
@@ -180,7 +180,7 @@ def drift_filter(
         ):
             keep = False
             reason = "drop: KS>0.25 AND val_AUC<0.54"
-        # Tighter S2 gate rule (plan §8): drop drift-prone features whose
+        # Tighter S2 gate rule (methodology spec): drop drift-prone features whose
         # val_AUC is essentially noise (≤ 0.51). Keeps a few high-KS features
         # that still carry directional info (val_AUC > 0.51) so the matrix
         # stays in the 80-120 col range while >=80% of kept features have
@@ -215,7 +215,7 @@ def drift_filter(
         c for c in (
             "instrument", "t_signal", "t_start", "t_end", "side", "ret",
             "label", "uniqueness_weight", "sigma_at_t", "barrier_hit",
-            "pt", "sl", "h", "partition",  # Jay's per-instrument geometry + partition.
+            "pt", "sl", "h", "partition",  # the per-instrument geometry + partition.
         )
         if c in feature_matrix.columns
     ]
@@ -231,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = PipelineConfig()
     root = _find_repo_root()
-    events_path = root / "data" / "sreeram_experimental_events.parquet"
+    events_path = root / "data" / "events.parquet"
     if not events_path.exists():
         print(f"FATAL: {events_path} missing — run `python -m stml.experimental.make_labels` first.")
         return 1
@@ -285,8 +285,8 @@ def main(argv: list[str] | None = None) -> int:
     print(top[["feature", "ks", "val_auc", "keep", "reason"]].to_string(index=False))
 
     if not args.no_persist:
-        feat_path = root / "data" / "sreeram_experimental_features.parquet"
-        audit_path = root / "results" / "sreeram_experimental" / "feature_drift_audit.csv"
+        feat_path = root / "data" / "features.parquet"
+        audit_path = root / "results" / "submission" / "feature_drift_audit.csv"
         feat_path.parent.mkdir(parents=True, exist_ok=True)
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         kept.to_parquet(feat_path, index=False)

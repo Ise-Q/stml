@@ -109,7 +109,7 @@ def strategy_returns(
 
 
 # ---------------------------------------------------------------------------
-# Sortino-Price 1994 full-T form (plan §3.7 + pass-5 fix).
+# Sortino-Price 1994 full-T form (methodology spec + pass-5 fix).
 # ---------------------------------------------------------------------------
 
 

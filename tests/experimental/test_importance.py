@@ -1,4 +1,4 @@
-"""Tests for ``stml.experimental.importance`` + ``dim_reduction`` — plan §8 S5.
+"""Tests for ``stml.experimental.importance`` + ``dim_reduction`` — methodology spec S5.
 
 Verifies the four S5 acceptance properties:
   * Mantegna distance: metric (zero diagonal, symmetric, triangle invariant
@@ -70,7 +70,7 @@ def test_mantegna_anti_correlation_zero_distance():
 def test_importance_forest_uses_sqrt_max_features():
     """The RF used by cluster_importance_one_fold must have max_features='sqrt'.
 
-    PS4 used 'auto' which sklearn ≥1.3 removed. plan §3.6 bug fix 1.
+    PS4 used 'auto' which sklearn ≥1.3 removed. methodology spec bug fix 1.
     """
     from stml.experimental.importance import ImportanceConfig, cluster_importance_one_fold
 

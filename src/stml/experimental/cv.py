@@ -1,7 +1,7 @@
 """Purged + combinatorial CV for triple-barrier labels.
 
 Plan §3.4 / §8 Stage 3 deliverable. Lifted with attribution from
-``metamodel-apb/src/alken_metamodel/cross_validation.py`` (alken parity) and
+
 ``src/stml/cv.py`` (Sreeram, the original `PurgedKFold`).
 
 Three splitters:
@@ -13,7 +13,7 @@ Three splitters:
 * :func:`nested_cpcv` — outer CPCV (selection-bias evaluator) over an inner
   CPCV (hyperparameter tuning) — gives selection-bias-aware OOS scores.
 
-Plus **per-instrument embargo** (plan §3.4 + alken S2.6): the standard 1 %
+Plus **per-instrument embargo** (methodology spec): the standard 1 %
 forward embargo under-covers thin instruments whose label windows can stretch
 to ~33 business days on the pooled calendar. With an `embargo_days`
 ``{inst: int}`` map, each test block's forward embargo is applied per
@@ -111,7 +111,7 @@ def _purge_train(
 
     # Step 2 — forward embargo. Two paths:
     if cfg.embargo_days and insts is not None and len(cfg.embargo_days) > 0:
-        # Per-instrument embargo on each instrument's own axis (plan §3.4).
+        # Per-instrument embargo on each instrument's own axis (methodology spec).
         axes = _instrument_date_axes(cfg.t, cfg.instruments)
         # For each instrument in the TEST block, find its own max t1; then
         # advance embargo_days on that instrument's axis; drop train events

@@ -6,7 +6,7 @@ Produces three artifacts:
      every primary signal at full vol-targeted size (no meta filter, no
      calibration, no sizing curve). The honest comparator for "did the
      meta-model add value?".
-  2. ``results/sreeram_experimental/strategy_variant_comparison.csv`` -- the
+  2. ``results/submission/strategy_variant_comparison.csv`` -- the
      existing comparison file, augmented with a `primary_blind` row.
   3. ``outputs/coverage_caveat.csv`` -- explicit flags for instruments whose
      meta-model produced zero positions on the sealed test, plus thin-OOS
@@ -128,7 +128,7 @@ def run(
 ) -> dict:
     root = _find_repo_root()
     cfg = PipelineConfig()
-    events_path = root / "data" / "sreeram_experimental_events.parquet"
+    events_path = root / "data" / "events.parquet"
     events_all = pd.read_parquet(events_path)
     events_test = events_all.loc[events_all["partition"] == "test"].copy()
     events_test["t_start"] = pd.to_datetime(events_test["t_start"])
@@ -181,7 +181,7 @@ def run(
     emit_weights(weights_long, outputs_dir / "strategy_weights_primary_blind.csv")
 
     # Append to strategy_variant_comparison.csv.
-    cmp_path = root / "results" / "sreeram_experimental" / "strategy_variant_comparison.csv"
+    cmp_path = root / "results" / "submission" / "strategy_variant_comparison.csv"
     cmp = pd.read_csv(cmp_path)
     # Drop any stale primary_blind row.
     cmp = cmp.loc[cmp["variant"] != "primary_blind"].copy()

@@ -23,7 +23,7 @@ from stml.experimental.bloomberg_ingest import (
 def test_ingest_emits_all_expected_parquets(tmp_path):  # noqa: ARG001
     """A run produces 4 (or 5 with the flag) parquets in cleaned/."""
     result = ingest()
-    expected = {"futures_term", "options_iv", "eia_crude", "eia_release_flag", "macro_harry"}
+    expected = {"futures_term", "options_iv", "eia_crude", "eia_release_flag", "macro_alternative"}
     assert expected.issubset(result.parquets.keys())
     for name, (rows, cols) in result.parquets.items():
         assert rows > 0, f"{name} has zero rows"
@@ -58,7 +58,7 @@ def test_eia_release_flag_fires_only_on_wednesdays_or_first_business_day_after(r
 
 
 def test_lag_constants_match_plan_5_1():
-    """Publication lags = plan §5.1 contract."""
+    """Publication lags = methodology spec contract."""
     assert LAG_DAILY == 1
     assert LAG_EIA == 5
 
@@ -77,9 +77,9 @@ def test_options_iv_pl1_substituted_by_gc1_at_loader_level(repo_root):  # noqa: 
     assert "GC1_IV1M_ATM" in df.columns
 
 
-def test_macro_harry_has_eia_levels_complementary_to_crude_change(repo_root):  # noqa: ARG001
-    """Harry's macro has LEVELS; new BBG EIA has CHANGES. Both present, distinct."""
-    macro = pd.read_parquet(repo_root / "data/bloomberg/cleaned/macro_harry.parquet")
+def test_macro_alternative_has_eia_levels_complementary_to_crude_change(repo_root):  # noqa: ARG001
+    """the macro has LEVELS; new BBG EIA has CHANGES. Both present, distinct."""
+    macro = pd.read_parquet(repo_root / "data/bloomberg/cleaned/macro_alternative.parquet")
     crude = pd.read_parquet(repo_root / "data/bloomberg/cleaned/eia_crude.parquet")
     assert "EIA_CRUDE_STOCK" in macro.columns  # LEVELS
     assert "EIA_CRUDE_CHANGE_KB" in crude.columns  # CHANGES

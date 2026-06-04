@@ -44,7 +44,7 @@ _BBG_IV_MAP = {
     "es1s": "SPX", "nq1s": "NDX", "fesx1s": "SX5E",
     "cl1s": "CL1", "ho1s": "HO1", "rb1s": "XB1", "ng1s": "NG1",
     "gc1s": "GC1", "si1s": "SI1", "hg1s": "HG1",
-    "pl1s": "GC1",  # SUBSTITUTION — plan §5.2 fallback (XPT data empty)
+    "pl1s": "GC1",  # SUBSTITUTION — methodology spec fallback (XPT data empty)
 }
 
 # Energy instruments — F22 applies only to these.
@@ -165,7 +165,7 @@ def _f19_iv_rv_spread_20(ctx: FeatureContext) -> pd.Series:
 def _f19_skew_1m(ctx: FeatureContext) -> pd.Series:
     """90% MNY IV − 110% MNY IV — skew (positive = put expensive vs call).
 
-    NOTE plan §5.2 / validation report: this is a moneyness-based proxy for
+    NOTE methodology spec / validation report: this is a moneyness-based proxy for
     25-delta skew (90% MNY ≈ 25Δ put for typical equity vols; not strict).
     """
     return _iv_series(ctx, "IV1M_90MNY") - _iv_series(ctx, "IV1M_110MNY")

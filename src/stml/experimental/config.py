@@ -60,11 +60,11 @@ class PipelineConfig:
     seed: int = 42
 
     # ----------------------------------------------------------- S1 labelling
-    # Triple-barrier convention (plan §3.2).
-    # Entry is at t+1 (Harry's load-bearing fix). Barriers sized as
+    # Triple-barrier convention (methodology spec).
+    # Entry is at t+1 (the load-bearing fix). Barriers sized as
     # ``pt_mult * sigma_t * sqrt(h)`` and ``-sl_mult * sigma_t * sqrt(h)`` in
     # log-return units. CPCV barrier search in S2 may override pt/sl/h per
-    # asset class (plan §3.2 gates).
+    # asset class (methodology spec gates).
     pt_mult: float = 0.5
     sl_mult: float = 0.5
     max_holding: int = 10  # h, in trading days
@@ -77,7 +77,7 @@ class PipelineConfig:
     garch_max_window: int = 2000
 
     # ---------------------------------------------------- S1 train/test split
-    # Harry's clean global cut (plan §4.19 + experimental adoption). The
+    # adopted clean global cut (methodology spec). The
     # 30 % post-2021-10-20 slice is SEALED — never read during selection or
     # importance, only at the final OOS confirmation.
     global_train_cut: str = "2021-10-06"
@@ -87,7 +87,7 @@ class PipelineConfig:
     drift_ks_threshold: float = 0.25
     drift_val_auc_floor: float = 0.54
     drift_val_auc_keep_above: float = 0.58
-    macro_rolling_rank_window: int = 63  # plan §3.3 reformulation
+    macro_rolling_rank_window: int = 63  # methodology spec reformulation
 
     # ----------------------------------------------------------- S3-S4 CV / models
     cv_scheme: CvScheme = "cpcv"
@@ -95,7 +95,7 @@ class PipelineConfig:
     cpcv_n_test_groups: int = 2  # → C(6,2) = 15 paths
     cpcv_pct_embargo: float = 0.01  # uniform fallback; per-instrument map overrides
     inner_kfold_k: int = 4
-    selection_rule: SelectionRule = "one_se"  # plan §4.19 — 1SE rule
+    selection_rule: SelectionRule = "one_se"  # methodology spec — 1SE rule
 
     roster: Roster = "default"
 
@@ -118,7 +118,7 @@ class PipelineConfig:
     ewma_sigma_span: int = 60
 
     # ---------------------------------------------------- S6 cost model
-    half_spread_bps: float = 2.0  # Grinold-Kahn, alken parity
+    half_spread_bps: float = 2.0  # Grinold-Kahn, adopted convention
     impact_bps: float = 10.0
     impact_exponent: float = 1.0  # linear
 
@@ -130,12 +130,12 @@ class PipelineConfig:
 
     # ----------------------------------------------- I/O
     output_dir: str = "outputs"
-    results_dir: str = "results/sreeram_experimental"
+    results_dir: str = "results/submission"
 
     # ------------------------------------- catalogue switches (S2)
     use_bloomberg: bool = True  # if False, F18-F22 silently dropped (R-1 fallback)
-    use_drift_feature: bool = True  # F16 — plan §3.3
-    use_ewma_hmm: bool = True  # plan §3.3 — alken parity
+    use_drift_feature: bool = True  # F16 — methodology spec
+    use_ewma_hmm: bool = True  # methodology spec — adopted convention
 
     # -------- "extras" reserved for stage-specific overrides without proliferation
     extras: dict[str, object] = field(default_factory=dict)

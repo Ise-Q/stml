@@ -1,7 +1,7 @@
 """Phase-I+ runner — within-cluster + global SHAP + cross-check + pruned model.
 
 Produces, per asset class, the per-instrument-importance artifacts that
-Harry's branch emits:
+the branch emits:
 
   cluster_crosscheck_table.csv  -- cluster ranks under MDA/MDI/SHAP, significance.
   within_cluster_<CID>.csv      -- one CSV per top cluster: members ranked by
@@ -13,7 +13,7 @@ Harry's branch emits:
                                    TRAIN; the comparison is on held-out VAL.
   pruned_features.json          -- the pruned feature list and selection reasons.
 
-Selection rule for the pruned model (per Harry's branch + user's spec):
+Selection rule for the pruned model (per the branch + user's spec):
 
   1. For each cluster that is *significant* (MDA mean > 1 sigma above zero):
        - If PC1 variance >= 65 percent  ->  keep PC1 component (a single
@@ -83,7 +83,7 @@ def _find_repo_root() -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Cluster cross-check (Harry's cluster_crosscheck_table.csv schema).
+# Cluster cross-check (the cluster_crosscheck_table.csv schema).
 # ---------------------------------------------------------------------------
 
 
@@ -108,7 +108,7 @@ def cluster_crosscheck(agg: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Within-cluster breakdown (Harry's within_cluster_<CID>.csv schema).
+# Within-cluster breakdown (the within_cluster_<CID>.csv schema).
 # ---------------------------------------------------------------------------
 
 
@@ -433,7 +433,7 @@ def run_class(
 
     # Existing cluster summary (we already saved this in Phase E).
     root = _find_repo_root()
-    out_dir = root / "results" / "sreeram_experimental" / "importance" / asset_class
+    out_dir = root / "results" / "submission" / "importance" / asset_class
     out_dir.mkdir(parents=True, exist_ok=True)
     agg = pd.read_csv(out_dir / "clustered_importance.csv")
 
@@ -561,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     cfg = PipelineConfig()
     root = _find_repo_root()
-    features = pd.read_parquet(root / "data" / "sreeram_experimental_features.parquet")
+    features = pd.read_parquet(root / "data" / "features.parquet")
     print(f"Loaded features: {features.shape}")
     summary_rows = []
     for cls in ("equity", "energy", "metals"):
@@ -581,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
             "delta_auc": pruned_auc - full_auc,
         })
     summary = pd.DataFrame(summary_rows)
-    out_path = root / "results" / "sreeram_experimental" / "importance" / "deep_summary.csv"
+    out_path = root / "results" / "submission" / "importance" / "deep_summary.csv"
     summary.to_csv(out_path, index=False, float_format="%.6f")
     print(f"\n=== Deep-importance summary ===")
     print(summary.to_string(index=False))

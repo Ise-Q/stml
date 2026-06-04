@@ -1,7 +1,7 @@
 """S7 runner — significance + deflation + signal_analysis on the H1-2022 OOS.
 
-Reads ``results/sreeram_experimental/strategy_daily_net_returns.csv`` (the S6
-emission) and produces ``results/sreeram_experimental/significance_summary.md``
+Reads ``results/submission/strategy_daily_net_returns.csv`` (the S6
+emission) and produces ``results/submission/significance_summary.md``
 + machine-readable CSV.
 
 Plan §8 S7 acceptance: all numbers reproduce from
@@ -62,7 +62,7 @@ def _pt_inputs(events_with_preds: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]
 
 def run(verbose: bool = True) -> dict:
     root = _find_repo_root()
-    res_dir = root / "results" / "sreeram_experimental"
+    res_dir = root / "results" / "submission"
 
     net_path = res_dir / "strategy_daily_net_returns.csv"
     if not net_path.exists():
@@ -169,7 +169,7 @@ def run(verbose: bool = True) -> dict:
     md_lines = [
         "# Significance + deflation + directional skill — H1-2022 OOS",
         "",
-        f"Source data: `results/sreeram_experimental/strategy_daily_net_returns.csv` (n = {n} periods).",
+        f"Source data: `results/submission/strategy_daily_net_returns.csv` (n = {n} periods).",
         "",
         "## §3.8 PRIMARY — Sharpe significance",
         "",
@@ -239,8 +239,8 @@ def run(verbose: bool = True) -> dict:
             v = row["value"]
             print(f"  {row['name']:40s}  {v if not isinstance(v, float) else f'{v:.6f}'}")
         print(f"\nWrote {md_path.relative_to(root)}")
-        print(f"Wrote results/sreeram_experimental/significance_summary.csv")
-        print(f"Wrote results/sreeram_experimental/deflation_ladder.csv")
+        print(f"Wrote results/submission/significance_summary.csv")
+        print(f"Wrote results/submission/deflation_ladder.csv")
 
     return {"summary": summary_df, "report": sig, "pbo_combos": pbo_combos}
 

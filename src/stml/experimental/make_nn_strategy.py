@@ -14,9 +14,9 @@ Outputs:
     outputs/strategy_weights_nn_lstm.csv
     outputs/strategy_weights_nn_vlstm.csv
     outputs/strategy_weights_sops.csv                    (copy of SOPS deliverable)
-    results/sreeram_experimental/nn_training_history_<variant>.csv
-    results/sreeram_experimental/strategy_variant_comparison.csv
-    results/sreeram_experimental/strategy_winner.json
+    results/submission/nn_training_history_<variant>.csv
+    results/submission/strategy_variant_comparison.csv
+    results/submission/strategy_winner.json
 """
 
 from __future__ import annotations
@@ -288,7 +288,7 @@ def run(
 ) -> dict:
     cfg = cfg or PipelineConfig()
     root = _find_repo_root()
-    results_dir = root / "results" / "sreeram_experimental"
+    results_dir = root / "results" / "submission"
     outputs_dir = root / "outputs"
     results_dir.mkdir(parents=True, exist_ok=True)
     outputs_dir.mkdir(parents=True, exist_ok=True)
@@ -316,7 +316,7 @@ def run(
     # Train + val + test window. Use a wider start so EWMA σ̂ warms up.
     # End boundary is data-driven from the events parquet's max t_end so the
     # marker's H2-2022 re-run extends automatically.
-    events_path = root / "data" / "sreeram_experimental_events.parquet"
+    events_path = root / "data" / "events.parquet"
     events_df_for_end = pd.read_parquet(events_path)
     panel_end = pd.to_datetime(events_df_for_end["t_end"]).max()
     panel_full = build_portfolio_panel(
@@ -327,7 +327,7 @@ def run(
     )
     instruments = panel_full.instruments
 
-    # Split by partition dates inferred from the events parquet (Jay's CSV).
+    # Split by partition dates inferred from the events parquet (the CSV).
     events_df = pd.read_parquet(events_path)
     events_df["t_signal"] = pd.to_datetime(events_df["t_signal"])
     train_max_date = events_df.loc[events_df["partition"] == "train", "t_signal"].max()

@@ -1,6 +1,6 @@
-"""Multi-task neural net with per-instrument heads — plan §3.1 Family B + §8 S4.
+"""Multi-task neural net with per-instrument heads — methodology spec Family B + §8 S4.
 
-Architecture (plan §3.1):
+Architecture (methodology spec):
 
     instrument id ──> Embedding(11, 8) ──┐
                                           ├──> concat ──> Linear(d+8, 64) + ReLU + Dropout(0.1)
@@ -28,7 +28,7 @@ Why instrument heads (over per-class XGB):
 * The 11-head design generalises across asset classes when used at the class
   level (3-4 heads per class model).
 
-Per-class instance (not pooled across classes — plan §3.1 explicit).
+Per-class instance (not pooled across classes — methodology spec explicit).
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _torch():
 class MultiTaskConfig:
     """Frozen hyperparameters for one training run.
 
-    Defaults mirror plan §3.1 spec.
+    Defaults mirror methodology spec spec.
     """
 
     embed_dim: int = 8
@@ -80,7 +80,7 @@ class MultiTaskConfig:
 
 
 def _build_model(d_feat: int, n_instruments: int, cfg: MultiTaskConfig):
-    """Build the torch nn.Module per plan §3.1."""
+    """Build the torch nn.Module per methodology spec"""
     torch = _torch()
     nn = torch.nn
 
@@ -280,7 +280,7 @@ class MultiTaskMetaClassifier:
     def predict_act_proba(self, X, *, instrument_ids: np.ndarray) -> np.ndarray:
         """P(class == 1) for each row, using the row's instrument head.
 
-        Clipped to [0.01, 0.99] to bound log-loss (alken parity with our
+        Clipped to [0.01, 0.99] to bound log-loss (adopted convention with our
         sklearn MetaClassifier).
         """
         torch = _torch()

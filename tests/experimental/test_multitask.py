@@ -1,4 +1,4 @@
-"""Tests for ``stml.experimental.multitask`` — plan §8 S4 acceptance.
+"""Tests for ``stml.experimental.multitask`` — methodology spec S4 acceptance.
 
 Verifies:
 * Deterministic forward+backward+Adam step (same seed → same predictions).

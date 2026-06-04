@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the ``stml.experimental`` test suite.
 
-Plan §9 (RED-first TDD) + plan §10 (determinism). The conftest:
+Plan §9 (RED-first TDD) + methodology spec (determinism). The conftest:
 
 * Seeds every RNG before each test runs, so a test that uses random data is
   byte-stable across pytest invocations.

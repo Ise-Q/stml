@@ -4,13 +4,13 @@ The bonus strategy-construction track applies the lecturer's *Optional Session 3
 Sharpe-optimal portfolio recipe (BUSI70575, Madmoun) to the meta-model's
 calibrated probabilities. Five sizing variants are benchmarked head-to-head
 against a primary-blind baseline; sealed-test results in
-`results/sreeram_experimental/strategy_variant_comparison.csv`.
+`results/submission/strategy_variant_comparison.csv`.
 
 > **Labels source.** Triple-barrier labels use a per-instrument geometry
 > `(pt, sl, h)` selected by an adjusted-Sharpe grid search over 343
 > configurations on the development partition only (test partition never
 > touched during label selection). Per-instrument winners in
-> `results/sreeram_experimental/jay_geometry_summary.csv`. All downstream
+> `results/submission/jay_geometry_summary.csv`. All downstream
 > stages — champion selection, calibration, sizing, backtest, importance —
 > operate on the same `(events, partition)` schema.
 
@@ -66,7 +66,7 @@ The NN variants additionally accept lookback windows of `(features, primary side
 
 Modelling slice: pre-2021-10-06 (366 train days, 91 val days). Sealed test: post-2021-10-20 (179 days). Same cut used across all of Stages 1–5.
 
-## Sealed-test backtest comparison (Jay's labels, 2022-H1, 129 trading days)
+## Sealed-test backtest comparison (the labels, 2022-H1, 129 trading days)
 
 > **Train / val / test discipline.** Drift filter runs on TRAIN only (early
 > 70% vs late 30% chronologically — val and test sealed from feature
@@ -75,9 +75,9 @@ Modelling slice: pre-2021-10-06 (366 train days, 91 val days). Sealed test: post
 > scores on held-out VAL. The **final deliverable model refits on
 > TRAIN + VAL combined** (Jan 2020 → Dec 2021, ~24 months) — maximum data
 > before the sealed test slice (H1 2022). Embargo widened per-instrument to
-> `max(p90 span, Jay's h, 10 days)`.
+> `max(p90 span, the h, 10 days)`.
 
-Run `results/sreeram_experimental/strategy_variant_comparison.csv` (NN params: lookback 21, hidden 16, epochs 25, patience 5, seeds 5):
+Run `results/submission/strategy_variant_comparison.csv` (NN params: lookback 21, hidden 16, epochs 25, patience 5, seeds 5):
 
 | Variant | val Sharpe | **test Sharpe** | test ann ret (net) | test ann vol | Sortino | max DD | turnover/yr |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -146,9 +146,9 @@ Both commands are deterministic (seeded torch + numpy RNGs). Outputs:
 - `outputs/strategy_weights_nn_linear.csv`   — NN linear backbone weights.
 - `outputs/strategy_weights_nn_lstm.csv`     — NN LSTM backbone weights.
 - `outputs/strategy_weights_nn_vlstm.csv`    — NN VLSTM backbone weights.
-- `results/sreeram_experimental/strategy_variant_comparison.csv` — head-to-head metrics.
-- `results/sreeram_experimental/strategy_winner.json`            — selected winner + criterion.
-- `results/sreeram_experimental/nn_training_history_<variant>.csv` — per-epoch train/val Sharpe.
+- `results/submission/strategy_variant_comparison.csv` — head-to-head metrics.
+- `results/submission/strategy_winner.json`            — selected winner + criterion.
+- `results/submission/nn_training_history_<variant>.csv` — per-epoch train/val Sharpe.
 
 ## Test coverage
 
@@ -167,9 +167,9 @@ Both commands are deterministic (seeded torch + numpy RNGs). Outputs:
 
 ---
 
-## Appendix: Migration to Jay's per-instrument geometry labels
+## Appendix: Migration to the per-instrument geometry labels
 
-### What Jay's CSV is
+### What the CSV is
 
 A model-free per-instrument search over 343 triple-barrier geometries
 `(pt, sl) ∈ {0.25, 0.5, 0.75, 1, 1.5, 2, 2.5}² × h ∈ {1, 2, 3, 5, 10, 15, 20}`.
@@ -216,7 +216,7 @@ Three structural observations from the PDF, propagated to
 | Entry timing | close of `date` (= t_signal) | PDF: "lag 1 = first tradeable bar = u_{t+1}" requires entry at close(t) |
 | Held window | `[t_signal, t1)` (half-open) | matches `backtest.build_position_panel` half-open clipping |
 | Uniqueness weights | AFML Ch.4, half-open span | recomputed per instrument on the new spans |
-| σ̂ source for sizing | causal EWMA span 60 (slide 39) | independent of label σ̂ (which is `f2_vol_20` in Jay's CSV) |
+| σ̂ source for sizing | causal EWMA span 60 (slide 39) | independent of label σ̂ (which is `f2_vol_20` in the CSV) |
 | Train/val/test | `partition` column from CSV (chronological) | replaces single global cut at 2021-10-06 |
 | Test window | 2021-12-31 → 2022-06-29 (951 events, 129 days) | smaller than the old 179-day window |
 
@@ -245,7 +245,7 @@ Architecture surface untouched through the migration:
 
 ### Old GARCH vs Jay labels — quantitative diff (locked submission)
 
-| Metric | Old GARCH `pt=sl=0.5, h=10` | Jay's per-instrument |
+| Metric | Old GARCH `pt=sl=0.5, h=10` | the per-instrument |
 |---|---:|---:|
 | Total events | 4,886 | 4,917 |
 | Sealed test events | 1,342 (179 days) | 951 (129 days) |
@@ -263,7 +263,7 @@ Architecture surface untouched through the migration:
 
 The new locked submission has **comparable Sharpe**, **half the drawdown**,
 **70% of the turnover**, and **realised vol that respects the 10% cap** —
-the strategy is cleaner under Jay's spec at minor cost in raw return.
+the strategy is cleaner under the spec at minor cost in raw return.
 
 ### Caveats persisted to `outputs/coverage_caveat.csv`
 
@@ -293,7 +293,7 @@ the noise floor for any metric.
 `tests/experimental/test_make_labels_jay.py` (13 tests):
 - Schema round-trip CSV → events
 - Partition counts per instrument match CSV exactly
-- `t_start == t_signal` (Jay's entry-at-`date` convention)
+- `t_start == t_signal` (the entry-at-`date` convention)
 - `t_end >= t_start` for every event
 - Uniqueness weights ∈ (0, 1]
 - h=1 instruments have mean uniqueness 1.0 (consecutive h=1 events are disjoint)

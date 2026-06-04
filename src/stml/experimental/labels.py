@@ -1,17 +1,17 @@
-"""Triple-barrier labels with **t+1 entry** — plan §3.2 / §8 Stage 1 deliverable.
+"""Triple-barrier labels with **t+1 entry** — methodology spec / §8 Stage 1 deliverable.
 
-This module is the single labelling implementation on Sreeram_experimental.
-Three load-bearing decisions vs the AFML Ch.3 default and vs Sreeram's prior
+This module is the single labelling implementation .
+Three load-bearing decisions vs the AFML Ch.3 default and vs the prior
 labeller:
 
 * **Entry at the close of t+1, not t.** A signal observed at the close of bar
   ``t`` is acted on at the close of ``t+1``. The held window is
   ``[t+1, t+1+h]``; the bar between ``t`` and ``t+1`` is no longer inside the
-  event. This is Harry's load-bearing fix (branch_descriptions.md §4.3) —
+  event. This is the load-bearing fix (prior audit) —
   empirically ``corr(s_t, r_{t+1}) > 0`` for all 11 instruments.
 
 * **Tighter symmetric barriers by default** (``pt = sl = 0.5``). The branch
-  audit (branch_descriptions.md §4.19 and the plan §3.2) shows the EWMA-σ̂ ×
+  audit (prior audit and the methodology spec) shows the EWMA-σ̂ ×
   ``pt=sl=1.0`` barrier resolves at the vertical line 50–65 % of the time on
   the released data — labels degenerate to "10-day drift sign" rather than a
   triple-barrier first-touch. The S2 CPCV barrier search may override pt/sl/h
@@ -140,7 +140,7 @@ def triple_barrier_labels(
         pos_entry = pos_t + 1
         pos_vert = pos_entry + cfg.max_holding
         # Drop events whose full [t+1, t+1+h] window is not available on this
-        # instrument's calendar — matches Harry's labels.py convention (§4.3).
+        # instrument's calendar — matches the labels.py convention (§4.3).
         # Truncating to fewer than h bars would change the barrier semantics
         # (barrier width is sized by sqrt(h)).
         if pos_vert >= len(close):
@@ -294,7 +294,7 @@ def _first_barrier_touch(
 ) -> tuple[int, str, float]:
     """Scan close[pos_entry+1 ... pos_vert] for first PT or SL touch.
 
-    Per the plan §3.2 / Harry §4.3 algorithm:
+    Per the methodology spec / algorithm:
         for u in (t+2, …, t+1+h):
             signed_dist = side · log(close[u] / entry_close)
             if signed_dist ≥ +pt_width: PT touch

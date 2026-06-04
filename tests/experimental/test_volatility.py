@@ -1,4 +1,4 @@
-"""Tests for ``stml.experimental.volatility`` — plan §9 RED-first.
+"""Tests for ``stml.experimental.volatility`` — methodology spec RED-first.
 
 Plan §8 Stage 1 acceptance gates relevant to this module:
 * Closed forms (GK / Parkinson / RS) match the textbook formulas on hand-computed
@@ -7,7 +7,7 @@ Plan §8 Stage 1 acceptance gates relevant to this module:
 * Rolling annualised versions return NaN before warmup and finite values after.
 * GARCH σ̂ is truncation-invariant: σ̂_t computed on ``close[:t+1]`` is equal to
   σ̂_t computed on ``close[:T]`` for any later T (right-edge invariance — the
-  load-bearing causality property from plan §10).
+  load-bearing causality property from methodology spec).
 """
 
 from __future__ import annotations

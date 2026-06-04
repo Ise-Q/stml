@@ -1,4 +1,4 @@
-"""Signal analysis — plan §3.8 / §8 S7.
+"""Signal analysis — methodology spec / §8 S7.
 
 * Pesaran-Timmermann (PRIMARY directional skill test, base-rate aware)
 * Treynor-Mazuy convexity timing
@@ -102,7 +102,7 @@ def treynor_mazuy(
 def henriksson_merton_proxy(
     realised: np.ndarray, predicted: np.ndarray
 ) -> tuple[float, float, float]:
-    """Base-rate-SENSITIVE Henriksson-Merton proxy (alken §5.21 caveat).
+    """Base-rate-SENSITIVE Henriksson-Merton proxy (prior audit caveat).
 
     Returns ``(hit_rate, z_statistic, p_value)``.
 

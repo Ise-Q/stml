@@ -1,6 +1,6 @@
-"""Deterministic CSV writer — plan §3.9 / §8 S6.
+"""Deterministic CSV writer — methodology spec / §8 S6.
 
-Contract (plan §3.9):
+Contract (methodology spec):
 * Rows sorted by ``(date, instrument)``.
 * Pinned column order.
 * ISO date ``%Y-%m-%d``.

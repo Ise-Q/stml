@@ -1,4 +1,4 @@
-"""S1 runner — load Jay's per-instrument triple-barrier labels into the
+"""S1 runner — load the per-instrument triple-barrier labels into the
 canonical events parquet.
 
 Replaces the previous GARCH(1,1) + global ``pt=sl=0.5, h=10`` label
@@ -15,18 +15,18 @@ Inputs:
 
 Outputs:
 
-    data/sreeram_experimental_events.parquet
+    data/events.parquet
         Canonical events schema (instrument, t_signal, t_start, t_end, side,
-        ret, label, uniqueness_weight, sigma_at_t, barrier_hit) + Jay's
+        ret, label, uniqueness_weight, sigma_at_t, barrier_hit) + the team's
         per-instrument geometry columns (pt, sl, h) + `partition` column
         that controls the train/val/test split downstream.
 
-    results/sreeram_experimental/label_outcome_audit.csv
+    results/submission/label_outcome_audit.csv
         Per-instrument composition: n_events, n_long/n_short, pos_rate,
         PT/SL/vert counts and fractions, mean_uniqueness, plus the
         adopted (pt, sl, h) geometry.
 
-    results/sreeram_experimental/jay_geometry_summary.csv
+    results/submission/jay_geometry_summary.csv
         Per-instrument (pt, sl, h) + adjusted-Sharpe context — the "what
         geometry was picked for each instrument and why".
 
@@ -41,7 +41,7 @@ Notes:
   * ``t_end`` is the CSV's ``t1`` column (first barrier touch or vertical).
   * ``uniqueness_weight`` is computed per instrument as the mean of
     ``1 / concurrency[bar]`` over the held window ``[t_start, t_end]`` —
-    AFML Ch.4, recomputed on Jay's spans.
+    AFML Ch.4, recomputed on the spans.
   * The CSV's ``touch`` column uses ``vert``; we rename to ``vertical`` to
     match the downstream consumers (backtest, evaluation).
   * The ``partition`` column drives the train/val/test split in Phase B;
@@ -129,7 +129,7 @@ def _per_instrument_uniqueness(
             pos_ends[i] = pos_map[te]
             if pos_ends[i] < pos_starts[i]:
                 pos_ends[i] = pos_starts[i]
-    # HALF-OPEN convention [pos_start, pos_end) — matches Jay's t1 semantics
+    # HALF-OPEN convention [pos_start, pos_end) — matches the t1 semantics
     # and ``backtest.build_position_panel``'s ``< t_end`` clipping. A h=1
     # event has span_len = 1 (just the entry bar t); consecutive h=1 events
     # are disjoint.
@@ -165,7 +165,7 @@ def build_events(
     csv_path: Path | str | None = None,
     verbose: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load Jay's CSV, map to the canonical events schema, compute uniqueness.
+    """Load the CSV, map to the canonical events schema, compute uniqueness.
 
     Returns
     -------
@@ -180,10 +180,10 @@ def build_events(
     root = _find_repo_root()
     csv_path = Path(csv_path) if csv_path else (root / "data" / "triple_barrier_labels.csv")
     if not csv_path.exists():
-        raise FileNotFoundError(f"Jay's labels CSV not found at {csv_path}")
+        raise FileNotFoundError(f"the labels CSV not found at {csv_path}")
 
     if verbose:
-        print(f"S1 make_labels — loading Jay's per-instrument labels from {csv_path.name}")
+        print(f"S1 make_labels — loading the per-instrument labels from {csv_path.name}")
 
     raw = pd.read_csv(csv_path)
     _validate_raw(raw)
@@ -211,11 +211,11 @@ def build_events(
         frame = panel[inst]
         trading_days = pd.DatetimeIndex(frame.index)
 
-        # Jay's convention (PDF): signal observed at close of `date`, position
+        # the convention (PDF): signal observed at close of `date`, position
         # entered at close of `date`, exited at close of `t1`. The "first
         # tradeable bar" is lag-1 = u_{t+1} = log(close_{t+1}/close_t), which
         # requires entry at close(t). So t_start = t_signal (not next-trading-
-        # day) — this matches the realised `ret` column in Jay's CSV.
+        # day) — this matches the realised `ret` column in the CSV.
         sub = sub.sort_values("date").reset_index(drop=True)
         sub["t_signal"] = sub["date"]
         sub["t_start"] = sub["date"]
@@ -262,7 +262,7 @@ def build_events(
         n_label_1 = int(events_inst["label"].sum())
         audit_rows.append({
             "instrument": inst,
-            "sigma_source": "f2_vol_20",  # Jay's methodology.
+            "sigma_source": "f2_vol_20",  # the methodology.
             "n_events": n,
             "n_long": n_long,
             "n_short": n_short,
@@ -308,11 +308,11 @@ def build_events(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="S1 runner — load Jay's per-instrument triple-barrier "
+        description="S1 runner — load the per-instrument triple-barrier "
                     "labels into the canonical events parquet.",
     )
     ap.add_argument("--csv", type=str, default=None,
-                     help="Path to Jay's labels CSV (default: data/triple_barrier_labels.csv).")
+                     help="Path to the labels CSV (default: data/triple_barrier_labels.csv).")
     ap.add_argument("--no-persist", action="store_true",
                      help="Don't write parquet/CSV.")
     ap.add_argument("--quiet", action="store_true")
@@ -340,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
           f"val={int((events['partition']=='val').sum())}  "
           f"test={int((events['partition']=='test').sum())}")
 
-    # Acceptance gates — adapted to Jay's spec.
+    # Acceptance gates — adapted to the spec.
     print("\n=== S1 acceptance gates ===")
     n_obs = len(events)
     gate1 = 4800 <= n_obs <= 5000
@@ -357,9 +357,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.no_persist:
         root = _find_repo_root()
-        events_path = root / "data" / "sreeram_experimental_events.parquet"
-        audit_path = root / "results" / "sreeram_experimental" / "label_outcome_audit.csv"
-        geo_path = root / "results" / "sreeram_experimental" / "jay_geometry_summary.csv"
+        events_path = root / "data" / "events.parquet"
+        audit_path = root / "results" / "submission" / "label_outcome_audit.csv"
+        geo_path = root / "results" / "submission" / "jay_geometry_summary.csv"
         events_path.parent.mkdir(parents=True, exist_ok=True)
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         events.to_parquet(events_path, index=False)

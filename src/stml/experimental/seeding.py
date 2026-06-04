@@ -1,7 +1,7 @@
 """Seed every RNG the experimental pipeline touches.
 
-Plan R5 (determinism). Lifted from ``metamodel-apb/src/alken_metamodel/seeding.py``
-(alken parity) with attribution. Call at every CLI entry point and at the head
+Determinism contract. ````
+(adopted convention) with attribution. Call at every CLI entry point and at the head
 of every test that depends on a stochastic estimator.
 
 The single seed propagates to:
@@ -70,10 +70,10 @@ def derive_seed(base: int, position: int) -> int:
     ``derive_seed(base, t) == derive_seed(base, t)`` for any ``t``, regardless of
     whether the call site computed it on a truncated or full panel. This is the
     invariant that makes f15-style positional bootstrap MC right-edge truncation
-    invariant — see plan §10.
+    invariant — see methodology spec
     """
     # 1_000_003 is the lowest 7-digit prime (Bertrand-style spreading without
-    # numerical risk in int64). The same constant used in alken's f15 path.
+    # numerical risk in int64). The same constant used in the reference f15 path.
     return int(base) * 1_000_003 + int(position)
 
 

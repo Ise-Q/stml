@@ -21,8 +21,8 @@ Outputs:
     outputs/strategy_weights.csv               (lecturer's vol-targeted)
     outputs/coverage_caveat.csv                (per-instrument flags)
     outputs/experiment_log.csv                 (per-class deterministic log)
-    results/sreeram_experimental/backtest_metrics.csv
-    results/sreeram_experimental/threshold_summary.csv
+    results/submission/backtest_metrics.csv
+    results/submission/threshold_summary.csv
 
 Acceptance gates:
 * Calibration: Platt monotone → AUC invariant (unit test).
@@ -91,7 +91,7 @@ def _find_repo_root() -> Path:
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
-    "pt", "sl", "h", "partition",  # Jay's geometry + partition.
+    "pt", "sl", "h", "partition",  # the geometry + partition.
 })
 
 
@@ -109,7 +109,7 @@ class InstrumentDeliverable:
 def _load_champions() -> dict[str, dict]:
     """Load champion per-instrument selection from S3-fix output."""
     root = _find_repo_root()
-    summary = pd.read_csv(root / "results" / "sreeram_experimental" / "champions_summary.csv")
+    summary = pd.read_csv(root / "results" / "submission" / "champions_summary.csv")
     with_bbg = summary.loc[summary["variant"] == "with_bbg"].set_index("instrument")
     return {
         inst: {
@@ -278,7 +278,7 @@ def _returns_panel(ohlcv: pd.DataFrame) -> pd.DataFrame:
 def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     cfg = cfg or PipelineConfig()
     root = _find_repo_root()
-    features = pd.read_parquet(root / "data" / "sreeram_experimental_features.parquet")
+    features = pd.read_parquet(root / "data" / "features.parquet")
     if verbose:
         print(f"Loaded features: {features.shape}")
 
@@ -308,7 +308,7 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
             # 1-SE-pickable alternative for the deliverable. The multitask
             # contribution is in the CV/per-instrument breakdown only.
             from stml.experimental.champion_pipeline import select_champion
-            summary = pd.read_csv(root / "results" / "sreeram_experimental" / "champions_per_pool_per_model.csv")
+            summary = pd.read_csv(root / "results" / "submission" / "champions_per_pool_per_model.csv")
             grid = summary.loc[
                 (summary["variant"] == "with_bbg")
                 & (summary["instrument"] == inst)
@@ -478,7 +478,7 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     # Persist.
     outputs_dir = root / "outputs"
     outputs_dir.mkdir(parents=True, exist_ok=True)
-    results_dir = root / "results" / "sreeram_experimental"
+    results_dir = root / "results" / "submission"
     results_dir.mkdir(parents=True, exist_ok=True)
 
     emit_predictions(preds_raw, outputs_dir / "metamodel_predictions_raw.csv")

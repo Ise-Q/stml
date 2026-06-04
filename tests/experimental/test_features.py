@@ -1,4 +1,4 @@
-"""Tests for the feature subsystem — plan §8 Stage 2 acceptance.
+"""Tests for the feature subsystem — methodology spec Stage 2 acceptance.
 
 Coverage:
 * Registry sanity (every feature has a unique name, valid family, callable fn).
@@ -38,7 +38,7 @@ def test_registry_has_unique_names() -> None:
 
 
 def test_registry_covers_required_families() -> None:
-    """At minimum, the families specified in plan §3.3 must be present."""
+    """At minimum, the families specified in methodology spec must be present."""
     fc = family_counts()
     required = {"F1", "F2", "F5", "F6", "F7", "F8", "F10", "F11", "F12", "F15",
                 "F16", "F17", "F18", "F19", "F21", "F22", "EWMA_HMM"}
@@ -117,7 +117,7 @@ def synth_ctx(synth_ohlc, synth_signal):
         asset_class="equity",
         frame=frame,
         universe=universe,
-        macro_harry=pd.DataFrame(),
+        macro_alternative=pd.DataFrame(),
         futures_term=pd.DataFrame(),
         options_iv=pd.DataFrame(),
         eia_crude=pd.DataFrame(),
@@ -136,7 +136,7 @@ def test_f12_variance_ratio_truncation_invariant(synth_ctx) -> None:
         asset_class=synth_ctx.asset_class,
         frame=synth_ctx.frame.iloc[:200],
         universe={"x": synth_ctx.frame.iloc[:200]},
-        macro_harry=synth_ctx.macro_harry,
+        macro_alternative=synth_ctx.macro_alternative,
         futures_term=synth_ctx.futures_term,
         options_iv=synth_ctx.options_iv,
         eia_crude=synth_ctx.eia_crude,
@@ -159,7 +159,7 @@ def test_f15_path_tortuosity_truncation_invariant(synth_ctx) -> None:
         asset_class=synth_ctx.asset_class,
         frame=synth_ctx.frame.iloc[:200],
         universe={"x": synth_ctx.frame.iloc[:200]},
-        macro_harry=synth_ctx.macro_harry,
+        macro_alternative=synth_ctx.macro_alternative,
         futures_term=synth_ctx.futures_term,
         options_iv=synth_ctx.options_iv,
         eia_crude=synth_ctx.eia_crude,
@@ -181,7 +181,7 @@ def test_f1_rsi_14_truncation_invariant(synth_ctx) -> None:
         asset_class=synth_ctx.asset_class,
         frame=synth_ctx.frame.iloc[:200],
         universe={"x": synth_ctx.frame.iloc[:200]},
-        macro_harry=synth_ctx.macro_harry,
+        macro_alternative=synth_ctx.macro_alternative,
         futures_term=synth_ctx.futures_term,
         options_iv=synth_ctx.options_iv,
         eia_crude=synth_ctx.eia_crude,

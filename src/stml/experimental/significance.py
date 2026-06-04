@@ -1,4 +1,4 @@
-"""Sharpe-significance — plan §3.8 / §8 S7 PRIMARY inference.
+"""Sharpe-significance — methodology spec / §8 S7 PRIMARY inference.
 
 * t-statistic = SR · √n (Bailey-Lopez de Prado 2012 baseline)
 * Studentised stationary block-bootstrap CI (Politis-Romano 1994, Lo 2002 SE)
@@ -7,7 +7,7 @@
 * Minimum Track Record Length (MinTRL)
 * Ljung-Box(10) IID gate before √252 annualisation
 
-Lifted from ``metamodel-apb/src/alken_metamodel/significance.py`` (alken parity).
+
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def sharpe_ci_analytic(
 
 
 # ---------------------------------------------------------------------------
-# Studentised stationary block-bootstrap CI (PRIMARY — plan §3.8).
+# Studentised stationary block-bootstrap CI (PRIMARY — methodology spec).
 # ---------------------------------------------------------------------------
 
 

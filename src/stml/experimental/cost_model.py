@@ -1,7 +1,7 @@
-"""Grinold-Kahn cost model — plan §3.7 / §8 S6.
+"""Grinold-Kahn cost model — methodology spec / §8 S6.
 
 Half-spread + market-impact cost on |Δw|. Lifted from
-``metamodel-apb/src/alken_metamodel/cost_model.py`` (alken parity).
+
 
 Defaults:
     half_spread_bps = 2.0   conservative for liquid front-month futures

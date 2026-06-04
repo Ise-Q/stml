@@ -1,4 +1,4 @@
-"""Dimensionality reduction — plan §3.6 + alken §5.15.
+"""Dimensionality reduction — methodology spec
 
 ClusterRepSelector — pick one feature per Mantegna cluster (the **medoid**,
 the feature with smallest mean Spearman distance to its cluster-mates).
@@ -6,8 +6,8 @@ Deterministic, unsupervised, interpretable.
 
 Used in two places:
   1. Feature-set reduction for the S4 multi-task NN if it's overfit-prone with
-     the full 80-feature matrix (plan §3.10 calls out reducing-then-NN as the
-     "shipped" path in alken).
+     the full 80-feature matrix (methodology spec calls out reducing-then-NN as the
+     alternative shipped path).
   2. As a clean baseline for understanding which features ALONE carry signal
      after redundancy is removed.
 

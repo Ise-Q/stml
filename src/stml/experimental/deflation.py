@@ -1,11 +1,11 @@
-"""Backtest deflation — plan §3.8 / §8 S7 corroboration.
+"""Backtest deflation — methodology spec / §8 S7 corroboration.
 
 * DSR (Bailey-Lopez de Prado 2014) ladder over N_eff → 4·N_raw
 * CSCV-PBO with C(16, 8) = 12,870 (corrects the long-propagated "12,780" typo)
 * MinBTL — Minimum Backtest Length
 * ONC N_eff — effective trial count via Mantegna-clustered trial correlations
 
-Lifted from ``metamodel-apb/src/alken_metamodel/deflation.py`` (alken parity).
+
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Tests for ``stml.experimental.cv`` — plan §9 RED-first.
+"""Tests for ``stml.experimental.cv`` — methodology spec RED-first.
 
 Property tests on the splitters' purge + embargo invariants.
 """

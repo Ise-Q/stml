@@ -1,14 +1,14 @@
 """S3-fix runner — champion architecture per instrument.
 
-Plan §4.3 / Harry §4.11 — per-instrument + alternative-pool candidate search,
+Plan §4.3 / — per-instrument + alternative-pool candidate search,
 champion selected by mean AUC + 1SE rule.
 
 Produces:
-* ``results/sreeram_experimental/champions_with_bbg.csv``
-* ``results/sreeram_experimental/champions_without_bbg.csv``
-* ``results/sreeram_experimental/champions_summary.csv``
-* ``results/sreeram_experimental/champions_per_pool_per_model.csv``
-   (the full 4-model × pool grid per instrument — like Harry's master_results)
+* ``results/submission/champions_with_bbg.csv``
+* ``results/submission/champions_without_bbg.csv``
+* ``results/submission/champions_summary.csv``
+* ``results/submission/champions_per_pool_per_model.csv``
+   (the full 4-model × pool grid per instrument — like the master_results)
 
 Run via::
 
@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = PipelineConfig()
     root = _find_repo_root()
-    features_path = root / "data" / "sreeram_experimental_features.parquet"
+    features_path = root / "data" / "features.parquet"
     if not features_path.exists():
         print(f"FATAL: {features_path} missing — run S2 first.")
         return 1
@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         if cls_aucs.empty:
             continue
         mean_cls = cls_aucs.mean()
-        print(f"  {cls}: mean champion AUC = {mean_cls:.4f}  (alken: equity 0.579, energy 0.525, metals 0.530)")
+        print(f"  {cls}: mean champion AUC = {mean_cls:.4f}  (reference: equity 0.579, energy 0.525, metals 0.530)")
 
     print("\nPer-instrument champion summary (with_bbg):")
     cols = ["instrument", "winning_pool", "winning_model", "champion_auc", "champion_sem",
@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     print(with_bbg.reset_index().loc[:, cols].to_string(index=False))
 
     if not args.no_persist:
-        out = root / "results" / "sreeram_experimental"
+        out = root / "results" / "submission"
         out.mkdir(parents=True, exist_ok=True)
         summary_path = out / "champions_summary.csv"
         grid_path = out / "champions_per_pool_per_model.csv"

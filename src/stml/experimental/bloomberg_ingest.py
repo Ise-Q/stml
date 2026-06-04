@@ -2,8 +2,8 @@
 
 Plan §5.3 / §8 Stage 2 deliverable.
 
-Reads raw BBG-style pulls + Harry's macro CSV from ``data/bloomberg/raw/`` and
-``data/alternate_data_cleaned.csv`` (via ``git show origin/Harry`` if needed)
+Reads raw BBG-style pulls + the macro CSV from ``data/bloomberg/raw/`` and
+``data/alternate_data_cleaned.csv`` (when present)
 and produces **PIT-aligned cleaned parquets** under
 ``data/bloomberg/cleaned/`` that the feature modules consume.
 
@@ -39,7 +39,7 @@ import pandas as pd
 # Constants.
 # ---------------------------------------------------------------------------
 
-# Publication lags (calendar days), plan §5.1.
+# Publication lags (calendar days), methodology spec
 LAG_DAILY = 1
 LAG_EIA = 5  # Friday data-as-of -> Wednesday release
 
@@ -127,7 +127,7 @@ def _read_block_b(raw_dir: Path) -> pd.DataFrame:
             — these are header-row leakage from the BBG paste; ignored.
 
     Empty sheets (#N/A — happens for XPT) become empty columns; the loader
-    substitutes GC1 IV for pl1s downstream (plan §5.2).
+    substitutes GC1 IV for pl1s downstream (methodology spec).
     """
     candidates = list(raw_dir.glob("block_b_iv_extraction*.xlsx"))
     if not candidates:
@@ -216,25 +216,25 @@ def _eia_release_calendar(eia_change: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Harry's macro CSV (already in repo via origin/Harry, read into the bloomberg
+# the macro CSV (already in repo via the alternate-data branch, read into the bloomberg
 # pipeline so all macro lives in one place after S2).
 # ---------------------------------------------------------------------------
 
 
-def _read_harry_macro(raw_dir: Path) -> pd.DataFrame:
-    """Read Harry's alternate_data_cleaned.csv via repo-root.
+def _read_alternative_macro(raw_dir: Path) -> pd.DataFrame:
+    """Read the alternate_data_cleaned.csv via repo-root.
 
-    The file is COMMITTED on origin/Harry but NOT on Sreeram_experimental (we
+    The file is COMMITTED on the alternate-data branch but NOT  (we
     keep the experimental branch lean — see the orphan-rewrite history). We
     pull it via ``git show`` and persist a local copy to ``data/bloomberg/raw/``
     so the ingest is self-contained on the experimental branch from then on.
     """
-    cache = raw_dir / "harry_alternate_data_cleaned.csv"
+    cache = raw_dir / "alternative_alternate_data_cleaned.csv"
     if not cache.exists():
         import subprocess
         repo_root = _find_repo_root()
         text = subprocess.check_output(
-            ["git", "show", "origin/Harry:data/alternate_data_cleaned.csv"],
+            ["git", "show", "the alternate-data branch:data/alternate_data_cleaned.csv"],
             cwd=repo_root,
         ).decode()
         cache.parent.mkdir(parents=True, exist_ok=True)
@@ -242,7 +242,7 @@ def _read_harry_macro(raw_dir: Path) -> pd.DataFrame:
     df = pd.read_csv(cache, parse_dates=["Date"]).rename(columns={"Date": "date"})
     df = df.set_index("date").sort_index()
     # Drop nothing — the +1d lag applies to daily series; weekly EIA macro
-    # series in Harry's CSV are already forward-filled to daily.
+    # series in the CSV are already forward-filled to daily.
     return _apply_calendar_lag(df, LAG_DAILY)
 
 
@@ -334,18 +334,18 @@ def ingest(raw_dir: Path | None = None, cleaned_dir: Path | None = None) -> Inge
         e_flag.to_parquet(e_flag_path)
         parquets["eia_release_flag"] = e_flag.shape
 
-    # 4. Harry's macro — the 21-series CSV.
-    h_macro = _read_harry_macro(raw_dir)
+    # 4. the macro — the 21-series CSV.
+    h_macro = _read_alternative_macro(raw_dir)
     h_macro = _to_daily(h_macro, fill_method="ffill")
-    h_path = cleaned_dir / "macro_harry.parquet"
+    h_path = cleaned_dir / "macro_alternative.parquet"
     h_macro.to_parquet(h_path)
-    parquets["macro_harry"] = h_macro.shape
+    parquets["macro_alternative"] = h_macro.shape
 
     return IngestResult(cleaned_dir=cleaned_dir, raw_dir=raw_dir, parquets=parquets)
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Ingest BBG + Harry's macro into cleaned parquets")
+    ap = argparse.ArgumentParser(description="Ingest BBG + the macro into cleaned parquets")
     args = ap.parse_args(argv)
     result = ingest()
     print(f"Cleaned dir: {result.cleaned_dir}")

@@ -2,7 +2,7 @@
 
 Reads:
     data/primary_signals.csv                                — the full panel
-    results/sreeram_experimental/oos_events_with_predictions.csv — events with model output
+    results/submission/oos_events_with_predictions.csv — events with model output
 
 Writes:
     outputs/metamodel_predictions.csv  — schema (date, instrument, prediction)
@@ -37,7 +37,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIMARY_SIGNALS = ROOT / "data" / "primary_signals.csv"
-EVENTS_WITH_PRED = ROOT / "results" / "sreeram_experimental" / "oos_events_with_predictions.csv"
+EVENTS_WITH_PRED = ROOT / "results" / "submission" / "oos_events_with_predictions.csv"
 
 OUT_DIR = ROOT / "outputs"
 PREDICTIONS_OUT = OUT_DIR / "metamodel_predictions.csv"

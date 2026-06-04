@@ -1,17 +1,17 @@
-"""Tests for ``stml.experimental.labels`` — plan §9 RED-first.
+"""Tests for ``stml.experimental.labels`` — methodology spec RED-first.
 
 Plan §8 Stage 1 acceptance gates relevant to this module:
 
-* ``test_t_plus_one_entry_changes_label_5_row_ohlc`` — Harry's load-bearing
+* ``test_t_plus_one_entry_changes_label_5_row_ohlc`` — the load-bearing
   off-by-one fix: a hand-computed 5-row example where the *same* input produces
-  opposite labels under "entry at t" vs "entry at t+1". The plan §3.2 / Harry §4.3
+  opposite labels under "entry at t" vs "entry at t+1". The methodology spec /
   algorithm is the t+1 form.
 
 * ``test_uniqueness_weights_disjoint_and_overlapping`` — AFML Ch.4 invariant:
   disjoint events get weight 1, fully overlapping pair get weight 0.5 each.
 
 * ``test_labels_truncation_invariance`` — labels at event ``i`` are unchanged
-  whether ``close`` extends past ``t_end`` by 1 bar or 1000 (plan §10).
+  whether ``close`` extends past ``t_end`` by 1 bar or 1000 (methodology spec).
 
 * ``test_schema_and_dtypes`` — the canonical output schema is byte-stable.
 
@@ -43,7 +43,7 @@ from stml.experimental.labels import (
 def test_t_plus_one_entry_changes_label_5_row_ohlc() -> None:
     """A 5-row OHLC where entry-at-t and entry-at-t+1 produce OPPOSITE labels.
 
-    The branch_descriptions.md §4.3 walkthrough constructs a case where the
+    The prior audit walkthrough constructs a case where the
     t→t+1 return is +0.20 (so the event 'opens' favourably under entry-at-t)
     but then the subsequent bars dip enough to take SL under entry-at-t while
     the t+1-entry skips that initial favourable bar and ends up hitting PT
@@ -190,7 +190,7 @@ def test_uniqueness_weights_in_zero_one_range() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Truncation invariance (plan §10).
+# Truncation invariance (methodology spec).
 # ---------------------------------------------------------------------------
 
 

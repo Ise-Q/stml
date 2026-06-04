@@ -1,11 +1,11 @@
 """F11 macro features — PIT-aligned, REFORMULATED as 63-day rolling RANKS.
 
-The plan §3.3 diagnostic finding: macro LEVELS in alken's F11 have CATASTROPHIC
-train→test drift (median KS 0.358, max 1.000 — see plan §2.4 / branch_descriptions
+The methodology spec diagnostic finding: macro LEVELS in the reference F11 have CATASTROPHIC
+train→test drift (median KS 0.358, max 1.000 — see methodology spec
 §5.26). Reformulation: every LEVEL series becomes a 63-day rolling rank in [0, 1];
 CHANGES are kept as-is. The level is NOT added as a feature.
 
-Inputs: Harry's PIT-aligned macro parquet (``data/bloomberg/cleaned/macro_harry.parquet``).
+Inputs: the PIT-aligned macro parquet (``data/bloomberg/cleaned/macro_alternative.parquet``).
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from stml.experimental.features.catalog import (
     rolling_zscore,
 )
 
-# Series consumed from Harry's macro parquet → feature name + role.
+# Series consumed from the macro parquet → feature name + role.
 # Levels go through rolling rank; changes are computed and kept as-is.
 _LEVEL_SERIES = {
     # series name : feature suffix (we prepend "f11_")
@@ -71,9 +71,9 @@ _5D_DIFF = {
 
 def _make_rank_fn(series_name: str, window: int = 63):
     def _fn(ctx: FeatureContext) -> pd.Series:
-        if series_name not in ctx.macro_harry.columns:
+        if series_name not in ctx.macro_alternative.columns:
             return pd.Series(np.nan, index=ctx.frame.index)
-        s = ctx.macro_harry[series_name].astype(float)
+        s = ctx.macro_alternative[series_name].astype(float)
         s = s.reindex(ctx.frame.index, method="ffill")
         return rolling_rank(s, window)
     return _fn
@@ -81,9 +81,9 @@ def _make_rank_fn(series_name: str, window: int = 63):
 
 def _make_chg_fn(series_name: str, periods: int):
     def _fn(ctx: FeatureContext) -> pd.Series:
-        if series_name not in ctx.macro_harry.columns:
+        if series_name not in ctx.macro_alternative.columns:
             return pd.Series(np.nan, index=ctx.frame.index)
-        s = ctx.macro_harry[series_name].astype(float)
+        s = ctx.macro_alternative[series_name].astype(float)
         s = s.reindex(ctx.frame.index, method="ffill")
         # Use log change for positive series; otherwise plain diff.
         if (s > 0).all() and not s.isna().all():
@@ -101,7 +101,7 @@ for series, suffix in _LEVEL_SERIES.items():
             fn=_make_rank_fn(series, window=63),
             leakage_class="E",
             warmup_bars=63,
-            source="alken+rebuild",
+            source="baseline+rebuild",
         )
     )
 
@@ -113,7 +113,7 @@ for series, suffix in _CHANGE_SERIES.items():
             fn=_make_chg_fn(series, periods=20),
             leakage_class="E",
             warmup_bars=21,
-            source="alken+rebuild",
+            source="baseline+rebuild",
         )
     )
 
@@ -125,37 +125,37 @@ for series, suffix in _5D_DIFF.items():
             fn=_make_chg_fn(series, periods=5),
             leakage_class="E",
             warmup_bars=6,
-            source="alken+rebuild",
+            source="baseline+rebuild",
         )
     )
 
 
-# Two derived spread features (the plan §3.3 add-ons).
+# Two derived spread features (the methodology spec add-ons).
 def _f11_curve_slope(ctx: FeatureContext) -> pd.Series:
     """10Y UST - 2Y UST — yield curve slope."""
-    if "10Y_UST" not in ctx.macro_harry.columns or "2Y_UST" not in ctx.macro_harry.columns:
+    if "10Y_UST" not in ctx.macro_alternative.columns or "2Y_UST" not in ctx.macro_alternative.columns:
         return pd.Series(np.nan, index=ctx.frame.index)
-    macro = ctx.macro_harry
+    macro = ctx.macro_alternative
     slope = (macro["10Y_UST"] - macro["2Y_UST"]).reindex(ctx.frame.index, method="ffill")
     return slope
 
 
 def _f11_credit_diff(ctx: FeatureContext) -> pd.Series:
     """HY OAS - IG OAS — credit risk spread."""
-    if "HY_OAS" not in ctx.macro_harry.columns or "IG_OAS" not in ctx.macro_harry.columns:
+    if "HY_OAS" not in ctx.macro_alternative.columns or "IG_OAS" not in ctx.macro_alternative.columns:
         return pd.Series(np.nan, index=ctx.frame.index)
-    macro = ctx.macro_harry
+    macro = ctx.macro_alternative
     return (macro["HY_OAS"] - macro["IG_OAS"]).reindex(ctx.frame.index, method="ffill")
 
 
 def _f11_vix_term_slope(ctx: FeatureContext) -> pd.Series:
     """VIX3M - VIX — VIX term structure slope."""
-    if "VIX3M" not in ctx.macro_harry.columns or "VIX" not in ctx.macro_harry.columns:
+    if "VIX3M" not in ctx.macro_alternative.columns or "VIX" not in ctx.macro_alternative.columns:
         return pd.Series(np.nan, index=ctx.frame.index)
-    macro = ctx.macro_harry
+    macro = ctx.macro_alternative
     return (macro["VIX3M"] - macro["VIX"]).reindex(ctx.frame.index, method="ffill")
 
 
-register(FeatureSpec("f11_curve_slope", "F11", _f11_curve_slope, "E", 1, "alken"))
-register(FeatureSpec("f11_credit_diff", "F11", _f11_credit_diff, "E", 1, "alken"))
-register(FeatureSpec("f11_vix_term_slope", "F11", _f11_vix_term_slope, "E", 1, "alken"))
+register(FeatureSpec("f11_curve_slope", "F11", _f11_curve_slope, "E", 1, "baseline"))
+register(FeatureSpec("f11_credit_diff", "F11", _f11_credit_diff, "E", 1, "baseline"))
+register(FeatureSpec("f11_vix_term_slope", "F11", _f11_vix_term_slope, "E", 1, "baseline"))

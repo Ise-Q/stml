@@ -2,14 +2,14 @@
 
 Plan §8 Stage 3 deliverable. Produces:
 
-* ``results/sreeram_experimental/baseline_xgb_per_class.csv`` — per-class
+* ``results/submission/baseline_xgb_per_class.csv`` — per-class
   pooled AUC + winner + per-instrument breakdown for the `with_bbg` variant.
-* ``results/sreeram_experimental/bbg_missingness_ablation.csv`` — per-class
+* ``results/submission/bbg_missingness_ablation.csv`` — per-class
   `with_bbg_auc` / `without_bbg_auc` / `simulated_missingness_auc`. The
   decisive R-11 gate (§13 R-11).
-* ``results/sreeram_experimental/coverage_caveat.csv`` — per-instrument
+* ``results/submission/coverage_caveat.csv`` — per-instrument
   thin / low-coherence flags. ng1s gets the §2.8.4 low-coherence flag.
-* Prints plan §8 S3 acceptance gate verdict.
+* Prints methodology spec S3 acceptance gate verdict.
 
 Run via::
 
@@ -36,15 +36,15 @@ from stml.experimental.pipeline import (
 # `ng1s` is the load-bearing case (R² 0.72; 11 % label flip).
 LOW_COHERENCE_INSTRUMENTS = ("ng1s",)
 NOISY_COHERENCE_INSTRUMENTS = ("ho1s", "rb1s")  # R² 0.87 / 0.95 — caution flag
-THIN_INSTRUMENTS = ("ho1s", "gc1s", "ng1s")  # plan §2.1 — thin participation
+THIN_INSTRUMENTS = ("ho1s", "gc1s", "ng1s")  # methodology spec — thin participation
 
-# Plan §8 S3 gate — alken's per-class CPCV AUC baseline.
+# Plan §8 S3 gate — the reference per-class CPCV AUC baseline.
 ALKEN_BASELINE_AUC = {
     "equity": 0.579,
     "energy": 0.525,
     "metals": 0.530,
 }
-TARGET_DELTA_OVER_ALKEN = 0.02  # plan §8 S3 — beat alken by ≥ 0.02.
+TARGET_DELTA_OVER_BASELINE = 0.02  # methodology spec S3 — beat baseline by ≥ 0.02.
 
 
 def _find_repo_root() -> Path:
@@ -115,8 +115,8 @@ def _coverage_caveat_frame(events: pd.DataFrame) -> pd.DataFrame:
 def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
     cfg = cfg or PipelineConfig()
     root = _find_repo_root()
-    features_path = root / "data" / "sreeram_experimental_features.parquet"
-    events_path = root / "data" / "sreeram_experimental_events.parquet"
+    features_path = root / "data" / "features.parquet"
+    events_path = root / "data" / "events.parquet"
     if not features_path.exists():
         raise FileNotFoundError(features_path)
     if not events_path.exists():
@@ -210,11 +210,11 @@ def main(argv: list[str] | None = None) -> int:
     gate1_pass = True
     for cls, target in ALKEN_BASELINE_AUC.items():
         actual = float(with_bbg.loc[cls, "pooled_mean_auc"]) if cls in with_bbg.index else float("nan")
-        required = target + TARGET_DELTA_OVER_ALKEN
+        required = target + TARGET_DELTA_OVER_BASELINE
         ok = (not np.isnan(actual)) and actual >= required
         gate1_pass &= ok
         print(f"  [{'PASS' if ok else 'CHECK'}] {cls}: pooled AUC = {actual:.4f}  "
-              f"(target ≥ alken {target:.3f} + 0.02 = {required:.3f})")
+              f"(target ≥ baseline{target:.3f} + delta target)")
 
     n_above_055 = int((per_inst_with_bbg["auc"] > 0.55).sum()) if not per_inst_with_bbg.empty else 0
     gate2_pass = n_above_055 >= 6
@@ -251,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.no_persist:
         root = _find_repo_root()
-        out = root / "results" / "sreeram_experimental"
+        out = root / "results" / "submission"
         out.mkdir(parents=True, exist_ok=True)
         pooled_path = out / "baseline_xgb_per_class.csv"
         ablation_path = out / "bbg_missingness_ablation.csv"

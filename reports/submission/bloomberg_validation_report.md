@@ -185,7 +185,7 @@ Schema: `date, DOEASCRD_Index__crude_stocks_kb`
 * The actual **release date** is `as-of-Friday + 5 calendar days` (the following Wednesday).
 * For PIT (point-in-time) alignment, traders can only act on the data from the release Wednesday onward.
 
-**The publication-lag policy is the standard +5-calendar-day lag** the plan §5.1 already specifies and Harry's `macro.py` (alken parity) already implements:
+**The publication-lag policy is the standard +5-calendar-day lag** that the macro feature module implements:
 
 ```python
 EIA_LAG_DAYS = 5  # Friday data → Wednesday release
@@ -207,9 +207,9 @@ Value statistics:
 
 These are **weekly CHANGES in thousands of barrels** (i.e., `kb` = thousand barrels), not levels.
 
-Cross-check: Harry's `EIA_CRUDE_STOCK` in `data/alternate_data_cleaned.csv` is the LEVELS series (median ~321,000 mbbl, range 247k–540k mbbl — the total US crude stocks excluding SPR). So **Harry's series and this new BBG series are COMPLEMENTARY, not duplicative**:
+Cross-check: the `EIA_CRUDE_STOCK` in `data/alternate_data_cleaned.csv` is the LEVELS series (median ~321,000 mbbl, range 247k–540k mbbl — the total US crude stocks excluding SPR). So **the series and this new BBG series are COMPLEMENTARY, not duplicative**:
 
-* Harry's level → `f11_eia_crude_stock` (already in pipeline) — "where storage is right now"
+* the level → `f11_eia_crude_stock` (already in pipeline) — "where storage is right now"
 * New BBG change → `f22_eia_crude_change` (NEW) — "the surprise traders react to on release day"
 
 We use **both**.

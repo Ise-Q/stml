@@ -1,6 +1,6 @@
 # Significance + deflation + directional skill — H1-2022 OOS
 
-Source data: `results/sreeram_experimental/strategy_daily_net_returns.csv` (n = 179 periods).
+Source data: `results/submission/strategy_daily_net_returns.csv` (n = 179 periods).
 
 ## §3.8 PRIMARY — Sharpe significance
 

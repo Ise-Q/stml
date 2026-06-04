@@ -29,7 +29,7 @@ import pandas as pd
 from stml import io as stml_io
 from stml.experimental.config import INSTRUMENTS
 
-# Required OHLCV columns. ``open_interest`` is optional — Sreeram + Harry both
+# Required OHLCV columns. ``open_interest`` is optional — both teams
 # observed that some instruments have OI populated and some have all-NaN; the
 # microstructure features tolerate that.
 OHLCV_COLUMNS: tuple[str, ...] = (

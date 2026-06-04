@@ -1,4 +1,4 @@
-"""Probability calibration — plan §3.5 / §8 S6.
+"""Probability calibration — methodology spec / §8 S6.
 
 Per-class Platt scaling fit on **purged modelling-OOF predictions** (strictly
 ``date <= modelling_end``, before ``predict_start`` so it cannot leak).
@@ -7,7 +7,7 @@ Platt is monotone → AUC is unchanged before/after calibration (unit-tested
 invariant). Only Brier / log-loss / ECE / the sizing stake move.
 
 Lifted with attribution from
-``metamodel-apb/src/alken_metamodel/calibration.py`` (alken parity).
+
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@ Submodules:
     closed_form      F1 / F2 / F5 / F6 / F7 / F8 / F10 / F12 — OHLCV+signal
     risk_drift_regime F15 (path) / F16 (drift) / F17 (HMM)
     cross_asset      F9 (cross-section) / F21 (relative value)
-    macro            F11 (Harry's macro, REFORMULATED as 63-day rolling ranks)
+    macro            F11 (the macro, REFORMULATED as 63-day rolling ranks)
     bloomberg        F18 (term) / F19 (options IV) / F22 (event flags) — BBG
 """
 

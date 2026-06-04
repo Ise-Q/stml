@@ -1,6 +1,6 @@
 """Champion architecture — per-instrument + alternative-pool model selection.
 
-Plan §4.3 + §4.4 + branch_descriptions §4.11 (Harry's `INSTRUMENT_REGIMES`).
+Plan §4.3 + §4.4 (the `INSTRUMENT_REGIMES`).
 
 Per instrument, evaluate multiple candidate `(pool, model)` combinations under
 CPCV(6,2) + per-instrument embargo, pick the **champion** by mean AUC + 1-SE
@@ -10,14 +10,14 @@ into one per-instrument OOS frame.
 This replaces the prior per-class-only pipeline (`pipeline.run_asset_class`)
 for the final reported per-instrument breakdown.
 
-The pool options per instrument mirror Harry's PM-refresh `INSTRUMENT_REGIMES`:
+The pool options per instrument mirror the PM-refresh `INSTRUMENT_REGIMES`:
 
     es1s / nq1s / fesx1s / hg1s : individual only (already specialised within
         their class; pooling would dilute the signal).
     cl1s   : individual OR energy_all OR energy_cl_ho
     ho1s   : energy_all OR energy_cl_ho (too thin for individual)
     rb1s   : individual OR energy_all
-    ng1s   : energy_all (Harry's PM refresh; ng1s individual dropped after the
+    ng1s   : energy_all (the PM refresh; ng1s individual dropped after the
         clean-split discipline showed it didn't survive)
     gc1s   : individual OR precious (gc + si + pl trio)
     si1s   : individual OR precious
@@ -51,16 +51,16 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Pool definitions — Harry §4.11 INSTRUMENT_REGIMES + the full asset class.
+# Pool definitions — INSTRUMENT_REGIMES + the full asset class.
 # ---------------------------------------------------------------------------
 
 # Each entry is a tuple of instruments that constitute a pool.
 POOL_MEMBERS: dict[str, tuple[str, ...]] = {
-    # Asset-class pools (alken-style)
+    # Asset-class pools
     "equity_all":    ("es1s", "nq1s", "fesx1s"),
     "energy_all":    ("cl1s", "ho1s", "rb1s", "ng1s"),
     "metals_all":    ("gc1s", "si1s", "hg1s", "pl1s"),
-    # Sub-class pools (Harry-style)
+    # Sub-class pools (alternative)
     "energy_cl_ho":  ("cl1s", "ho1s"),
     "precious":      ("gc1s", "si1s", "pl1s"),
     # Per-instrument pools (one entry per instrument).
@@ -77,7 +77,7 @@ POOL_MEMBERS: dict[str, tuple[str, ...]] = {
     "hg1s":   ("hg1s",),
 }
 
-# Plan §4.3 / Harry §4.11 — per-instrument candidate pools.
+# Plan §4.3 / — per-instrument candidate pools.
 INSTRUMENT_REGIMES: dict[str, list[str]] = {
     "es1s":   ["es1s", "equity_all"],
     "nq1s":   ["nq1s", "equity_all"],
@@ -104,7 +104,7 @@ MIN_INDIVIDUAL_EVENTS = 250
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
-    # Jay's per-instrument geometry + partition (carried through features but
+    # the per-instrument geometry + partition (carried through features but
     # not for training — partition is a string and pt/sl/h are constant per
     # instrument so they'd leak the per-instrument identity beyond the
     # one-hot dummy.).
@@ -392,7 +392,7 @@ def _evaluate_candidate(
             n_oos_for_instrument=int(len(inst_oos)),
         )
 
-    # Per-fold AUC ON THE INSTRUMENT'S OOS ROWS — alken-style "fair" metric.
+    # Per-fold AUC ON THE INSTRUMENT'S OOS ROWS — "fair" metric.
     from sklearn.metrics import roc_auc_score
     per_fold = []
     for fold_id, grp in inst_oos.groupby("fold"):

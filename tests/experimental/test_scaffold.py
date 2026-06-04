@@ -1,4 +1,4 @@
-"""S0 scaffold verification — plan §8 acceptance gates for Stage 0.
+"""S0 scaffold verification — methodology spec acceptance gates for Stage 0.
 
 These tests do not exercise any modelling logic; they verify the package
 imports cleanly, the determinism env is pinned, and the seed plumbing works.
@@ -30,7 +30,7 @@ def test_package_imports() -> None:
 def test_env_vars_pinned() -> None:
     """Single-thread env vars must be present after ``import stml.experimental``."""
     env = _env.applied_env()
-    # The plan §10 contract: each pool pinned to 1 thread + libomp fix.
+    # The methodology spec contract: each pool pinned to 1 thread + libomp fix.
     for key in (
         "OPENBLAS_NUM_THREADS",
         "MKL_NUM_THREADS",
@@ -59,7 +59,7 @@ def test_derive_seed_is_position_unique_and_byte_stable() -> None:
     """``derive_seed(base, t)`` must depend on both args AND be replay-stable.
 
     This is the invariant that makes per-row bootstrap MC right-edge truncation
-    invariant — see plan §10. A value at position ``t`` derived from
+    invariant — see methodology spec A value at position ``t`` derived from
     ``derive_seed(base, t)`` is identical whether computed on the truncated or
     full panel.
     """
@@ -84,7 +84,7 @@ def test_pipeline_config_is_frozen() -> None:
 
 
 def test_pipeline_config_defaults_match_plan() -> None:
-    """Spot-check that defaults are wired to plan values (plan §3 / §6 / §10)."""
+    """Spot-check that defaults are wired to plan values (methodology spec / §6 / §10)."""
     cfg = config.PipelineConfig()
     # Plan §3.2 — t+1 entry; symmetric default pt=sl=0.5 (tighter than h=10 EWMA).
     assert cfg.max_holding == 10

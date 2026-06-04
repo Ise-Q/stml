@@ -1,7 +1,7 @@
-"""Per-asset-class orchestrator — plan §8 Stage 3.
+"""Per-asset-class orchestrator — methodology spec Stage 3.
 
 Lifted with attribution from
-``metamodel-apb/src/alken_metamodel/pipeline.py`` (alken parity).
+
 
 The flow per asset class:
 
@@ -76,7 +76,7 @@ def _select_feature_cols(features: pd.DataFrame, variant: str) -> list[str]:
 
 
 def _add_instrument_onehot(df: pd.DataFrame) -> pd.DataFrame:
-    """Append per-instrument one-hot dummies (plan §3.1 — required for per-class XGB).
+    """Append per-instrument one-hot dummies (methodology spec — required for per-class XGB).
 
     Within an asset class, the dummies let the tree learn `instrument × feature`
     interactions without per-instrument training; instrument is just another
@@ -152,7 +152,7 @@ def run_asset_class(
             feature_cols=[],
         )
 
-    # Append per-instrument one-hot dummies (plan §3.1 — required for per-class
+    # Append per-instrument one-hot dummies (methodology spec — required for per-class
     # XGB to learn `instrument × feature` interactions without per-instrument
     # training).
     cls_features = _add_instrument_onehot(cls_features)
@@ -188,7 +188,7 @@ def run_asset_class(
 
     # Horse-race: per-estimator CV.
     # For XGBoost: pick hyperparameters via a tiny inner grid + 1SE rule on
-    # the modelling slice (plan §4.19 — Harry's PM refresh refinement).
+    # the modelling slice (methodology spec — the PM refresh refinement).
     # Other estimators use their plan defaults.
     if "xgboost" in roster:
         best_xgb_overrides = _tune_xgb_via_grid(
@@ -223,7 +223,7 @@ def run_asset_class(
     winner = roster_cv[best_name]
 
     # Also build a simple-average ensemble across the three estimators
-    # (defensive variance reduction, NOT stacking — plan §3.10 only rejects
+    # (defensive variance reduction, NOT stacking — methodology spec only rejects
     # stacked ensembles with learned weights). Tracked as "ensemble_simple"
     # in roster_cv and considered for the per-class winner pick.
     ens_oos = _ensemble_simple_oos(roster_cv)
@@ -342,7 +342,7 @@ def _tune_xgb_via_grid(
     embargo_map: dict[str, int],
     cfg: PipelineConfig,
 ) -> dict:
-    """Inner purged k-fold + 1SE rule (plan §4.19) over a small XGB grid.
+    """Inner purged k-fold + 1SE rule (methodology spec) over a small XGB grid.
 
     Grid: max_depth × n_estimators × reg_lambda. The "1SE" rule picks the
     MOST REGULARISED config within 1 SE of the best mean inner-fold AUC —

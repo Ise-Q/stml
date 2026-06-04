@@ -1,6 +1,6 @@
 """F9 cross-section + F21 cross-asset relative value.
 
-F9 — Harry's harry/features/cross_asset.py (lead-lag, asset-class dispersion,
+F9 — the alternative/features/cross_asset.py (lead-lag, asset-class dispersion,
      EWMA implied-correlation z).
 F21 — NEW, computed from existing OHLCV (no BBG dependency).
 """
@@ -113,10 +113,10 @@ def _f9_implied_corr_z_252(ctx: FeatureContext) -> pd.Series:
     return rolling_zscore(mean_corr, window=252)
 
 
-register(FeatureSpec("f9_xsect_rank_60", "F9", _f9_xsect_rank_60, "E", 60, "harry"))
-register(FeatureSpec("f9_dispersion_z_60", "F9", _f9_dispersion_z_60, "E", 252, "harry"))
-register(FeatureSpec("f9_pair_corr_mean_63", "F9", _f9_pair_corr_mean_63, "E", 63, "harry"))
-register(FeatureSpec("f9_implied_corr_z_252", "F9", _f9_implied_corr_z_252, "E", 252, "harry"))
+register(FeatureSpec("f9_xsect_rank_60", "F9", _f9_xsect_rank_60, "E", 60, "alternative"))
+register(FeatureSpec("f9_dispersion_z_60", "F9", _f9_dispersion_z_60, "E", 252, "alternative"))
+register(FeatureSpec("f9_pair_corr_mean_63", "F9", _f9_pair_corr_mean_63, "E", 63, "alternative"))
+register(FeatureSpec("f9_implied_corr_z_252", "F9", _f9_implied_corr_z_252, "E", 252, "alternative"))
 
 
 # ---------------------------------------------------------------------------

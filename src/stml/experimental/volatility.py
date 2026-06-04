@@ -34,9 +34,9 @@ Citations:
     Rogers, L.C.G. & Satchell, S.E. (1991). Estimating variance from high, low and
         closing prices. Annals of Applied Probability 1 (4): 504-512.
 
-Lifted from / informed by:
-    metamodel-apb/src/alken_metamodel/volatility.py (closed forms, alken parity).
-    src/stml/new_work/triple_barrier.py (Harry's GARCH(1,1) refit cadence pattern).
+/ informed by:
+    (closed forms, adopted convention).
+    src/stml/new_work/triple_barrier.py (the GARCH(1,1) refit cadence pattern).
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ def ewma_lecturer(returns: pd.Series, span: int = 60) -> pd.Series:
 
 
 # ---------------------------------------------------------------------------
-# GARCH(1,1) — the plan §3.2 default barrier scale.
+# GARCH(1,1) — the methodology spec default barrier scale.
 # ---------------------------------------------------------------------------
 
 
@@ -198,7 +198,7 @@ def garch_sigma(
     Returns a Series of the same length as ``close`` whose value at bar ``t`` is
     the GARCH(1,1)-forecast one-step-ahead daily standard deviation of log
     returns — i.e. σ̂_{t+1}. The triple-barrier labels then size barriers as
-    ``pt_mult · σ̂_t · √h`` (plan §3.2 convention).
+    ``pt_mult · σ̂_t · √h`` (methodology spec convention).
 
     Causality contract: σ̂_t uses only ``close.iloc[:t+1]`` (no lookahead).
     The function refits every ``refit`` bars; between refits, σ̂ evolves via the
@@ -209,7 +209,7 @@ def garch_sigma(
     close
         Strictly positive close prices, ``DatetimeIndex``.
     refit
-        Refit cadence in bars (21 = monthly business-day; plan §3.2).
+        Refit cadence in bars (21 = monthly business-day; methodology spec).
     min_obs
         Bars required before the first fit attempt; pre-min_obs σ̂ are NaN.
     max_window
@@ -221,9 +221,9 @@ def garch_sigma(
 
     Notes
     -----
-    Lifted from Harry's ``src/stml/new_work/triple_barrier.py::sigma_garch`` with
+    the ``src/stml/new_work/triple_barrier.py::sigma_garch`` with
     attribution. We adopt the **daily** convention (one-step-ahead) rather than
-    Harry's cumulative h-day form because the plan §3.2 barrier formula
+    the cumulative h-day form because the methodology spec barrier formula
     multiplies by ``√h`` itself. ``garch_h_cumulative_sigma`` below is offered
     as the alternative when an experiment wants the term-structure-aware form.
     """
@@ -247,7 +247,7 @@ def garch_h_cumulative_sigma(
     *,
     scale: float = 100.0,
 ) -> pd.Series:
-    """GARCH(1,1) **cumulative h-day σ̂** per bar — Harry's term-structure variant.
+    """GARCH(1,1) **cumulative h-day σ̂** per bar — the term-structure variant.
 
     Identical fitting protocol to :func:`garch_sigma`; only the per-bar emission
     differs: this function returns ``√(Σ_{k=1}^h σ²_{t+k})`` so a barrier sized

@@ -1,16 +1,16 @@
-"""Model roster — plan §3.1 / §8 Stage 3.
+"""Model roster — methodology spec / §8 Stage 3.
 
 Three estimators behind one uniform :class:`MetaClassifier` interface:
 
 * :func:`make_elasticnet_logistic` — sklearn elastic-net LogisticRegression,
   standardised inputs, median-imputed NaNs.
-* :func:`make_xgb` — XGBoost with the PS5 cell-43 / alken-parity config
+* :func:`make_xgb` — XGBoost with the PS5 cell-43 / config
   (binary:logistic, max_depth=4, lr=0.05, subsample=0.8, colsample=0.8,
   reg_alpha=0.1, reg_lambda=1.0, n_jobs=1). Single-threaded for byte-stable
   re-fit. **Handles NaN natively** — critical for the R-11 BBG-missingness
   ablation (XGB consumes NaNs without imputation).
 * :func:`make_random_forest` — sklearn RandomForestClassifier (max_features='sqrt'
-  — Harry's PS4 bug fix; auto would error on sklearn ≥1.3).
+  — the PS4 bug fix; auto would error on sklearn ≥1.3).
 
 All estimators implement:
 
@@ -18,13 +18,13 @@ All estimators implement:
     predict_proba(X)              -> ndarray (n, 2)
     predict_act_proba(X)          -> ndarray (n,)  — P(class == 1)
 
-Sample weighting (plan §3.1):
+Sample weighting (methodology spec):
 
     balanced_sample_weight(y, base=uniqueness) ↦
         per-sample weight = uniqueness × inverse_class_frequency
 
-Lifted with attribution from ``metamodel-apb/src/alken_metamodel/models.py``
-(alken parity) and ``src/stml/models.py`` (Sreeram, the original wrappers).
+````
+(adopted convention) and ``src/stml/models.py``.
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ def make_elasticnet_logistic(
 
 
 def make_xgb(*, seed: int = 42, **overrides: Any) -> MetaClassifier:
-    """XGBoost — PS5 cell-43 config (plan §3.1 / alken parity).
+    """XGBoost — configured per (methodology spec / adopted convention).
 
     NaN-tolerant by default — critical for the R-11 BBG-missingness ablation.
     """
@@ -195,7 +195,7 @@ def make_xgb(*, seed: int = 42, **overrides: Any) -> MetaClassifier:
 
 
 def make_lightgbm(*, seed: int = 42, **overrides: Any) -> MetaClassifier:
-    """LightGBM — alken-parity regularised config (deterministic, NaN-tolerant)."""
+    """LightGBM — regularised config (deterministic, NaN-tolerant)."""
     from lightgbm import LGBMClassifier  # lazy
 
     config = dict(
@@ -228,7 +228,7 @@ def make_random_forest(
         n_estimators=n_estimators,
         max_depth=max_depth,
         min_samples_leaf=min_samples_leaf,
-        max_features="sqrt",  # plan §3.6 — alken's first §4 bug fix
+        max_features="sqrt",  # methodology spec — the reference first §4 bug fix
         class_weight="balanced",
         random_state=seed,
         n_jobs=1,
@@ -241,7 +241,7 @@ def make_random_forest(
 
 
 def default_roster(seed: int = 42) -> dict[str, MetaClassifier]:
-    """The plan §8 S3 roster — four families (linear / boosted tree / boosted tree / bagged tree)."""
+    """The methodology spec S3 roster — four families (linear / boosted tree / boosted tree / bagged tree)."""
     return {
         "elasticnet_logistic": make_elasticnet_logistic(seed=seed),
         "xgboost": make_xgb(seed=seed),

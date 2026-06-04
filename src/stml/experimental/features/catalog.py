@@ -47,8 +47,8 @@ class FeatureContext:
         ``{inst: frame}`` dict for ALL instruments — used by cross-section
         features (F9 / F21). Caller passes the same dict to every instrument's
         feature run.
-    macro_harry
-        Harry's PIT-aligned macro parquet (``data/bloomberg/cleaned/macro_harry.parquet``).
+    macro_alternative
+        the PIT-aligned macro parquet (``data/bloomberg/cleaned/macro_alternative.parquet``).
     futures_term
         BBG-raw front + 2nd month parquet
         (``data/bloomberg/cleaned/futures_term.parquet``).
@@ -64,7 +64,7 @@ class FeatureContext:
     asset_class: str
     frame: pd.DataFrame
     universe: dict[str, pd.DataFrame]
-    macro_harry: pd.DataFrame
+    macro_alternative: pd.DataFrame
     futures_term: pd.DataFrame
     options_iv: pd.DataFrame
     eia_crude: pd.DataFrame
@@ -81,7 +81,7 @@ class FeatureSpec:
     fn: FeatureFn
     leakage_class: str  # "E" = pure causal / "TF" = train-fitted
     warmup_bars: int  # bars before the first valid value
-    source: str  # "sreeram", "harry", "alken", "bbg", "new", "shared"
+    source: str  # "engineered", "alternative", "baseline", "bbg", "new", "shared"
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ def assemble_features(
             return pd.DataFrame()
         return pd.read_parquet(p)
 
-    macro_harry = _read_parquet("macro_harry.parquet")
+    macro_alternative = _read_parquet("macro_alternative.parquet")
     futures_term = _read_parquet("futures_term.parquet")
     options_iv = _read_parquet("options_iv.parquet")
     eia_crude = _read_parquet("eia_crude.parquet")
@@ -179,7 +179,7 @@ def assemble_features(
             asset_class=INSTRUMENT_TO_CLASS.get(inst, "unknown"),
             frame=frame,
             universe=panel,
-            macro_harry=macro_harry,
+            macro_alternative=macro_alternative,
             futures_term=futures_term,
             options_iv=options_iv,
             eia_crude=eia_crude,

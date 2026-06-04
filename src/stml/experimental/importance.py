@@ -1,7 +1,7 @@
-"""Cluster-level feature importance — plan §3.6 + §8 S5.
+"""Cluster-level feature importance — methodology spec + §8 S5.
 
-Implements the alken-style cluster importance pipeline with **all four** of the
-required bug fixes (plan §3.6 / branch_descriptions §5.16 + §4.12):
+Implements the cluster importance pipeline with **all four** of the
+required bug fixes (methodology spec + §4.12):
 
   Bug fix 1. ``max_features='sqrt'`` on the forest (not the deprecated ``'auto'``).
   Bug fix 2. ``PurgedKFold`` for cluster MDA (not ``KFold(shuffle=True)`` which
@@ -15,10 +15,10 @@ required bug fixes (plan §3.6 / branch_descriptions §5.16 + §4.12):
   Bug fix 4. **Mantegna distance** ``sqrt(1 - |Spearman ρ|)`` — metric (triangle
              inequality holds); the original ``1 - |ρ|`` is non-metric.
 
-Pipeline (per asset class, on the modelling sample only — plan §11.3):
+Pipeline (per asset class, on the modelling sample only — methodology spec):
   1. Hygiene — drop high-NaN columns, zero-variance columns, near-perfect twins.
   2. Mantegna distance matrix on continuous features; Ward linkage → clusters
-     selected by silhouette (alken §5.16 pattern).
+     selected by silhouette (prior audit pattern).
   3. Per CPCV(6,2) fold:
        a. Fit a RandomForest (max_features='sqrt', PurgedKFold sample weights).
        b. Compute fold AUC.
@@ -33,9 +33,9 @@ Pipeline (per asset class, on the modelling sample only — plan §11.3):
   5. Cross-method rank agreement via Kendall τ (MDA ↔ MDI ↔ gain).
 
 Output:
-  results/sreeram_experimental/importance/{class}/clustered_importance.csv
-  results/sreeram_experimental/importance/{class}/cluster_membership.csv
-  results/sreeram_experimental/importance/{class}/rank_agreement.csv
+  results/submission/importance/{class}/clustered_importance.csv
+  results/submission/importance/{class}/cluster_membership.csv
+  results/submission/importance/{class}/rank_agreement.csv
 """
 
 from __future__ import annotations
@@ -189,12 +189,12 @@ class ImportanceConfig:
     n_estimators: int = 200
     max_depth: int = 6
     min_samples_leaf: int = 10
-    n_mda_repeats: int = 5  # alken used 5
+    n_mda_repeats: int = 5  # n_mda_repeats: 5 (common default)
     random_state: int = 42
 
 
 def _balanced_sample_weight(y: np.ndarray, uniq: np.ndarray) -> np.ndarray:
-    """uniqueness × inverse class freq (alken parity)."""
+    """uniqueness × inverse class freq."""
     w = uniq.astype(float).copy()
     classes = np.unique(y)
     if len(classes) < 2:
@@ -383,7 +383,7 @@ def aggregate_across_folds(per_fold_dfs: list[pd.DataFrame]) -> pd.DataFrame:
 
 
 def kendall_rank_agreement(agg: pd.DataFrame) -> pd.DataFrame:
-    """Cross-method Kendall τ between MDI / MDA / gain rankings (alken §4.12)."""
+    """Cross-method Kendall τ between MDI / MDA / gain rankings."""
     if agg.empty:
         return pd.DataFrame()
     pairs = [
