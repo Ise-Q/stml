@@ -1,13 +1,13 @@
-Metric,A Benchmark,B model_confidence,B all_or_nothing,B ncdf
-Ann return,+8.62%,+2.76%,+4.90%,+2.70%
-Ann vol,6.10%,1.63%,2.87%,1.60%
-Sharpe,1.412,1.688,1.707,1.693
-t-stat,1.19,1.43,1.44,1.43
-SR 95% CI low,-1.559,-1.239,-1.211,-1.226
-SR 95% CI high,3.750,3.846,3.892,3.856
-PSR(SR*=0),0.861,0.908,0.911,0.909
-Max DD,-3.42%,-0.82%,-1.41%,-0.80%
-Total cost (bps),416.1,106.3,187.9,103.8
-Annual turnover,48.28,12.33,21.80,12.05
-Breakeven ½-spread,17.8 bps,22.3 bps,22.5 bps,22.4 bps
-Events taken,100%,54%,54%,54%
+Metric,A Benchmark,B all_or_nothing,B SOPS
+Ann return,+8.62%,+4.90%,+4.90%
+Ann vol,6.10%,2.87%,2.87%
+Sharpe,1.412,1.707,1.707
+t-stat,1.19,1.44,1.44
+SR 95% CI low,-1.559,-1.211,-1.211
+SR 95% CI high,3.750,3.892,3.892
+PSR(SR*=0),0.861,0.911,0.911
+Max DD,-3.42%,-1.41%,-1.41%
+Total cost (bps),416.1,187.9,187.9
+Annual turnover,48.28,21.80,21.80
+Breakeven ½-spread,17.8 bps,22.5 bps,22.5 bps
+Events taken,100%,54%,54%

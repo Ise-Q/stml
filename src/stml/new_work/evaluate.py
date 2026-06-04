@@ -1,22 +1,23 @@
-"""OOS evaluation — Checkpoint 5: full four-way comparison + vol comparison.
+"""OOS evaluation — lecture-aligned strategy comparison.
 
-Methods compared:
-    A          — Benchmark (primary-only, full conviction)
-    B-mc       — model_confidence: ŷ = side · p̂  (p̂ > 0.5)
-    B-aon      — all_or_nothing:  ŷ = side · 1(p̂ > 0.5)
-    B-ncdf     — NCDF:            ŷ = side · Φ(z)
+Methods:
+    A          — Benchmark: ŷ = side (primary-only, full conviction)
+    B-aon      — all_or_nothing: ŷ = side · 1(p̂ > 0.5)
     B-sops     — SOPS sigmoid fitted on OOF Sharpe
     C-vsn-lstm — VSN+LSTM neural model (loads saved weights)
     D-tft      — Temporal Fusion Transformer (loads saved weights)
 
-Vol comparison (Section 2):
-    Methods A and B-aon re-run with yang_zhang / ewma_close / garch / gjr estimators.
+Portfolio construction follows StrategyWeights lecture (slides 38–43):
+    - Simple returns r_t = (P_t − P_{t-1}) / P_{t-1}
+    - EWMA vol (span=60), exact lecture recurrence, annualised ×√252, σ_tgt=10%
+    - 1/K cross-sectional average (K = 11 instruments, flat = cash)
+    - Lag: w_t earns r_{t+1} (position stamped at t_start, shift(-1) in backtest)
+    - Net of Grinold-Kahn costs: 2 bps half-spread + 10 bps × |Δw|
 
 Outputs:
     results/strategy_eval/
-        eval_summary.csv / .md     — full seven-column comparison table
-        vol_comparison.csv / .md   — A and B-aon × four vol estimators
-        net_returns_<method>.csv   — per-method daily net returns
+        eval_summary.csv / .md
+        net_returns_<method>.csv
 
 Usage:
     .venv/bin/python src/stml/new_work/evaluate.py [--no-sops] [--no-neural] [--quiet]
@@ -47,23 +48,14 @@ from stml.experimental.significance import significance_report
 
 EVAL_DIR = _REPO / "results" / "strategy_eval"
 
-METHODS_BASE: list[MethodName] = ["A", "B-mc", "B-aon", "B-ncdf"]
+METHODS_BASE: list[MethodName] = ["A", "B-aon"]
 
 METHOD_LABELS: dict[str, str] = {
     "A":          "A Benchmark",
-    "B-mc":       "B model_confidence",
     "B-aon":      "B all_or_nothing",
-    "B-ncdf":     "B ncdf",
     "B-sops":     "B SOPS",
     "C-vsn-lstm": "C VSN+LSTM",
     "D-tft":      "D TFT",
-}
-
-VOL_METHOD_LABELS = {
-    "yang_zhang": "Yang-Zhang (default)",
-    "ewma_close": "EWMA(60)",
-    "garch":      "GARCH(1,1)",
-    "gjr":        "GJR-GARCH (equity only)",
 }
 
 
@@ -76,10 +68,7 @@ def breakeven_halfspread(
     net_returns: pd.Series,
     weights: pd.DataFrame,
 ) -> float:
-    """Half-spread (bps) at which net Sharpe hits zero.
-
-    Approximation: gross_mean_daily / (annualised_turnover / 252) / 10000.
-    """
+    """Half-spread (bps) at which net Sharpe hits zero."""
     from stml.experimental.cost_model import annualised_turnover
     turnover = annualised_turnover(weights)
     gross_mean = net_returns.mean() * 252.0
@@ -106,9 +95,6 @@ def evaluate_method(
     verbose: bool = True,
 ) -> tuple[BacktestReport, dict]:
     """Run barrier_backtest for one method and return (report, metrics_dict)."""
-    if verbose:
-        print(f"\n  Sizing conviction for {METHOD_LABELS.get(method, method)} …")
-
     events, weights_series = make_weights(
         method,
         oos_events=oos_events,
@@ -161,7 +147,7 @@ def _print_method_summary(method: MethodName, m: dict, report: BacktestReport) -
 
 
 # ---------------------------------------------------------------------------
-# Comparison tables
+# Comparison table
 # ---------------------------------------------------------------------------
 
 
@@ -178,14 +164,6 @@ DISPLAY_COLS = [
     ("turnover_per_year",        "Annual turnover",    "{:.2f}"),
     ("breakeven_halfspread_bps", "Breakeven ½-spread", "{:.1f} bps"),
     ("frac_events_taken",        "Events taken",       "{:.0%}"),
-]
-
-VOL_CMP_COLS = [
-    ("ann_return", "Ann return",  "{:+.2%}"),
-    ("ann_vol",    "Ann vol",     "{:.2%}"),
-    ("sharpe",     "Sharpe",      "{:.3f}"),
-    ("t_stat",     "t-stat",      "{:.2f}"),
-    ("max_dd",     "Max DD",      "{:.2%}"),
 ]
 
 
@@ -218,74 +196,6 @@ def _to_markdown(df: pd.DataFrame) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Vol comparison
-# ---------------------------------------------------------------------------
-
-
-def run_vol_comparison(
-    *,
-    oos_events: pd.DataFrame,
-    ohlcv: pd.DataFrame,
-    returns_panel: pd.DataFrame,
-    verbose: bool = True,
-) -> dict[str, dict[str, dict]]:
-    """Re-run methods A and B-aon with four vol estimators.
-
-    Returns nested dict: results[method][vol_method] = metrics_dict.
-    """
-    vol_methods = ["yang_zhang", "ewma_close", "garch", "gjr"]
-    cmp_methods: list[MethodName] = ["A", "B-aon"]
-
-    results: dict[str, dict[str, dict]] = {m: {} for m in cmp_methods}
-
-    if verbose:
-        print("\n" + "=" * 70)
-        print("VOL COMPARISON — methods A and B-aon across four estimators")
-        print("=" * 70)
-
-    for vm in vol_methods:
-        if verbose:
-            print(f"\n  Building {VOL_METHOD_LABELS[vm]} vol panel …")
-
-        vp = build_vol_panel(
-            ohlcv,
-            method=vm,
-            window=config.LOOKBACK_L,
-            span=config.EWMA_SPAN,
-        )
-
-        for meth in cmp_methods:
-            if verbose:
-                print(f"    {METHOD_LABELS[meth]} × {VOL_METHOD_LABELS[vm]} …")
-            _, m = evaluate_method(
-                meth,
-                oos_events=oos_events,
-                vol_panel=vp,
-                returns_panel=returns_panel,
-                verbose=False,
-            )
-            results[meth][vm] = m
-
-    return results
-
-
-def _vol_cmp_table(
-    vol_results: dict[str, dict[str, dict]],
-) -> pd.DataFrame:
-    """Build a vol-comparison table: rows = metrics, columns = method×vol combos."""
-    label_map = {}
-    ordered: dict[str, dict] = {}
-    for meth in ["A", "B-aon"]:
-        for vm in ["yang_zhang", "ewma_close", "garch", "gjr"]:
-            col_key = f"{meth}_{vm}"
-            col_label = f"{METHOD_LABELS[meth]} / {VOL_METHOD_LABELS[vm]}"
-            label_map[col_key] = col_label
-            ordered[col_key] = vol_results[meth][vm]
-
-    return comparison_table(ordered, label_map, VOL_CMP_COLS)
-
-
-# ---------------------------------------------------------------------------
 # Main runner
 # ---------------------------------------------------------------------------
 
@@ -295,16 +205,16 @@ def run(
     include_neural: bool = True,
     verbose: bool = True,
 ) -> dict[MethodName, dict]:
-    """Run the full four-way evaluation and vol comparison."""
+    """Run OOS evaluation and return metrics dict keyed by method name."""
     EVAL_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 70)
-    print("Strategy evaluation — Checkpoint 5: four-way + vol comparison")
-    print(f"Vol method: {config.VOL_METHOD}  σ_tgt={config.SIGMA_TGT:.0%}  "
-          f"max_lev={config.MAX_LEVERAGE}")
+    print("Strategy evaluation — OOS comparison (lecture-aligned)")
+    print(f"Vol: {config.VOL_METHOD}(span={config.EWMA_SPAN})  "
+          f"σ_tgt={config.SIGMA_TGT:.0%}  max_lev={config.MAX_LEVERAGE}  "
+          f"returns=simple  1/K={11}")
     print("=" * 70)
 
-    # Shared inputs — load once.
     print("\nLoading data …")
     ohlcv, _ = load_data()
     returns_panel = load_returns_panel(kind="simple")
@@ -323,13 +233,11 @@ def run(
         span=config.EWMA_SPAN,
     )
 
-    # Load signals once for neural methods.
     signals = None
     if include_neural:
         from stml.new_work.data import load_signals
         signals = load_signals()
 
-    # OOF probabilities — required for B-sops.
     oof_df: pd.DataFrame | None = None
     methods: list[MethodName] = list(METHODS_BASE)
 
@@ -344,20 +252,20 @@ def run(
             print(f"  OOF probs not found at {oof_path} — skipping B-sops")
 
     if include_neural:
-        from pathlib import Path as _Path
-        _outputs = _Path(__file__).parent / "outputs"
-        if (_outputs / "vsn_lstm_weights.pt").exists():
+        _outputs = Path(__file__).parent / "outputs"
+        if (_outputs / "vsn_lstm_weights_cp5.pt").exists() or (_outputs / "vsn_lstm_weights.pt").exists():
             methods.append("C-vsn-lstm")
         else:
-            print("  vsn_lstm_weights.pt not found — skipping C-VSN+LSTM")
-        if (_outputs / "tft_weights.pt").exists():
+            print("  vsn_lstm weights not found — skipping C-VSN+LSTM")
+        if (_outputs / "tft_weights_cp5.pt").exists() or (_outputs / "tft_weights.pt").exists():
             methods.append("D-tft")
         else:
-            print("  tft_weights.pt not found — skipping D-TFT")
+            print("  tft weights not found — skipping D-TFT")
 
-    # ── Section 1: Full method comparison ────────────────────────────────
     print("\n" + "=" * 70)
-    print("SECTION 1: Full method comparison (Yang-Zhang vol)")
+    print("OOS RESULTS")
+    print(f"  Boundary: GLOBAL_CUT={config.BOUNDARY.date()}  "
+          f"Embargo end: 2021-10-20")
     print("=" * 70)
 
     all_results: dict[MethodName, dict] = {}
@@ -382,7 +290,7 @@ def run(
         report.net_returns.to_csv(ret_path, header=True)
 
     print("\n" + "=" * 70)
-    print("SECTION 1 RESULTS")
+    print("SUMMARY TABLE")
     print("=" * 70)
     tbl = comparison_table(all_results, METHOD_LABELS, DISPLAY_COLS)
     print(tbl.to_string())
@@ -392,57 +300,24 @@ def run(
     print(f"\nSaved → {csv_path.relative_to(_REPO)}")
 
     md_lines = [
-        "# Strategy evaluation — methods A–D",
+        "# Strategy evaluation — OOS results",
         "",
         f"OOS period: {oos_events['t_start'].min().date()} → "
         f"{oos_events['t_start'].max().date()}",
-        f"Vol method: {config.VOL_METHOD}  "
+        f"Vol: {config.VOL_METHOD}(span={config.EWMA_SPAN})  "
         f"σ_tgt={config.SIGMA_TGT:.0%}  max_lev={config.MAX_LEVERAGE}",
         "",
-        "## Section 1: Method comparison (Yang-Zhang vol)",
+        "## Lecture conventions (StrategyWeights slides 38–43)",
+        "- Returns: simple  r_t = (P_t − P_{t-1}) / P_{t-1}",
+        "- EWMA vol: λ=2/(span+1), exact lecture recurrence, ×√252, floor=2%",
+        "- Weight: w_t,k = ŷ_t,k × σ_tgt / σ̂_t,k",
+        "- Lag: w_t earns r_{t+1} (position at close of t, return from t→t+1)",
+        "- Aggregate: R^port = (1/K) Σ_k w_t,k r_{t+1,k}  (K=11, flat=cash)",
+        "- Costs: 2bps half-spread + 10bps×|Δw| Grinold-Kahn",
+        "",
+        "## Results",
         "",
         _to_markdown(tbl),
-        "",
-        "## Notes",
-        "- All Sharpe ratios are annualised (×√252).",
-        "- Bootstrap CI: Politis-Romano stationary block bootstrap (n_boot=2000).",
-        "- Transaction costs: 2bps half-spread + 10bps×|Δw| Grinold-Kahn impact.",
-        "- Vol targeting: Yang-Zhang(20-bar) annualised σ̂, σ_tgt=10%, max_lev=10×.",
-        "- C-VSN+LSTM / D-TFT: trained on pre-BOUNDARY OOF data; best checkpoint by val Sharpe.",
-    ]
-
-    # ── Section 2: Vol comparison ─────────────────────────────────────────
-    print("\n")
-    vol_results = run_vol_comparison(
-        oos_events=oos_events,
-        ohlcv=ohlcv,
-        returns_panel=returns_panel,
-        verbose=verbose,
-    )
-
-    vol_tbl = _vol_cmp_table(vol_results)
-
-    print("\n" + "=" * 70)
-    print("SECTION 2 RESULTS — Vol estimator comparison")
-    print("=" * 70)
-    print(vol_tbl.to_string())
-
-    vol_csv = EVAL_DIR / "vol_comparison.csv"
-    vol_tbl.to_csv(vol_csv)
-    print(f"\nSaved → {vol_csv.relative_to(_REPO)}")
-
-    md_lines += [
-        "",
-        "## Section 2: Vol estimator comparison (methods A and B-aon)",
-        "",
-        _to_markdown(vol_tbl),
-        "",
-        "### Vol estimators",
-        "- **Yang-Zhang**: bias-minimised OHLC estimator, window=20 bars.",
-        "- **EWMA(60)**: exponentially weighted close-to-close returns, span=60.",
-        "- **GARCH(1,1)**: refitted every 21 bars on up to 2000 bars of history.",
-        "- **GJR-GARCH**: asymmetric GARCH for equity instruments (es1s, nq1s, fesx1s); "
-        "  GARCH(1,1) for commodity instruments.",
     ]
 
     md_path = EVAL_DIR / "eval_summary.md"
@@ -454,12 +329,10 @@ def run(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Evaluate strategy methods A–D + vol comparison"
+        description="Evaluate strategy methods A, B-aon, B-sops, C-VSN+LSTM, D-TFT"
     )
-    ap.add_argument("--no-sops",   action="store_true",
-                    help="Skip B-sops")
-    ap.add_argument("--no-neural", action="store_true",
-                    help="Skip C-VSN+LSTM and D-TFT (neural models)")
+    ap.add_argument("--no-sops",   action="store_true", help="Skip B-sops")
+    ap.add_argument("--no-neural", action="store_true", help="Skip C/D neural models")
     ap.add_argument("--quiet",     action="store_true")
     args = ap.parse_args(argv)
     run(
