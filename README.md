@@ -1,103 +1,75 @@
-# Systematic Trading Strategies with ML — Meta-Model Submission
+# STML Competition Submission
 
-**Imperial College London × Alken Asset Management.** A *meta-model* that takes the provided primary
-trading signal `s ∈ {−1, 0, +1}` for 11 futures and predicts, for each non-zero signal, the
-**probability that following the trade is profitable** under a triple-barrier exit.
+This repository is set up for grading through one notebook:
 
-The notebook has two parts. **Part I — the feature-engineering foundation** regenerates the full F1–F17
-feature matrix **from raw OHLCV + signals**, including for the hidden Jul–Dec 2022 window. **Part II —
-the meta-model** fits the model under purged CPCV, selects a champion per instrument, extracts the
-cluster-level **weight vector** (feature importance), builds a **calibrated, vol-targeted strategy**
-(the metamodel-vs-primary comparison with the SOPS/`bsops` sizing), and saves the **hyper-parameter /
-champion cache** (`src/stml/new_work/outputs/selected_hps.json`) so re-runs reuse it. Part II **loads
-the team's committed results by default**; set `FORCE_RECOMPUTE = True` to re-run the real CPCV fit and
-rebuild the strategy net returns. The consolidated `date,instrument,prediction` deliverable and the
-H2-2022 refit are a later step.
+- `submission.ipynb` - run this top-to-bottom.
+- `src/stml/` - helper package imported by the notebook.
+- `data/` - raw released data and committed inputs used by the notebook.
+- `src/stml/new_work/outputs/` - committed model outputs used in load mode.
+- `results/strategy_eval/` - committed strategy evaluation outputs.
 
----
+The notebook runs in **LOAD mode** by default (`FORCE_RECOMPUTE = False`), so the expensive CPCV/model
+search artifacts are loaded from the committed outputs. This is intentional for grading reproducibility.
 
-## What's in this folder
+## Notebook Structure
 
-```
-submission.ipynb                       the one notebook — run this top-to-bottom
-src/stml/                              the util package (imported as `import stml`)
-  metamodel/ , model/                  Part I — the F1–F17 feature pipeline
-  harry/ , new_work/                   Part II — meta-model: features, CPCV, importance, hp_cache
-  new_work/ (strategy §11)             config, data, vol, targeting, weights, evaluate, models/ (VSN-LSTM, TFT)
-  experimental/                        import-closed sizing / backtest / calibration / significance (§11)
-  new_work/outputs/                    Part II committed results (CPCV, finalisation, importance,
-                                       _cache/*.parquet) + metamodel_predictions.csv + selected_hps.json
-results/strategy_eval/                 Part II — committed strategy net returns + summary + charts (§11)
-data/
-  ohlcv_data.csv                       raw OHLCV            ← REPLACE with your through-Dec-2022 file
-  primary_signals.csv                  raw signals         ← REPLACE with your through-Dec-2022 file
-  additional_data.xlsx                 F11 macro workbook (released window)
-  OOS_additional_data.xlsx             F11 macro source for Jul–Dec 2022 (provenance)
-  features/f11_macro_context_oos.csv   our EXTERNAL features for Jul–Dec 2022 (the shipped CSV)
-  meta/triple_barrier_labels.csv       Part II — canonical triple-barrier meta-labels (team input)
-  meta/macro_features.csv              Part II — macro feature source (HMM)
-  alternate_data_cleaned.csv           Part II — macro feature source (M1–M6)
-  oof_meta_probabilities.csv           Part II — training out-of-fold meta-probabilities (strategy §11)
-requirements.txt                     pinned deps (pip fallback)
-pyproject.toml / uv.lock             project + locked deps (uv)
-```
+- **Sections 0-5:** setup, EDA, macro data, HMM/regime features, full F1-F17 feature engineering, and leakage discipline.
+- **Section 6:** triple-barrier labels, sample weights, CPCV protocol, and barrier-geometry justification.
+- **Sections 7-9:** model comparison across logistic/RF/XGBoost/MLP, final variant lock, and saved hyperparameters.
+- **Section 10:** cluster-level feature importance and weight-vector extraction.
+- **Section 11:** model evaluation: precision, recall, F1, AUC, confusion matrix, threshold sweep, per-instrument breakdown, and blind-primary baseline.
+- **Section 12:** optional strategy construction and primary-vs-metamodel comparison.
+- **Section 13:** final summary.
 
-> Running the notebook writes the regenerated feature matrix to `results/feature_matrix.parquet`
-> (the `results/` folder is created on run; nothing under it needs to be shipped).
+## How To Run
 
-> The util folder is `src/stml/` — kept as an installable package so every notebook import resolves and
-> `stml.io` can auto-locate `data/` from the repo root.
+Recommended:
 
----
-
-## How to run
-
-### Option A — with `uv` (recommended)
 ```bash
 uv sync --group features-extra
-uv run jupyter lab          # open submission.ipynb, then Run All
-# …or headless:
-uv run jupyter nbconvert --to notebook --execute submission.ipynb
+uv run jupyter nbconvert --to notebook --execute submission.ipynb --output submission.executed.ipynb --ExecutePreprocessor.timeout=7200
 ```
 
-### Option B — with plain `pip` (Python 3.12)
+Or open `submission.ipynb` in Jupyter/JupyterLab and choose **Run All**.
+
+Plain pip fallback:
+
 ```bash
 python3.12 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
-pip install -e .                   # makes `import stml` resolve
-jupyter lab                        # open submission.ipynb, then Run All
+pip install -e .
+jupyter nbconvert --to notebook --execute submission.ipynb --output submission.executed.ipynb --ExecutePreprocessor.timeout=7200
 ```
 
-`requirements.txt` already includes the two feature dependencies **hmmlearn** (F17 regimes) and
-**PyWavelets** (F13), and points at the **CPU** build of PyTorch — no GPU needed.
+Expected runtime in load mode is a few minutes. Running the notebook regenerates
+`results/feature_matrix.parquet`; this is a normal generated artifact.
 
----
+## Prediction File
 
-## Re-running on the hidden Jul–Dec 2022 data
+The metamodel predictions are here:
 
-1. Replace `data/ohlcv_data.csv` and `data/primary_signals.csv` with your versions **extended through
-   Dec 2022** (same columns, just more rows). Keep the long price history — trailing features warm up on
-   it causally.
-2. Run `submission.ipynb` top-to-bottom.
+```text
+src/stml/new_work/outputs/metamodel_predictions.csv
+```
 
-The notebook **auto-detects** the extension. Section 0 then:
-- fits every learned feature family on the **FE-train block only (≤ 2021-07-01)** — the boundary is
-  pinned by *date*, so extending the axis never moves it;
-- regenerates all engineered features for the new rows, tagged **`partition == "oos"`**;
-- splices our shipped external macro features (`data/features/f11_macro_context_oos.csv`, z-scored with
-  the same frozen FE-train statistics) onto those `oos` rows — so you do **not** need any macro source
-  for the hidden window;
-- writes the full matrix to `results/feature_matrix.parquet`.
+Important columns:
 
-The shipped external CSV covers Jul 1 – Dec 30 2022; any `oos` row outside that span keeps
-median-imputable NaNs for F11 rather than failing.
+- `date` - trade signal date.
+- `instrument` - instrument ticker.
+- `calibrated_proba` - final probability prediction, i.e. `P(trade is profitable)`.
+- `raw_proba` - uncalibrated model probability.
+- `bin` - realised triple-barrier label for the released out-of-sample evaluation window.
 
----
+### Brief-format deliverables (repo root)
 
-## Notes
-- **Determinism.** Seed = 42; the released-window rebuild reproduces our feature matrix to ~1e-10.
-- **Leakage discipline.** Fitted (TF) families are fit on `≤ 2021-07-01` and frozen; engineered (E)
-  families are causal by truncation-invariance; structural NaNs are never forward-filled. Details in
-  `submission.ipynb` §4–§5.
-- **Python 3.12** required (`requires-python = ">=3.12"`).
+Two ready-to-grade CSVs in the exact brief schema, covering the **first half of 2022 (Jan–Jun)**:
+
+- `predictions.csv` — `date,instrument,prediction` (944 events). `prediction` is the calibrated
+  `P(trade is profitable)` (the `calibrated_proba` column), one row per non-zero primary-signal event.
+- `strategy_weights.csv` — `date,instrument,weight` (strategy track). Per-instrument vol-targeted
+  portfolio weights under the selected **SOPS** sizer, scaled by `1/K` (K = 11) so the portfolio
+  return is `Σ_k weight · next-day return`; flat instrument-days are `0`.
+
+The training out-of-fold probabilities used for calibration/strategy work are in
+`data/oof_meta_probabilities.csv`.
