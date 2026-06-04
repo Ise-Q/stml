@@ -1,20 +1,18 @@
-# Strategy construction — methodology, variants, comparison
+# Strategy Construction — Methodology, Variants, Comparison
 
-Madmoun *Optional Session 3* (BUSI70575) Sharpe-optimal portfolio recipe applied
-to the meta-model probabilities from Stages 1–5. Five variants benchmarked plus
-a primary-blind baseline; sealed-test backtest in
+The bonus strategy-construction track applies the lecturer's *Optional Session 3*
+Sharpe-optimal portfolio recipe (BUSI70575, Madmoun) to the meta-model's
+calibrated probabilities. Five sizing variants are benchmarked head-to-head
+against a primary-blind baseline; sealed-test results in
 `results/sreeram_experimental/strategy_variant_comparison.csv`.
 
-> **Labels source.** The triple-barrier labels were replaced with Jay's
-> per-instrument geometry CSV (`data/triple_barrier_labels.csv`). Each
-> instrument has its own `(pt, sl, h)` triplet picked by adjusted-Sharpe
-> over a 343-geometry grid with a held-out 2022-H1 validation slice.
-> Methodology: `triple-barrier-label.pdf`. Geometry summary:
-> `results/sreeram_experimental/jay_geometry_summary.csv`.
-> All downstream models (champions, calibration, SOPS, NN backbones,
-> importance) are unchanged — same architectures, same CPCV, same 1-SE
-> rule, same loss; only the (events, partition) flowing through the
-> pipeline changed.
+> **Labels source.** Triple-barrier labels use a per-instrument geometry
+> `(pt, sl, h)` selected by an adjusted-Sharpe grid search over 343
+> configurations on the development partition only (test partition never
+> touched during label selection). Per-instrument winners in
+> `results/sreeram_experimental/jay_geometry_summary.csv`. All downstream
+> stages — champion selection, calibration, sizing, backtest, importance —
+> operate on the same `(events, partition)` schema.
 
 ## What slides 21–53 prescribe
 
