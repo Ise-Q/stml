@@ -34,10 +34,10 @@ artefacts and renders the rubric narrative in seconds.
 | Max drawdown | −1.94 % | same |
 | Turnover (× per year) | 162.7 | same |
 | Avg holding period (days) | 2.19 | same |
-| t = SR · √n | **2.70** | `significance_summary.csv` |
+| t = SR · √n | **2.07** | `significance_summary.csv` |
 | Stationary block-bootstrap 95 % CI (per period) | [0.066, 0.338] — **excludes 0** | same |
-| PSR(0) | **0.998** (deployment threshold 0.95) | same |
-| MinTRL | 61 periods (have 179) — certified | same |
+| PSR(0) | **0.983** (deployment threshold 0.95) | same |
+| MinTRL | 79 periods (have 129) — certified | same |
 | Ljung-Box Q(10) p-value | 0.72 (IID-like; √252 scaling valid) | same |
 | DSR at N_eff = 2 | 0.996 | `deflation_ladder.csv` |
 | DSR at 4 · N_raw = 480 | 0.976 | same |
