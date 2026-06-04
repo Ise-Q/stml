@@ -1,13 +1,13 @@
 Metric,A Benchmark,B all_or_nothing,B SOPS
-Ann return,+8.62%,+4.90%,+4.90%
-Ann vol,6.10%,2.87%,2.87%
-Sharpe,1.412,1.707,1.707
-t-stat,1.19,1.44,1.44
-SR 95% CI low,-1.559,-1.211,-1.211
-SR 95% CI high,3.750,3.892,3.892
-PSR(SR*=0),0.861,0.911,0.911
-Max DD,-3.42%,-1.41%,-1.41%
-Total cost (bps),416.1,187.9,187.9
-Annual turnover,48.28,21.80,21.80
-Breakeven ½-spread,17.8 bps,22.5 bps,22.5 bps
+Ann return,+8.62%,+4.65%,+4.65%
+Ann vol,6.10%,2.88%,2.88%
+Sharpe,1.412,1.614,1.614
+t-stat,1.19,1.36,1.36
+SR 95% CI low,-1.559,-1.286,-1.286
+SR 95% CI high,3.750,3.821,3.821
+PSR(SR*=0),0.861,0.899,0.899
+Max DD,-3.42%,-1.49%,-1.49%
+Total cost (bps),416.1,188.4,188.4
+Annual turnover,48.28,21.86,21.86
+Breakeven ½-spread,17.8 bps,21.3 bps,21.3 bps
 Events taken,100%,54%,54%
