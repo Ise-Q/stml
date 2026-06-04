@@ -77,28 +77,42 @@ Modelling slice: pre-2021-10-06 (366 train days, 91 val days). Sealed test: post
 > before the sealed test slice (H1 2022). Embargo widened per-instrument to
 > `max(p90 span, the h, 10 days)`.
 
-Run `results/submission/strategy_variant_comparison.csv` (NN params: lookback 21, hidden 16, epochs 25, patience 5, seeds 5):
+Sealed-test metrics from `results/submission/strategy_variant_comparison.csv`
+(NN params: lookback 21, hidden 16, epochs ≤ 25, early-stop patience 5, single
+seed reported):
 
 | Variant | val Sharpe | **test Sharpe** | test ann ret (net) | test ann vol | Sortino | max DD | turnover/yr |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| **sops** (locked) | — | **+2.90** | **+14.7%** | **5.1%** | **+5.10** | **−1.9%** | **163×** |
-| primary_blind | — | +2.73 | +16.2% | 5.9% | +4.68 | −2.2% | 488× |
-| nn_lstm | −0.15 | −0.77 | −0.2% | 0.3% | −1.07 | −0.4% | 18× |
-| nn_linear | +0.10 | −1.91 | −5.5% | 2.9% | −2.32 | −3.7% | 208× |
-| nn_vlstm | +0.55 | −2.57 | −3.0% | 1.2% | −3.10 | −1.6% | 71× |
-| nn_tft | −0.29 | −2.63 | −3.9% | 1.5% | −3.15 | −1.9% | 91× |
+| **sops** (locked) | — | **+3.15** | **+16.2 %** | **5.1 %** | **+5.55** | **−1.9 %** | **184×** |
+| primary_blind | — | +2.73 | +16.2 % | 5.9 % | +4.68 | −2.2 % | 488× |
+| nn_lstm | −0.15 | −0.77 | −0.2 % | 0.3 % | −1.07 | −0.4 % | 18× |
+| nn_linear | +0.10 | −1.91 | −5.5 % | 2.9 % | −2.32 | −3.7 % | 208× |
+| nn_vlstm | +0.55 | −2.57 | −3.0 % | 1.2 % | −3.10 | −1.6 % | 71× |
+| nn_tft | −0.29 | −2.63 | −3.9 % | 1.5 % | −3.15 | −1.9 % | 91× |
 
-**SOPS beats primary-blind on Sharpe** (+2.90 vs +2.73) **with a third of the turnover** (163× vs 488×) and **lower volatility** (5.1% vs 5.9%). The meta-filter genuinely adds risk-adjusted value on the sealed test window: same regime, less trading, lower drawdown, higher Sharpe. NN variants all fail with the standard val→test sign-flip pattern; the 2.5-year primary-signal window is too short for sequence models to generalise across the regime shift.
+**SOPS beats primary-blind on Sharpe** (+3.15 vs +2.73) **with ≈ 38 % of the
+turnover** (184× vs 488×) and **lower volatility** (5.1 % vs 5.9 %). The net
+return is essentially identical (16.2 % vs 16.2 %) so the entire Sharpe lift
+comes from the volatility reduction the meta-filter induces. NN variants all
+fail with the standard val→test sign-flip pattern; the 2.5-year primary-signal
+window is too short for sequence models to generalise across the H2-2021 →
+H1-2022 regime shift.
 
 ## Selection result and honest assessment
 
 **Locked submission strategy: SOPS** (sizing-rules path, slides 21–34).
 
-**Why SOPS over primary-blind despite the lower Sharpe:**
-1. **Lower turnover** (188× vs 488×) → much higher breakeven-cost robustness; survives higher transaction costs.
-2. **Higher absolute return** (+18.3% net vs +16.2% net).
-3. **The meta-model methodology is what's being graded**, not primary-signal momentum. Primary-blind is a control / sanity check, not a deliverable.
-4. **More defensible across regimes:** primary-blind +2.73 is a lucky read on 2022-H1 specifically; SOPS has the structural filter that should generalise better.
+**Why SOPS over primary-blind on this window:**
+1. **Higher risk-adjusted return.** Sharpe +3.15 vs +2.73 — the meta-filter
+   genuinely lifts the realised Sharpe.
+2. **Same net return, lower realised vol** (5.1 % vs 5.9 %) — vol target
+   respected with 4.9 pp of headroom; primary-blind would breach 10 % on a
+   more volatile period.
+3. **≈ 38 % of the turnover** (184× vs 488×) → much higher breakeven-cost
+   robustness; survives higher transaction costs and slippage.
+4. **More defensible across regimes:** primary-blind +2.73 is a lucky read on
+   the H1 2022 window; SOPS has the structural filter that should generalise
+   better when the primary signal degrades.
 
 Why not pick an NN by val Sharpe per slide 51?
 
@@ -243,27 +257,23 @@ Architecture surface untouched through the migration:
 | Grinold-Kahn costs | `cost_model.py` | unchanged |
 | Backtest | `backtest.py` | unchanged |
 
-### Old GARCH vs Jay labels — quantitative diff (locked submission)
+### Locked submission — headline metrics (current pipeline)
 
-| Metric | Old GARCH `pt=sl=0.5, h=10` | the per-instrument |
-|---|---:|---:|
-| Total events | 4,886 | 4,917 |
-| Sealed test events | 1,342 (179 days) | 951 (129 days) |
-| Champions AUC > 0.55 | 7/11 | 6/11 |
-| Lower 1-SE CI > 0.50 (signal flag) | 11/11 | 9/11 |
-| Importance: ≥1 cluster MDA > 0.02 per class | 2/3 (energy, equity; metals borderline) | 2/3 (same) |
-| SOPS test Sharpe | +2.41 | **+2.52** |
-| SOPS ann ret (net) | +34.3% | +18.3% |
-| SOPS ann vol | 14.2% (over 10% cap) | **7.3% (under cap)** |
-| SOPS Sortino | +4.25 | +4.10 |
-| SOPS max DD | −6.9% | **−3.1%** |
-| SOPS turnover | 267× | **188×** |
-| Primary-blind Sharpe (on same test slice) | n/a | **+2.73** |
-| Primary-blind ann vol | n/a | 5.9% |
-
-The new locked submission has **comparable Sharpe**, **half the drawdown**,
-**70% of the turnover**, and **realised vol that respects the 10% cap** —
-the strategy is cleaner under the spec at minor cost in raw return.
+| Metric | Value | Source |
+|---|---:|---|
+| Total triple-barrier events | 4,917 | `data/triple_barrier_labels.csv` |
+| Sealed test events (H1 2022) | 951 (129 days) | `outputs/metamodel_predictions.csv` |
+| Champion AUC > 0.55 (instruments) | 6 / 11 | `champions_summary.csv` |
+| Lower 1-SE CI > 0.50 (instruments) | 10 / 11 | same |
+| Significant cluster (MDA > 0.02) | energy (1), equity (2), metals (0) | `importance/deep_summary.csv` |
+| SOPS test Sharpe | +3.15 | `backtest_metrics.csv` |
+| SOPS ann ret (net) | +16.2 % | same |
+| SOPS ann vol | 5.1 % (under 10 % cap) | same |
+| SOPS Sortino | +5.55 | same |
+| SOPS max DD | −1.91 % | same |
+| SOPS turnover | 184× | same |
+| Primary-blind Sharpe (same test slice) | +2.73 | `strategy_variant_comparison.csv` |
+| Primary-blind ann vol | 5.9 % | same |
 
 ### Caveats persisted to `outputs/coverage_caveat.csv`
 

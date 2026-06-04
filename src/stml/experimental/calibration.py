@@ -1,7 +1,7 @@
 """Probability calibration — methodology spec / §8 S6.
 
 Per-class Platt scaling fit on **purged modelling-OOF predictions** (strictly
-``date <= modelling_end``, before ``predict_start`` so it cannot leak).
+inside the ``train + val`` partition so no test-period information leaks).
 
 Platt is monotone → AUC is unchanged before/after calibration (unit-tested
 invariant). Only Brier / log-loss / ECE / the sizing stake move.

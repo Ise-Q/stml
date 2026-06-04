@@ -2,7 +2,7 @@
 
 A single-document methodology summary of the pipeline, key statistics, and the
 verdict on the H1 2022 out-of-sample slice. All numbers in this report reproduce
-from CSV artefacts shipped under `results/`.
+from CSV artefacts shipped under `results/submission/`.
 
 ---
 
@@ -11,9 +11,9 @@ from CSV artefacts shipped under `results/`.
 | Stage | Purpose | Code | Key artefact |
 |---|---|---|---|
 | 1 | Triple-barrier meta-labels (per-instrument geometry) | `make_labels.py` | `data/triple_barrier_labels.csv` |
-| 2 | Feature engineering (16 families, ~80 features) | `make_features.py` | `data/bloomberg/cleaned/*.parquet` (PIT-aligned macro) |
+| 2 | Feature engineering (16 families, 94 registered features → 64 kept after KS-AUC drift filter) | `make_features.py` | `data/features.parquet`, `feature_drift_audit.csv` |
 | 3 | Per-class baseline + per-instrument CPCV(6, 2) + 1-SE champion | `make_baseline.py`, `make_champions.py` | `champions_summary.csv` |
-| 4 | Cluster-level feature importance (MDA + MDI + SHAP) | `make_importance.py` | `results/importance/{class}/*` |
+| 4 | Cluster-level feature importance (MDA + MDI + SHAP) | `make_importance.py`, `make_importance_deep.py` | `results/submission/importance/{class}/*` |
 | 5 | Per-instrument Platt calibration on CPCV OOF | `calibration.py` | `oof_calibrated_predictions.csv` |
 | 6 | Bootstrap p\* gate, six sizing variants, vol-targeted backtest, Grinold-Kahn costs | `sizing.py`, `backtest.py`, `make_deliverables.py` | `outputs/metamodel_predictions.csv`, `outputs/strategy_weights.csv` |
 | 7 | Significance: t-stat, bootstrap CI, PSR, MinTRL, DSR, PT, Henriksson-Merton | `significance.py`, `make_significance.py` | `significance_summary.csv`, `deflation_ladder.csv` |
@@ -35,98 +35,113 @@ artefacts and renders the brief narrative in seconds.
 | Turnover (× per year) | 183.9 | same |
 | Avg holding period (days) | 2.19 | same |
 | t = SR · √n | **2.25** | `significance_summary.csv` |
-| Stationary block-bootstrap 95 % CI (per period) | [0.035, 0.368] — **excludes 0** | same |
+| Studentised stationary block-bootstrap 95 % CI (per period, primary) | [0.022, 0.356] — **excludes 0** | same |
+| Lo/Opdyke analytic 95 % CI (per period, cross-check) | [0.028, 0.369] | same |
 | PSR(0) | **0.989** (deployment threshold 0.95) | same |
 | MinTRL | 68 periods (have 129) — certified | same |
-| Ljung-Box Q(10) p-value | 0.72 (IID-like; √252 scaling valid) | same |
+| Ljung-Box Q(10) p-value | 0.21 (no significant lag-10 autocorrelation) | same |
 | DSR at N_eff = 2 | 0.985 | `deflation_ladder.csv` |
 | DSR at 4 · N_raw = 480 | 0.943 | same |
 
-**Verdict (five-lens framework).** Four of five lenses agree on deployable
-positive edge (AUC + cluster MDA + Sharpe significance + deflation); the fifth
-(Pesaran-Timmermann) is numerically degenerate when `P_star ≈ 0.5` (documented
-limitation). Henriksson-Merton hit rate 0.55 at `z = 3.66 (p < 0.001)` confirms
-positive directional skill.
+**Verdict (five-lens framework).** Four of five lenses agree on a positive,
+deflated edge (AUC + cluster MDA + bootstrap Sharpe + DSR); the fifth
+(Pesaran-Timmermann) is borderline because the meta-filtered prediction
+distribution is concentrated near `p ≈ 0.5` for half the events, where PT is
+known to be sensitive. Henriksson-Merton hit rate **0.571** at **z = 4.38
+(p ≈ 6e-6)** confirms positive directional skill independently of PT.
 
-The brief explicitly says **"the score is focused entirely on methodology, not
-on performance"** — these numbers are reported for transparency, not as a
-performance claim.
+These numbers are reported for transparency; the methodology — leakage-free
+features, CPCV+1-SE selection, per-instrument Platt calibration, bootstrap p\*,
+SOPS sizing, vol target — is the substance of the submission, not the headline
+Sharpe.
 
 ---
 
-## 3. Per-class champion AUC (CPCV 15-path mean OOS)
+## 3. Per-class champion AUC (CPCV 15-path mean OOS — development partition)
 
-| Asset class | Champion AUC | n_modelling events | n_features |
-|---|---:|---:|---:|
-| Equity | 0.550 | (see baseline_xgb_per_class.csv) | (variant: reduced) |
-| **Energy** | **0.602** | same | same |
-| **Metals** | **0.554** | same | same |
+Mean of the per-instrument champion AUCs (`champions_summary.csv`) within each
+asset class:
 
-Energy lift is driven by the Bloomberg-augmented blocks F18 (futures term
-structure) + F19 (options-implied vol) + the F2 vol family — the cluster-level
-MDA on these clusters is markedly higher than on the price-only blocks
-(see `results/importance/energy/cluster_crosscheck_table.csv`).
+| Asset class | Mean champion AUC | Instruments | n_features (avg) |
+|---|---:|---|---:|
+| Equity | 0.540 | es1s, nq1s, fesx1s | 64 |
+| **Energy** | **0.566** | cl1s, ng1s, ho1s, rb1s | 64 |
+| Metals | 0.545 | gc1s, si1s, pl1s, hg1s | 64 |
 
-### Per-instrument champion summary (top by AUC)
+The energy lead is traced to a single microstructure-plus-regime cluster
+(`f5_participation_60 + f7_oi_level + ewma_hmm_prob_highvol`, MDA 0.128) — see §4.
 
-| Instrument | Asset class | Model | Pool | AUC | Lower 1-SE CI |
+### Per-instrument champion summary (sorted by AUC)
+
+| Instrument | Asset class | Model | Winning pool | AUC | Lower 1-SE CI |
 |---|---|---|---|---:|---:|
-| cl1s (WTI Crude) | Energy | LightGBM | individual | 0.671 | 0.589 |
-| ng1s (Natural Gas) | Energy | Logistic | energy_all | 0.601 | 0.512 |
-| ho1s (Heating Oil) | Energy | Logistic | energy_cl_ho | 0.599 | 0.514 |
-| pl1s (Platinum) | Metals | Random Forest | individual | 0.581 | 0.502 |
-| gc1s (Gold) | Metals | Multi-task NN | precious | 0.568 | 0.480 |
-| fesx1s (Euro Stoxx) | Equity | Random Forest | equity_all | 0.557 | 0.479 |
-| es1s (S&P 500) | Equity | Random Forest | individual | 0.555 | 0.476 |
-| rb1s (RBOB Gasoline) | Energy | Random Forest | individual | 0.538 | 0.451 |
-| nq1s (Nasdaq) | Equity | Random Forest | equity_all | 0.537 | 0.473 |
-| si1s (Silver) | Metals | Logistic | individual | 0.534 | 0.450 |
-| hg1s (Copper) | Metals | Random Forest | metals_all | 0.533 | 0.461 |
+| ng1s (Natural Gas) | Energy | Elastic-net Logistic | energy_all | 0.619 | 0.569 |
+| cl1s (WTI Crude) | Energy | Multi-task NN | energy_all | 0.566 | 0.551 |
+| gc1s (Gold) | Metals | LightGBM | metals_all | 0.566 | 0.547 |
+| pl1s (Platinum) | Metals | LightGBM | pl1s (individual) | 0.564 | 0.550 |
+| nq1s (Nasdaq) | Equity | Random Forest | nq1s (individual) | 0.557 | 0.544 |
+| ho1s (Heating Oil) | Energy | LightGBM | energy_cl_ho | 0.552 | 0.498 |
+| es1s (S&P 500) | Equity | Elastic-net Logistic | equity_all | 0.548 | 0.535 |
+| hg1s (Copper) | Metals | Elastic-net Logistic | metals_all | 0.539 | 0.522 |
+| rb1s (RBOB Gasoline) | Energy | Random Forest | rb1s (individual) | 0.526 | 0.512 |
+| fesx1s (Euro Stoxx) | Equity | Elastic-net Logistic | equity_all | 0.516 | 0.507 |
+| si1s (Silver) | Metals | Multi-task NN | metals_all | 0.512 | 0.500 |
 
-7 of 11 instruments are above 0.55 mean AUC; **3 of 11** clear the 1-SE lower CI
-above 0.5 (cl1s, ng1s, ho1s). The remaining instruments are kept in the
-deliverable but flagged in `coverage_caveat.csv` so the strategy layer can route
-weight away from low-coherence instruments.
-
-Full per-`(instrument, pool, model)` candidate matrix in
-`champions_per_pool_per_model.csv`.
+**10 of 11 instruments** have a lower-1-SE-CI above 0.50 on the development
+partition (the one exception, ho1s, sits just below at 0.498). The 1-SE bound
+excludes 0.50 most cleanly for ng1s (0.57), cl1s (0.55), gc1s (0.55), pl1s
+(0.55), nq1s (0.54), and es1s (0.54). Per-`(instrument, pool, model)` candidate
+matrix in `champions_per_pool_per_model.csv`.
 
 ---
 
 ## 4. Cluster-level feature importance — headline finding
 
 Cross-checked via MDA, MDI (XGBoost gain), and SHAP magnitude; rank agreement
-quantified by Kendall-τ. **The three signals agree** on the leading clusters:
+quantified by Kendall-τ. The leading clusters per asset class (by mean MDA on
+the development partition):
 
-* **Energy**: F19 options-IV cluster + F2 vol cluster + F18 term structure cluster
-  — sum of MDA ≈ 0.036.
-* **Equity**: F11 macro cluster (VIX-level z + 2s10s slope) + F10 drift-regime
-  cluster.
-* **Metals**: F11 macro cluster (TIPS10Y + BE10Y) + F2 vol cluster + cross-asset
-  copper-stocks z.
+* **Energy** — top cluster combines `f5_participation_60` (signal-participation
+  rate), `f7_oi_level` (open interest), and `ewma_hmm_prob_highvol` (HMM
+  high-vol regime posterior). Permutation-AUC drop ≈ **0.128**. The Bloomberg
+  macro / EIA blocks (F11, F22) contribute a smaller secondary cluster
+  (`f11_be10y_chg20 + f11_ust10_chg5`, MDA ≈ 0.003).
+* **Equity** — top cluster is mean-reversion / momentum / path-structure:
+  `f1_bb_pctb_20, f1_rsi_14, f6_ts_momentum_20, f10_oc_ret_mean_20,
+  f12_trend_tval_21`. MDA ≈ **0.021**. Two clusters are significant.
+* **Metals** — top cluster combines momentum and signed-bias features
+  (`f5_long_bias_20, f6_ts_momentum_60, f6_ma_cross_20_60, f6_macd_*`),
+  MDA ≈ **0.007**.
 
-Pruned-vs-full variant per class shows AUC delta < 0.005 — i.e. the kept
-clusters carry the signal, the rest is noise. See
-`results/importance/deep_summary.csv`.
+Pruned-vs-full per class (`results/submission/importance/deep_summary.csv`):
+removing all but the significant clusters leaves AUC essentially unchanged on
+equity (+0.021), drops it by ≈ 0.008 on energy, and by ≈ 0.027 on metals — i.e.
+the energy cluster carries the asset class while metals has more distributed
+signal.
+
+F18 (futures term structure) and F19 (options-implied vol) were prototyped
+during development and dropped from the final model on parsimony grounds —
+they did not clear the cluster-importance threshold against the F1-F17 + F11 +
+F22 baseline.
 
 ---
 
 ## 5. Classification metrics — sealed test partition (H1 2022)
 
 Per-instrument `precision / recall / F1 / AUC` in `baseline_per_instrument.csv`;
-the notebook renders them side-by-side per asset class. **Confusion matrix
-analysis** (primary-blind vs primary + meta filter, p̂ ≥ 0.5) yields:
+the notebook renders them side-by-side per asset class. **Confusion-matrix
+analysis** at `p̂ ≥ 0.5` on the 951-event H1 2022 OOS slice:
 
-| Metric | Primary-blind (take every signal) | Primary + meta filter |
+| Metric | Primary-blind (take every signal) | Primary + meta filter (p̂ ≥ 0.5) |
 |---|---:|---:|
-| Trades taken | 951 | 478 |
-| Precision | 0.485 | 0.555 |
-| Recall | 1.000 | 0.569 |
-| F1 | 0.653 | 0.562 |
-| False positives | 490 | 213 |
-| True positives | 461 | 262 |
+| Trades taken | 951 | 470 |
+| Precision | 0.492 | 0.564 |
+| Recall | 1.000 | 0.566 |
+| F1 | 0.660 | 0.565 |
+| False positives | 483 | 205 |
+| True positives | 468 | 265 |
 
-**Precision lift +0.07; false positives avoided 277; true positives missed 199.**
+**Precision lift +0.072; false positives avoided 278; true positives missed 203.**
 The meta filter is a *precision lifter*, not a recall expander — exactly what a
 trade-selection meta-model should be.
 
@@ -146,8 +161,10 @@ trade-selection meta-model should be.
   `tests/experimental/test_methodology_guards.py`.
 * **Partition discipline.** The labels CSV ships with an authoritative
   `partition` column (`train` 60 % / `val` 21 % / `test` 19 %). The H1 2022
-  deliverable is the `test` partition; the marker's H2 2022 rerun uses the
-  same code path with `--start 2022-07-01 --end 2022-12-31`.
+  deliverable is the `test` partition; the H2 2022 rerun uses the same code
+  path with `--start 2022-07-01 --end 2022-12-31` after running
+  `scripts/extend_bloomberg_for_h2.py` to extend the cleaned Bloomberg
+  parquets.
 
 ---
 
@@ -155,10 +172,11 @@ trade-selection meta-model should be.
 
 1. **Measurement frame.** OHLCV is adjusted continuous-futures, not raw
    front-month. Numbers should not be read as raw-market WTI / S&P 500 P&L.
-2. **Bloomberg coverage on H2 2022.** The cleaned BBG panel ends 2022-06-30.
-   The shipped model was selected for robustness to BBG missingness; the
+2. **Bloomberg coverage on H2 2022.** The cleaned BBG panel ends 2022-06-30
+   in the released window; `scripts/extend_bloomberg_for_h2.py` extends the
+   F11 macro and F22 EIA panels from `data/OOS_additional_data.xlsx`. The
    per-class AUC delta when BBG columns are zeroed at inference time is
-   < 0.01 on equity and energy and ≈ 0.01 on metals
+   < 0.01 on equity and ≈ 0 on energy / metals
    (`bbg_missingness_ablation.csv`).
 3. **Per-instrument barrier geometry.** Six instruments use `h = 1` — the
    EDA shows the signal information sits at lag 1 on these (a wider window

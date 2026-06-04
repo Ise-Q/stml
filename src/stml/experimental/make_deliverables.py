@@ -378,11 +378,24 @@ def run(cfg: PipelineConfig | None = None, *, verbose: bool = True) -> dict:
         threshold = p_star_est.p_star if cfg.use_pstar_threshold else 0.5
 
         # ----- 3. Sizing policy: fit on OOF (slide 34, default SOPS).
+        # Same length-match guard as the p* block above: SOPS needs paired
+        # (p, r) so if pool-level CPCV did not cover every event for this
+        # instrument we fall back to model_confidence (an unfitted method
+        # that doesn't need r_tr) rather than crashing.
+        oof_pairs_aligned = (
+            oof_cal.size
+            and "ret" in modelling_inst.columns
+            and len(oof_cal) == len(modelling_inst)
+        )
+        sizing_method = cfg.sizing_method if oof_pairs_aligned else "model_confidence"
+        if sizing_method != cfg.sizing_method and verbose:
+            print(f"  {inst}: oof/modelling length mismatch "
+                  f"({len(oof_cal)} vs {len(modelling_inst)}) → "
+                  f"sizing falls back to model_confidence")
         policy = fit_sizing_policy(
-            cfg.sizing_method,
-            p_tr=oof_cal if oof_cal.size else None,
-            r_tr=modelling_inst["ret"].astype(float).values
-                  if (oof_cal.size and "ret" in modelling_inst.columns) else None,
+            sizing_method,
+            p_tr=oof_cal if oof_pairs_aligned else None,
+            r_tr=modelling_inst["ret"].astype(float).values if oof_pairs_aligned else None,
             threshold=threshold,
         )
 

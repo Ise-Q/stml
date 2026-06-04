@@ -122,12 +122,6 @@ class PipelineConfig:
     impact_bps: float = 10.0
     impact_exponent: float = 1.0  # linear
 
-    # -------------------------------------------- Submission deliverable window
-    # The grader's rerun will swap these; never hardcode H1-2022 in the pipeline
-    # code (plan R6).
-    predict_start: str = "2022-01-01"
-    predict_end: str = "2022-06-30"
-
     # ----------------------------------------------- I/O
     output_dir: str = "outputs"
     results_dir: str = "results/submission"

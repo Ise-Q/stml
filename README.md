@@ -104,8 +104,8 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 ## 4. H2 2022 rerun
 
 The brief states the held-out H2 2022 window is the hidden test set. The
-submission ships **the H2 2022 data the model needs** so the marker only has
-to replace the two CSVs the brief specifies and re-run the pipeline.
+submission ships **the H2 2022 data the model needs** so only the two CSVs the
+brief specifies need to be replaced before re-running the pipeline.
 
 ### 4a. Step-by-step procedure
 
@@ -157,16 +157,16 @@ signal gets the abstain value. Use §4a for the hidden test.
 
 ---
 
-## 5. Brief coverage
+## 5. Section map
 
-| Brief section | Marks | Notebook section | Code | Result artefacts |
-|---|---:|---|---|---|
-| Feature Engineering | 20 | §1 | `src/stml/experimental/features/`, `make_features.py` | 80+ features (16 families) — see notebook §1 for live count |
-| Triple-Barrier Labeling | 20 | §2 | `data/triple_barrier_labels.csv`, `make_labels.py` | Per-instrument geometry summary |
-| Model Development & Comparison | 30 | §3 | `champion_pipeline.py`, `make_champions.py`, `models.py` | `champions_summary.csv`, `champions_per_pool_per_model.csv` |
-| Cluster-Level Feature Importance | 10 | §4 | `make_importance_deep.py` | `results/importance/{equity,energy,metals}/*` |
-| Model Evaluation | 20 | §5 | `evaluation.py`, `make_baseline.py` | `baseline_per_instrument.csv`, `threshold_summary.csv` |
-| Strategy Construction (+10 bonus) | 10 | §6 | `sizing.py`, `backtest.py`, `make_deliverables.py` | `backtest_metrics.csv`, `strategy_variant_comparison.csv`, `significance_summary.csv` |
+| Brief section | Notebook section | Code | Result artefacts |
+|---|---|---|---|
+| Feature Engineering | §1 | `src/stml/experimental/features/`, `make_features.py` | 94 registered features across 16 families (notebook §1 has the live count) |
+| Triple-Barrier Labeling | §2 | `data/triple_barrier_labels.csv`, `make_labels.py` | Per-instrument geometry summary |
+| Model Development & Comparison | §3 | `champion_pipeline.py`, `make_champions.py`, `models.py` | `champions_summary.csv`, `champions_per_pool_per_model.csv` |
+| Cluster-Level Feature Importance | §4 | `make_importance_deep.py` | `results/submission/importance/{equity,energy,metals}/*` |
+| Model Evaluation | §5 | `evaluation.py`, `make_baseline.py` | `baseline_per_instrument.csv`, `threshold_summary.csv` |
+| Strategy Construction (bonus track) | §6 | `sizing.py`, `backtest.py`, `make_deliverables.py` | `backtest_metrics.csv`, `strategy_variant_comparison.csv`, `significance_summary.csv` |
 
 ---
 
