@@ -26,7 +26,7 @@ Outputs:
         PT/SL/vert counts and fractions, mean_uniqueness, plus the
         adopted (pt, sl, h) geometry.
 
-    results/submission/jay_geometry_summary.csv
+    results/submission/per_instrument_geometry_summary.csv
         Per-instrument (pt, sl, h) + adjusted-Sharpe context — the "what
         geometry was picked for each instrument and why".
 
@@ -359,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
         root = _find_repo_root()
         events_path = root / "data" / "events.parquet"
         audit_path = root / "results" / "submission" / "label_outcome_audit.csv"
-        geo_path = root / "results" / "submission" / "jay_geometry_summary.csv"
+        geo_path = root / "results" / "submission" / "per_instrument_geometry_summary.csv"
         events_path.parent.mkdir(parents=True, exist_ok=True)
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         events.to_parquet(events_path, index=False)
