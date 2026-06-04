@@ -1,5 +1,0 @@
-label_set,oof_path_auc,cpcv_lag1_median,cpcv_lag1_iqr,cpcv_lag1_min,holdout_lag1_sharpe,holdout_lag1_primary,holdout_lag1_nav,holdout_n_taken,holdout_auc,cpcv_realised_median,holdout_realised_sharpe
-A_econSharpe,0.5579,1.493,0.072,1.378,1.91,1.886,1.5159,479,0.5297,1.714,2.439
-B_global,0.5533,1.449,0.105,1.298,1.502,1.864,1.2531,513,0.5307,2.11,1.588
-B_class,0.571,1.491,0.079,1.311,2.071,1.85,2.0586,620,0.5104,2.159,1.167
-B_inst,0.5895,1.535,0.111,1.346,1.741,1.783,1.6869,607,0.5438,2.522,0.795

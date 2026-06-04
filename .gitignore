@@ -37,3 +37,9 @@ ignore/
 
 # Generated report exports (markdown sources are tracked instead)
 reports/**/*.pdf
+
+# Regenerable artifacts — rebuilt when the notebook runs (NOT shipped).
+# The one shipped results dir is results/strategy_eval/ (Part II load-by-default), kept tracked.
+/results/feature_matrix.parquet
+/results/features/
+/results/triple_barrier_*.csv
