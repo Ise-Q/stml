@@ -72,7 +72,13 @@ class PurgedWalkForward:
     n_splits : number of (train, val) folds. The dev date axis is cut into ``n_splits + 1``
         contiguous blocks; fold ``i`` validates on block ``i+1`` and trains on blocks ``0..i``.
     h : label horizon in trading bars (the purge width). Must match the ``h`` used to build the
-        labels -- a larger ``h`` both widens this gap and changes the labels.
+        labels -- a larger ``h`` both widens this gap and changes the labels. Serves as the default
+        purge width for any instrument absent from ``h_by_instrument``.
+    h_by_instrument : optional mapping ``instrument -> label horizon`` for **per-instrument**
+        geometries (e.g. the per-instrument triple-barrier study). When the labels were built with
+        a different ``h`` per instrument, the purge gap must match each instrument's own horizon;
+        missing instruments fall back to the scalar ``h``. ``None`` reproduces the single-``h``
+        behaviour exactly.
     embargo_by_instrument : mapping ``instrument -> embargo bars`` (e.g. the ``embargo_p90`` of
         ``results/instrument_scope.json``). Missing instruments fall back to ``default_embargo``.
     default_embargo : embargo used when an instrument is absent from the mapping.
@@ -83,6 +89,7 @@ class PurgedWalkForward:
         n_splits: int = 4,
         *,
         h: int = 5,
+        h_by_instrument: dict[str, int] | None = None,
         embargo_by_instrument: dict[str, int] | None = None,
         default_embargo: int = 10,
     ) -> None:
@@ -92,6 +99,7 @@ class PurgedWalkForward:
             raise ValueError(f"h must be >= 1, got {h}")
         self.n_splits = n_splits
         self.h = int(h)
+        self.h_by_instrument = dict(h_by_instrument or {})
         self.embargo_by_instrument = dict(embargo_by_instrument or {})
         self.default_embargo = int(default_embargo)
 
@@ -127,12 +135,13 @@ class PurgedWalkForward:
             # Per-instrument purge + embargo on the train side of this boundary.
             for g in np.unique(inst[in_val]):
                 emb = self.embargo_by_instrument.get(g, self.default_embargo)
+                h_g = self.h_by_instrument.get(g, self.h)
                 g_val = in_val & (inst == g)
                 # val-block start position on this instrument's own trading-bar axis
                 pos_v = int(bar_pos[g_val].min())
                 # Keep a train event iff its label window ends strictly before the embargoed
-                # boundary: bar_pos + h < pos_v - emb  <=>  bar_pos < pos_v - emb - h.
-                cutoff = pos_v - emb - self.h
+                # boundary: bar_pos + h_g < pos_v - emb  <=>  bar_pos < pos_v - emb - h_g.
+                cutoff = pos_v - emb - h_g
                 g_train = in_train & (inst == g)
                 drop = g_train & (bar_pos >= cutoff)
                 keep_train[drop] = False
@@ -192,7 +201,12 @@ class CombinatorialPurgedCV:
     n_blocks : number of contiguous date blocks (``>= 2``).
     k_test : test blocks per combination (``1 <= k_test < n_blocks``). ``(6, 2)`` is the project
         default; ``(8, 2)`` (28 models / 7 paths) is the documented robustness upgrade.
-    h : label horizon in trading bars (purge width); must match the labels' ``h``.
+    h : label horizon in trading bars (purge width); must match the labels' ``h``. Default purge
+        width for any instrument absent from ``h_by_instrument``.
+    h_by_instrument : optional ``instrument -> label horizon`` for **per-instrument** triple-barrier
+        geometries; the forbidden envelope becomes ``|p - t| <= h_g + embargo`` with that
+        instrument's own ``h_g``. Missing instruments fall back to the scalar ``h``; ``None``
+        reproduces the single-``h`` behaviour exactly.
     embargo_by_instrument : ``instrument -> embargo bars`` (the ``embargo_p90`` of
         ``results/instrument_scope.json``); missing instruments fall back to ``default_embargo``.
     default_embargo : embargo for instruments absent from the mapping.
@@ -204,6 +218,7 @@ class CombinatorialPurgedCV:
         k_test: int = 2,
         *,
         h: int = 5,
+        h_by_instrument: dict[str, int] | None = None,
         embargo_by_instrument: dict[str, int] | None = None,
         default_embargo: int = 10,
     ) -> None:
@@ -216,6 +231,7 @@ class CombinatorialPurgedCV:
         self.n_blocks = int(n_blocks)
         self.k_test = int(k_test)
         self.h = int(h)
+        self.h_by_instrument = dict(h_by_instrument or {})
         self.embargo_by_instrument = dict(embargo_by_instrument or {})
         self.default_embargo = int(default_embargo)
 
@@ -263,11 +279,12 @@ class CombinatorialPurgedCV:
             # bar on the same instrument's own trading-bar axis (both sides of interior blocks).
             for g in np.unique(inst[in_test]):
                 emb = self.embargo_by_instrument.get(g, self.default_embargo)
+                h_g = self.h_by_instrument.get(g, self.h)
                 g_mask = inst == g
                 test_bars = np.sort(bar_pos[in_test & g_mask])
                 if test_bars.size == 0:
                     continue
-                w = self.h + emb
+                w = h_g + emb
                 g_train_idx = np.flatnonzero(keep_train & g_mask)
                 if g_train_idx.size == 0:
                     continue

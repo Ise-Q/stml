@@ -131,3 +131,98 @@ def test_purged_walk_forward_untouched(synthetic_panel):
     assert len(folds) == 3
     for tr, va in folds:
         assert set(tr).isdisjoint(set(va))
+
+
+# --- per-instrument h (h_by_instrument) -------------------------------------------------------
+
+def _kept_train_by_inst(df, splitter):
+    """Per fold: ``({instrument: set(kept-train bar_pos)}, holdout_pos)`` for either splitter."""
+    inst = df["instrument"].to_numpy()
+    bar = df["bar_pos"].to_numpy()
+    out = []
+    for tr, hold in splitter.split(df):
+        per = {g: set(bar[tr][inst[tr] == g]) for g in np.unique(inst)}
+        out.append((per, hold))
+    return out
+
+
+def test_per_instrument_h_none_matches_scalar(synthetic_panel):
+    """``h_by_instrument=None`` reproduces the single-``h`` splits byte-for-byte (backward compat)."""
+    base = list(_cpcv().split(synthetic_panel))
+    mapped = list(
+        CombinatorialPurgedCV(6, 2, h=H, h_by_instrument=None, default_embargo=EMB).split(synthetic_panel)
+    )
+    assert len(base) == len(mapped)
+    for (tr0, te0), (tr1, te1) in zip(base, mapped):
+        assert np.array_equal(tr0, tr1) and np.array_equal(te0, te1)
+    # an empty map is the same as None
+    empty = list(
+        CombinatorialPurgedCV(6, 2, h=H, h_by_instrument={}, default_embargo=EMB).split(synthetic_panel)
+    )
+    for (tr0, _), (tr1, _) in zip(base, empty):
+        assert np.array_equal(tr0, tr1)
+
+
+def test_per_instrument_h_widens_purge_cpcv(synthetic_panel):
+    """A larger per-instrument ``h`` purges *that* instrument more (kept-train shrinks) and respects
+    the wider ``h_g + emb`` envelope; other instruments and all test sets are unchanged."""
+    df = synthetic_panel.reset_index(drop=True)
+    inst = df["instrument"].to_numpy()
+    bar = df["bar_pos"].to_numpy()
+    big = H + 5
+    scalar = _kept_train_by_inst(df, _cpcv())
+    wide = _kept_train_by_inst(df, CombinatorialPurgedCV(6, 2, h=H, h_by_instrument={"AAA": big},
+                                                         default_embargo=EMB))
+    strictly_more = False
+    for (s_per, s_te), (w_per, w_te) in zip(scalar, wide):
+        assert np.array_equal(s_te, w_te)            # purge touches only the train side
+        assert w_per["AAA"] <= s_per["AAA"]          # AAA purged at least as hard
+        if w_per["AAA"] < s_per["AAA"]:
+            strictly_more = True
+        for g in ("BBB", "CCC"):                      # untouched instruments identical
+            assert w_per[g] == s_per[g]
+        test_bars = np.sort(bar[w_te][inst[w_te] == "AAA"])
+        train_bars = np.array(sorted(w_per["AAA"]))
+        if test_bars.size and train_bars.size:
+            ins = np.searchsorted(test_bars, train_bars)
+            left = test_bars[np.clip(ins - 1, 0, test_bars.size - 1)]
+            right = test_bars[np.clip(ins, 0, test_bars.size - 1)]
+            dist = np.minimum(np.abs(train_bars - left), np.abs(train_bars - right))
+            assert dist.min() > big + EMB             # wider envelope honored
+    assert strictly_more, "wider h must purge AAA strictly more in at least one split"
+
+
+def test_per_instrument_h_narrower_superset_cpcv(synthetic_panel):
+    """A smaller per-instrument ``h`` purges *that* instrument less -- its kept-train is a superset
+    of the scalar-``h`` run (others unchanged)."""
+    df = synthetic_panel.reset_index(drop=True)
+    scalar = _kept_train_by_inst(df, _cpcv())
+    narrow = _kept_train_by_inst(df, CombinatorialPurgedCV(6, 2, h=H, h_by_instrument={"AAA": 1},
+                                                           default_embargo=EMB))
+    strictly_more = False
+    for (s_per, _), (n_per, _) in zip(scalar, narrow):
+        assert s_per["AAA"] <= n_per["AAA"]          # narrower h keeps a superset
+        if s_per["AAA"] < n_per["AAA"]:
+            strictly_more = True
+        for g in ("BBB", "CCC"):
+            assert n_per[g] == s_per[g]
+    assert strictly_more, "narrower h must keep AAA strictly more in at least one split"
+
+
+def test_per_instrument_h_purged_walk_forward(synthetic_panel):
+    """``PurgedWalkForward`` honors ``h_by_instrument`` the same way (one-sided, earlier tail)."""
+    df = synthetic_panel.reset_index(drop=True)
+    scalar = _kept_train_by_inst(df, PurgedWalkForward(n_splits=3, h=H, default_embargo=EMB))
+    wide = _kept_train_by_inst(
+        df, PurgedWalkForward(n_splits=3, h=H, h_by_instrument={"AAA": H + 5}, default_embargo=EMB))
+    narrow = _kept_train_by_inst(
+        df, PurgedWalkForward(n_splits=3, h=H, h_by_instrument={"AAA": 1}, default_embargo=EMB))
+    wider_seen = narrower_seen = False
+    for (s_per, s_va), (w_per, w_va), (n_per, _) in zip(scalar, wide, narrow):
+        assert np.array_equal(s_va, w_va)            # val blocks unchanged by purge width
+        assert w_per["AAA"] <= s_per["AAA"] <= n_per["AAA"]
+        wider_seen |= w_per["AAA"] < s_per["AAA"]
+        narrower_seen |= s_per["AAA"] < n_per["AAA"]
+        for g in ("BBB", "CCC"):
+            assert w_per[g] == s_per[g] == n_per[g]
+    assert wider_seen and narrower_seen

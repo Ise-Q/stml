@@ -59,7 +59,13 @@ from stml.model.importance import (
     single_feature_importance,
     tree_importance,
 )
-from stml.model.labels import class_balance, sample_uniqueness, triple_barrier_labels
+from stml.model.labels import (
+    class_balance,
+    load_instrument_geometry,
+    sample_uniqueness,
+    triple_barrier_labels,
+    triple_barrier_labels_per_instrument,
+)
 from stml.model.linear import LogRegModel, logreg_param_space
 from stml.model.mlp import MLPModel, mlp_param_space
 from stml.model.optuna_objective import (
@@ -82,11 +88,24 @@ from stml.model.trees import (
     rf_param_space,
     xgb_param_space,
 )
+from stml.model.hmm_features_v2 import (
+    HAS_HMMLEARN,
+    HmmV2Bundle,
+    build_observation_matrix,
+    fit_hmm_v2,
+    fit_transform_f17_v2,
+    rolling_performance_features,
+    select_n_states,
+    transform_f17_v2,
+    transform_hmm_v2,
+)
 from stml.model.vsn import VSNModel, vsn_param_space
 
 __all__ = [
     # labels
     "triple_barrier_labels",
+    "triple_barrier_labels_per_instrument",
+    "load_instrument_geometry",
     "sample_uniqueness",
     "class_balance",
     # dataset
@@ -162,4 +181,14 @@ __all__ = [
     "adding_zeros_eval",
     "nav_sharpe",
     "predictions_grid",
+    # f17_v2: label-aware skill-regime HMM features (model layer)
+    "HAS_HMMLEARN",
+    "HmmV2Bundle",
+    "rolling_performance_features",
+    "build_observation_matrix",
+    "fit_hmm_v2",
+    "transform_hmm_v2",
+    "fit_transform_f17_v2",
+    "transform_f17_v2",
+    "select_n_states",
 ]

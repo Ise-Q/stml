@@ -361,7 +361,9 @@ def test_macro_artifact_row_aligned(fitted_subset, tmp_path) -> None:
         catalog_path=tmp_path / "reports" / "feature-catalog.md",
         data_dir=tmp_path / "data",
     )
-    macro_csv = paths["macro_features_csv"]
+    # The F11 macro family is exported as a per-family CSV (commit ccd25de dropped
+    # the separate standalone macro export); its _persist key is "family_<slug>".
+    macro_csv = paths["family_f11_macro_context"]
     assert macro_csv.exists()
     art = pd.read_csv(macro_csv)
     assert list(art.columns[:2]) == ["date", "instrument"]

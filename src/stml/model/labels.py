@@ -40,6 +40,8 @@ never reach this function.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -134,6 +136,82 @@ def triple_barrier_labels(
     if not out.empty:
         out = out.sort_values(["instrument", "date"]).reset_index(drop=True)
     return out
+
+
+def load_instrument_geometry(
+    path: str | Path,
+    *,
+    pnl_type: str = "lag1",
+    rank_col: str = "adj_sharpe",
+) -> dict[str, tuple[float, float, int]]:
+    """Load a ``{instrument -> (pt, sl, h)}`` triple-barrier geometry map from a study CSV.
+
+    Consumes the per-instrument geometry the labeling study selected by economic Sharpe
+    (``reports/jay/triple-barrier-label.md`` / §11 of CLAUDE.md). Two file shapes are accepted:
+
+    * a one-row-per-instrument map (e.g. ``results/triple_barrier_model_geometry.csv``) with
+      columns ``instrument, pt, sl, h`` -- used as-is; or
+    * the wider study table ``results/triple_barrier_per_instrument.csv`` with a ``pnl_type``
+      column and multiple rows per instrument -- filtered to ``pnl_type`` and reduced to the
+      top-1 per instrument by ``rank_col`` (deterministic ``(h, pt, sl)``-ascending tie-break,
+      matching the study's selection rule).
+
+    ``path`` is explicit (no default) so this stays import-light and never reaches into
+    ``dataset.py`` for a results dir -- the caller passes ``RESULTS / "..."``.
+
+    Returns a dict ``{instrument: (pt, sl, h)}`` with ``pt``/``sl`` floats and ``h`` an int.
+    """
+    df = pd.read_csv(path)
+    missing = {"instrument", "pt", "sl", "h"} - set(df.columns)
+    if missing:
+        raise KeyError(f"geometry CSV {path} missing columns: {sorted(missing)}")
+    if "pnl_type" in df.columns:
+        df = df[df["pnl_type"] == pnl_type]
+        if rank_col not in df.columns:
+            raise KeyError(f"geometry CSV {path} has pnl_type but no rank column {rank_col!r}")
+        df = (df.sort_values(["instrument", rank_col, "h", "pt", "sl"],
+                             ascending=[True, False, True, True, True])
+                .groupby("instrument", as_index=False).head(1))
+    dup = df["instrument"].duplicated().any()
+    if dup:
+        raise ValueError(f"geometry CSV {path} has >1 row per instrument after reduction")
+    return {row.instrument: (float(row.pt), float(row.sl), int(row.h))
+            for row in df.itertuples(index=False)}
+
+
+def triple_barrier_labels_per_instrument(
+    close_wide: pd.DataFrame,
+    events: pd.DataFrame,
+    geometry: dict[str, tuple[float, float, int]],
+    *,
+    vertical_zero: bool = False,
+    price_end: str | pd.Timestamp | None = None,
+) -> pd.DataFrame:
+    """Label events with a **per-instrument** triple-barrier geometry.
+
+    Generalises :func:`triple_barrier_labels` so each instrument is labelled with its own
+    ``(pt, sl, h)`` from ``geometry`` (e.g. :func:`load_instrument_geometry`'s output) instead of
+    one global geometry. Instruments absent from ``geometry`` are skipped. The same ``price_end``
+    is threaded through every per-instrument call -- so dev labels are regenerated causally here
+    (with ``price_end`` truncation), never read from a full-data label dump.
+
+    Output columns are identical to :func:`triple_barrier_labels`
+    (``[date, instrument, t1, ret, bin, touch]``), so ``class_balance`` / ``sample_uniqueness`` /
+    the downstream ``make_xy`` merge are all unchanged.
+    """
+    frames = []
+    for inst, (pt, sl, h) in geometry.items():
+        ev_inst = events[events["instrument"] == inst]
+        if ev_inst.empty:
+            continue
+        lab = triple_barrier_labels(close_wide, ev_inst, pt=pt, sl=sl, h=int(h),
+                                    vertical_zero=vertical_zero, price_end=price_end)
+        if not lab.empty:
+            frames.append(lab)
+    if not frames:
+        return pd.DataFrame(columns=_LABEL_COLS)
+    return (pd.concat(frames, ignore_index=True)
+            .sort_values(["instrument", "date"]).reset_index(drop=True))
 
 
 def sample_uniqueness(labels: pd.DataFrame, close_wide: pd.DataFrame) -> pd.Series:

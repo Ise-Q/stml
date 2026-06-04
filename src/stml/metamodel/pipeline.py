@@ -67,7 +67,7 @@ from stml.metamodel.regime_features import RegimeBundle, fit_regime, transform_r
 from stml.metamodel.regime_features_hmm import HmmBundle, fit_hmm, transform_hmm
 from stml.metamodel.scope import ASSET_CLASS_MAP, InstrumentScope, build_scope
 from stml.metamodel.xsection import xsection_features
-from stml.metamodel.splits import chronological_split
+from stml.metamodel.splits import fixed_date_split
 from stml.na_checks import native_returns, rolling_vol
 
 __all__ = ["FeaturePipeline"]
@@ -114,9 +114,21 @@ class FeaturePipeline:
         fe_train_end: str = "2021-07-01",
         seed: int = 0,
         macro_path: str = DEFAULT_MACRO_PATH,
+        val_end: str = "2021-12-30",
+        test_end: str = "2022-06-30",
     ) -> None:
         self.fe_train_end = fe_train_end
         self.fe_train_end_ts = pd.Timestamp(fe_train_end)
+        # val/test partition edges are pinned by DATE (not by fraction of the
+        # given axis) so extending the released signal axis with a hidden
+        # out-of-sample block (Jul-Dec 2022) never moves the FE-train boundary
+        # or re-buckets already-released rows; post-test_end rows are tagged
+        # "oos". For the 645-day released window these defaults reproduce the
+        # historical (0.6, 0.2, 0.2) chronological split exactly.
+        self.val_end = val_end
+        self.val_end_ts = pd.Timestamp(val_end)
+        self.test_end = test_end
+        self.test_end_ts = pd.Timestamp(test_end)
         self.seed = seed
         self.macro_path = macro_path
 
@@ -211,13 +223,22 @@ class FeaturePipeline:
 
         instruments = self._instruments(signals)
 
-        # Chronological split of the released signal dates: train ends at
-        # fe_train_end, val/test follow. These date sets drive the partition
-        # labels and the FE-train fit window.
-        split = chronological_split(signals["date"])
+        # Date-pinned split of the signal dates: train ends at fe_train_end,
+        # val ends at val_end, test ends at test_end; anything after test_end is
+        # an out-of-sample extension (tagged "oos" at transform). These edges are
+        # fixed by DATE so an extended axis never moves the FE-train fit window.
+        split = fixed_date_split(
+            signals["date"],
+            train_end=self.fe_train_end,
+            val_end=self.val_end,
+            test_end=self.test_end,
+        )
         self._train_dates = pd.DatetimeIndex(split.train_dates)
         self._val_dates = pd.DatetimeIndex(split.val_dates)
         self._test_dates = pd.DatetimeIndex(split.test_dates)
+        # F4-latent fit window = released nonzero-signal rows on or before the
+        # FE-train boundary (== split.train_dates); pinned by date, so it is
+        # invariant to how far the released axis is extended.
         train_date_set = set(self._train_dates)
 
         # D5 scope registry (n_eff gate per instrument, fit-scope policy).
@@ -295,26 +316,22 @@ class FeaturePipeline:
     # transform                                                           #
     # ------------------------------------------------------------------ #
     def _partition_for(self, index: pd.DatetimeIndex) -> np.ndarray:
-        """Map each date to its chronological partition label.
+        """Map each date to its partition label by DATE range.
 
-        Dates in the FE-train block are ``"train"``, the validation block
-        ``"val"``, the test block ``"test"``. A date outside all three sets
-        (should not occur for released-window nonzero-signal rows) is labelled
-        ``""``.
+        ``d <= fe_train_end`` is ``"train"``; ``fe_train_end < d <= val_end`` is
+        ``"val"``; ``val_end < d <= test_end`` is ``"test"``; and ``d >
+        test_end`` -- a hidden / out-of-sample extension of the released axis --
+        is ``"oos"``. Assigning by range (rather than by membership in the
+        released split sets) keeps already-released rows in their original
+        partition when the axis is extended, and cleanly tags the new H2-2022
+        rows as ``"oos"`` so they never enter a fitted window.
         """
-        train_set = set(self._train_dates)
-        val_set = set(self._val_dates)
-        test_set = set(self._test_dates)
-        labels = np.empty(len(index), dtype=object)
-        for i, d in enumerate(index):
-            if d in train_set:
-                labels[i] = "train"
-            elif d in val_set:
-                labels[i] = "val"
-            elif d in test_set:
-                labels[i] = "test"
-            else:
-                labels[i] = ""
+        idx = pd.DatetimeIndex(index)
+        labels = np.empty(len(idx), dtype=object)
+        labels[:] = "oos"
+        labels[idx <= self.test_end_ts] = "test"
+        labels[idx <= self.val_end_ts] = "val"
+        labels[idx <= self.fe_train_end_ts] = "train"
         return labels
 
     def transform(self, ohlcv: pd.DataFrame, signals: pd.DataFrame) -> pd.DataFrame:

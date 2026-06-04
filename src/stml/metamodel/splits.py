@@ -130,6 +130,73 @@ def chronological_split(
     )
 
 
+def fixed_date_split(
+    dates: pd.DatetimeIndex | pd.Series | np.ndarray | list,
+    train_end: str | pd.Timestamp = "2021-07-01",
+    val_end: str | pd.Timestamp = "2021-12-30",
+    test_end: str | pd.Timestamp = "2022-06-30",
+) -> Split:
+    """Split a date axis into train/val/test blocks at FIXED calendar boundaries.
+
+    Unlike :func:`chronological_split` (which cuts at *fractions* of the given
+    axis and therefore moves when the axis is extended), this pins the block
+    edges to absolute dates::
+
+        train  = {d <= train_end}
+        val    = {train_end < d <= val_end}
+        test   = {val_end   < d <= test_end}
+
+    Dates after ``test_end`` -- an out-of-sample / hidden-test extension of the
+    released signal axis -- fall in NONE of the three blocks; callers tag them
+    separately (e.g. the pipeline's ``"oos"`` partition). This makes the
+    feature-engineering fit windows and the partition labels **invariant to how
+    far the signal axis is extended**, which is the property the OOS feature
+    regeneration path depends on (extending the axis must not move the FE-train
+    boundary or re-bucket already-released rows).
+
+    For the 645-day released window with the default boundaries the result is
+    **byte-identical** to ``chronological_split(dates, (0.6, 0.2, 0.2))`` (the
+    fractional cuts land exactly on these dates), so this is a safe drop-in.
+
+    Parameters
+    ----------
+    dates : index-like of timestamps, assumed already in ascending order.
+    train_end, val_end, test_end : inclusive upper edges of the three blocks.
+
+    Raises
+    ------
+    ValueError : if ``dates`` is empty or the boundaries are not strictly
+        increasing.
+    """
+    idx = pd.DatetimeIndex(pd.to_datetime(np.asarray(dates)))
+    n = len(idx)
+    if n == 0:
+        raise ValueError("dates is empty")
+
+    train_ts = pd.Timestamp(train_end)
+    val_ts = pd.Timestamp(val_end)
+    test_ts = pd.Timestamp(test_end)
+    if not (train_ts < val_ts < test_ts):
+        raise ValueError(
+            f"boundaries must be strictly increasing, got "
+            f"{train_ts.date()}, {val_ts.date()}, {test_ts.date()}"
+        )
+
+    pos = np.arange(n)
+    train_idx = pos[idx <= train_ts]
+    val_idx = pos[(idx > train_ts) & (idx <= val_ts)]
+    test_idx = pos[(idx > val_ts) & (idx <= test_ts)]
+
+    return Split(
+        train_idx=train_idx,
+        val_idx=val_idx,
+        test_idx=test_idx,
+        train_dates=idx[train_idx],
+        val_dates=idx[val_idx],
+        test_dates=idx[test_idx],
+    )
+
+
 def _run_lengths(signal_series: pd.Series | np.ndarray | list) -> np.ndarray:
     """Lengths of the maximal constant-value runs in ``signal_series``.
 
