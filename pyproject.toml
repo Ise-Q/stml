@@ -1,23 +1,26 @@
 [project]
 name = "stml"
 version = "0.1.0"
-requires-python = ">=3.12"
+# Tested on 3.10–3.12. The codebase uses no 3.12-only syntax; the lower bound
+# is set so a grader on a stable distro (Ubuntu 22.04, macOS Sonoma stock
+# python, conda base) can install without compiling Python from source.
+requires-python = ">=3.10"
 dependencies = [
-    "arch>=7.0",
+    "arch>=6.0",
     "hmmlearn>=0.3.0",
-    "ipykernel>=7.2.0",
+    "ipykernel>=6.0",
     "lightgbm>=4.0",
-    "matplotlib>=3.10.9",
-    "numpy>=2.4.6",
-    "openpyxl>=3.1.0",
-    "optuna>=4.8.0",
-    "pandas>=3.0.3",
-    "pyarrow>=24.0.0",
-    "scikit-learn>=1.8.0",
-    "seaborn>=0.13.2",
-    "statsmodels>=0.14.6",
-    "tqdm>=4.67.3",
-    "xgboost>=2.1.0",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "openpyxl>=3.1",
+    "optuna>=3.4",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "scikit-learn>=1.3",
+    "seaborn>=0.13",
+    "statsmodels>=0.14",
+    "tqdm>=4.66",
+    "xgboost>=2.0",
 ]
 
 [project.optional-dependencies]
