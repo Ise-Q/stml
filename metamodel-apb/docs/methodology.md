@@ -38,8 +38,8 @@ re-run yet fail to reproduce — violating the determinism contract. It is there
 selectable. The **autoencoder reducer** is likewise built for the EX.2 comparison only;
 cluster-representative selection is the promoted reducer (deterministic, interpretable, tied to §4).
 
-> Selected models this run (CPCV selection): **Equity → XGBoost** (0.568), **Energy → torch-MLP**
-> (0.536 — a neural variant won), **Metals → elastic-net logistic** (0.532).
+> Selected models this run (CPCV selection): **Equity → XGBoost** (0.5897), **Energy → torch-MLP**
+> (0.5233 — a neural variant won, knife-edge over xgboost 0.5212), **Metals → elastic-net logistic** (0.5324).
 
 ---
 
@@ -137,10 +137,27 @@ maturity), so this is correctly omitted rather than fabricated.
 Meta-labels in {0,1} ("act"/"skip") are assigned **only on the non-zero-signal trade days** via
 the triple-barrier method (López de Prado 2018 Ch.3, nlr-cw §1):
 
-- **Vol-adaptive symmetric barriers** `±k·σ̂ₜ` where `σ̂ₜ` is the de-annualised Garman–Klass-based
-  daily vol (`f2_vol_20 / √252`) — fixed-% thresholds ignore the heteroskedasticity of returns and
-  make the label distribution pro-cyclical. **Vertical barrier** `T_max` (default 10 bars) bounds
-  the horizon.
+- **Vol-adaptive barriers** `±k·σ̂ₜ` where `σ̂ₜ` is a de-annualised *realised* daily vol (a rolling
+  20-day std of log returns, `f2_vol_20 / √252`) — **not**, despite an earlier draft's wording, a
+  Garman–Klass estimate (Garman–Klass enters only as a *feature*, §1). Fixed-% thresholds ignore the
+  heteroskedasticity of returns and make the label distribution pro-cyclical. **Vertical barrier**
+  `T_max` (default 10 bars) bounds the horizon.
+- **Per-class barrier geometry (EX.5, modelling-window economic-Sharpe selected).** The geometry is
+  set per asset class rather than a single global symmetric barrier. The **default and Metals** path
+  uses the de-annualised realised-vol-20 above with symmetric `(1,1)` multiples and a 10-day vertical
+  barrier. **Equity** carries a 50-day rolling-volatility scale with an asymmetric `(2,1)`
+  profit-to-stop ratio and a 10-day horizon; **Energy** a 20-day EWMA volatility with a tight
+  `(0.5,0.25)` ratio and a vol-scaled horizon (base 10, clipped to `[2,40]`). The EX.5 sweep ranked
+  candidate geometries by their downstream **net Sharpe** — not label accuracy — strictly on the
+  modelling window (`≤ 2021-12-31`), so the choice never touches the OOS window and the selection
+  statistic sits inside the leakage firewall (best modelling net Sharpe vs always-act floor: equity
+  0.513 vs 0.099, energy 0.279 vs 0.084, metals 0.159 vs 0.107). Three honesty caveats: the sweep was
+  one-factor-at-a-time and XGBoost-scored, so the per-class triples were never jointly validated under
+  the deployed torch roster; only Equity's and Energy's geometries survive an XGBoost→LightGBM
+  robustness swap, so **Metals is omitted from EX.5** (it flips negative under LightGBM) and falls back
+  to the default symmetric barrier; and adopting these geometries is a wiring decision at the emit
+  boundary, not a demonstrated improvement — §6 reports that under the torch roster Energy's geometry
+  does not transfer OOS (it abstains entirely).
 - The label is the sign of the side-adjusted P&L at the **first** barrier touched; **`t1`
   (first-touch time) is recorded for every label** and drives purge/embargo everywhere.
 - **Per-instrument embargo (S2.6, pass-4).** The purged CV now embargoes each instrument by its own
@@ -198,22 +215,28 @@ consumes the
 probability itself (Gramegna-Giudici 2021, nlr-cw §2 — see the calibration subsection). The pooled
 matrix keeps the event-date index so concurrent **cross-instrument** labels are purged by `t1`.
 
-**Selected models (CPCV selection, real data):** Equity → **XGBoost** (15-path mean AUC 0.568),
-Energy → **torch-MLP** (0.536 — a neural variant won its class), Metals → **elastic-net logistic**
-(0.532). The torch NN family is now genuinely competitive, not a synthetic-only appendix.
+**Selected models (CPCV selection, real data):** Equity → **XGBoost** (15-path mean AUC 0.5897),
+Energy → **torch-MLP** (0.5233 — a neural variant won its class, knife-edge over xgboost 0.5212),
+Metals → **elastic-net logistic** (0.5324). The torch NN family is now genuinely competitive, not a
+synthetic-only appendix.
 
 **CPCV path robustness (EX.1, modelling sample).** The fraction of the 15 purged combinatorial
 paths beating 0.5 is the discriminating signal for *where* the edge is real:
 
 | Class | best model | mean CPCV AUC | paths > 0.5 | reading |
 | :---: | :---: | :---: | :---: | :---: |
-| Equity | XGBoost | **0.572** | **15 / 15** | edge is **robust** |
-| Metals | logistic | 0.524 | 13 / 15 | marginal-but-positive |
-| Energy | LightGBM | 0.493 | 6 / 15 | **no reliable edge** |
+| Equity | LightGBM | **0.5923** | **15 / 15** | edge is **robust** |
+| Metals | elasticnet | 0.5241 | 13 / 15 | marginal-but-positive |
+| Energy | XGBoost | 0.5266 | 12 / 15 | majority-but **within-sample only** |
 
-Equity's edge survives every combinatorial path; Energy's does not (6/15 ≈ coin-flip),
-corroborating the §4 cluster importance and the deflated-Sharpe / multiple-testing caveat
-(Bailey 2014; Harvey-Liu-Zhu 2016).
+This is a *within-sample* count on a stripped tree-and-linear roster (regime/macro off), so the
+nominal Energy winner is XGBoost rather than the deployed torch-MLP — the path count, not the model
+identity, is the object of interest. Equity's edge survives every combinatorial path; Metals and
+Energy clear 0.5 on a majority of paths *here too*, but this in-sample count sits alongside
+per-instrument **OOS** AUCs that fall below the no-skill line for Energy (§5) and a uniformly
+negative significance and timing verdict (§5/§6) — it anticipates Equity's relative strength, not a
+transferable Energy edge, corroborating the §4 cluster importance and the deflated-Sharpe /
+multiple-testing caveat (Bailey 2014; Harvey-Liu-Zhu 2016).
 
 **Calibration is now shipped (S3.9, `calibration.py`).** Because Kelly sizes on p̂ directly, a model
 that *ranks* act/skip adequately still mis-sizes if p̂ is uncalibrated. Pass 3 fits **one Platt map
@@ -223,19 +246,22 @@ the Kelly stake. Platt is monotone, so **AUC is unchanged** (the act/skip rankin
 unit-tested invariant); only Brier/ECE and the stake move. On a leakage-safe in-time 70/30 split of
 the **selected** models (not LightGBM-as-proxy as in pass-2's EX.4):
 
-| Class | Selected model | ECE raw → Platt | Brier raw → Platt | AUC (raw = Platt) |
+| Class | s3 selected model | ECE raw → Platt | Brier raw → Platt | AUC (raw = Platt) |
 | :---: | :---: | :---: | :---: | :---: |
-| Energy | torch-MLP | 0.140 → **0.100** | 0.254 → 0.244 | 0.541 |
-| Equity | XGBoost | 0.055 → **0.027** | 0.247 → 0.242 | 0.607 |
-| Metals | logistic | 0.210 → **0.001** | 0.313 → **0.247** | 0.532 |
+| Energy | XGBoost* | 0.1053 → **0.0481** | 0.254 → 0.244 | 0.541 |
+| Equity | XGBoost | 0.0615 → **0.0173** | 0.247 → 0.242 | 0.607 |
+| Metals | logistic | 0.2096 → **0.0012** | 0.313 → **0.247** | 0.532 |
 
-The raw probabilities are materially miscalibrated (Energy's torch-MLP worst at ECE 0.140 — NNs
-need post-hoc calibration more than trees, Gramegna-Giudici 2021); Platt cuts ECE 1.4–200× with the
-AUC untouched. The **deliverable ships the calibrated probabilities** (`metamodel_predictions.csv`),
-with the raw file retained (`metamodel_predictions_raw.csv`) for this before/after; the
-`experiment_log.csv` now records the calibrated class-level Brier (Equity 0.249, Energy 0.265,
-Metals 0.341) and precision. **Note:** calibration *does* change §6 — it shifts which positions clear
-the p̂≥0.55 Kelly floor, which moves the per-book Sharpes (Metals especially; see §6).
+\* The s3 calibration probe re-selects on its own 70% calib split → names **XGBoost** for Energy,
+versus emit's full-sample deployment of **torch-MLP**; cite emit's deployed model as canonical.
+
+The raw probabilities are materially miscalibrated (Metals worst at ECE 0.2096 — Gramegna-Giudici
+2021); Platt cuts ECE sharply with the AUC untouched. The **deliverable ships the calibrated
+probabilities** (`metamodel_predictions.csv`), with the raw file retained
+(`metamodel_predictions_raw.csv`) for this before/after; the `experiment_log.csv` now records the
+calibrated class-level Brier (Equity 0.2484, Energy 0.2597, Metals 0.3406) and precision (Equity
+0.5549, Energy 0.5466, Metals 0.5754). **Note:** calibration *does* change §6 — it shifts which
+positions clear the p̂≥0.55 Kelly floor, which moves the per-book Sharpes (Metals especially; see §6).
 
 **XGBoost benchmark (LR.4).** The horse-race is the NN-vs-tree benchmark itself: torch-MLP and
 torch-VSN compete directly against tuned XGBoost and LightGBM under identical CPCV. Equity and
@@ -269,19 +295,19 @@ and scoring every cluster:
 
 | Class | clusters | top cluster MDA | top cluster SHAP | near-zero-MDA clusters |
 | :---: | :---: | :---: | :---: | :---: |
-| Equity | 3 | **0.031** | 0.43 | 2 / 3 |
-| Energy | 3 | 0.011 | 0.40 | 3 / 3 |
-| Metals | 2 | −0.004 | 0.71 | 2 / 2 |
+| Equity | 3 | **0.0191** | 0.43 | 2 / 3 |
+| Energy | 3 | −0.0045 | 0.40 | 3 / 3 |
+| Metals | 2 | −0.0113 | 0.7134 | 2 / 2 |
 
 The honest reading (S4.8): **MDI and SHAP are in-sample attribution** — they always split 100% of a
 fitted model's importance across the clusters, so a high MDI/SHAP says only *which* features the
 model leaned on in-sample, not that those features carry OOS edge. **Cluster permutation MDA is the
-OOS reality check, and it is near-zero across the board** (every cluster `|MDA| < 0.02` bar one) —
-exactly what a ≈0.5-edge problem should look like, and a useful negative result. So a high cluster
-SHAP must **not** be read as edge. **Re-checked on the F16-expanded matrix (S4.8, pass-4):** the
-picture is unchanged — Energy top-cluster MDA 0.003, Metals −0.011 (all clusters noise), and the
-**only materially positive cluster MDA is Equity's 0.025** (was 0.031 pre-F16), matching its 15/15
-CPCV robustness; F16 lands in a noise cluster and adds nothing under permutation. The MDI/SHAP-vs-MDA
+OOS reality check, and it is near-zero across the board** (every cluster `|MDA| < 0.02`, no exception
+now) — exactly what a ≈0.5-edge problem should look like, and a useful negative result. So a high
+cluster SHAP must **not** be read as edge. **Re-checked under the per-class barrier (S4.8):** the
+picture is unchanged — Energy top-cluster MDA −0.0045, Metals −0.0113 (all clusters noise), and the
+**largest cluster MDA is Equity's 0.0191** — still marginal and the only positive one, matching its
+15/15 CPCV robustness; F16 lands in a noise cluster and adds nothing under permutation. The MDI/SHAP-vs-MDA
 divergence *is* the §4 lesson — only the permutation (OOS) view is honest about edge. The synthetic
 noise-cluster≈0 sanity test still holds.
 
@@ -297,9 +323,9 @@ NaN ranking metrics rather than crashing. The baseline is **blind-primary** (act
 
 | Class | Model | Per-instrument AUC (n labels) | vs blind-primary |
 | :---: | :---: | :---: | :---: |
-| Equity | XGBoost | es1s 0.62 (457) · nq1s 0.59 (482) · fesx1s 0.57 (510) | **beats** |
+| Equity | XGBoost | es1s 0.61 (457) · nq1s 0.62 (482) · fesx1s 0.63 (510) | **beats** |
 | Metals | logistic | hg1s 0.57 (504) · pl1s 0.49 (453) · si1s 0.51 (462) · gc1s 0.45 (138) | mixed |
-| Energy | torch-MLP | cl1s 0.56 (334) · rb1s 0.49 (504) · ho1s 0.43 (61) · ng1s 0.52 (68) | mixed |
+| Energy | torch-MLP | cl1s 0.47 (334) · rb1s 0.50 (504) · ho1s 0.43 (61) · ng1s 0.42 (68) | **below no-skill** |
 
 **OOS coverage caveat (S5.7 → widened S5.9).** All 11 instruments emit (no abstention), but the
 thin-coverage flag is now `n_oos_rows < 60` **OR** an undefined information coefficient — which
@@ -310,9 +336,13 @@ carry 88–127 rows. `coverage_caveat.csv` now records `n_oos_rows`, the per-ins
 uniform. The per-instrument AUCs for ho1s/ng1s (≈60 *training* labels too) are small-sample noise.
 
 **Primary-signal context (EX.5).** Characterising the *provided* signal sets the metamodel's
-ceiling: directional hit-rates run **0.52–0.69** (gc1s strongest at 0.66, IC 0.21; rb1s weakest at
-0.53), turnover 0.02–0.23 flips/day, with several names better in the low-vol regime. The base
-signal is already decent, so the secondary act/skip filter has little headroom.
+ceiling: directional hit-rates run **0.51–0.69** (gc1s strongest at 0.66, IC 0.2111; rb1s weakest),
+turnover 0.02–0.23 flips/day, with several names better in the low-vol regime. The base signal is
+already decent, so the secondary act/skip filter has little headroom. (This primary-signal IC — rank
+correlation of the *signal* with the subsequent return, on the modelling window — must not be
+confused with the metamodel's own OOS IC, the rank correlation of the *calibrated probability* with
+the subsequent return on the 2022 window; for gc1s the two even differ in sign, the metamodel IC
+being −0.23.)
 
 **Utility-aware evaluation (S5.10 — beyond AUC).** AUC says nothing about whether *acting* adds
 economic value, so we test market timing on the OOS acted trades. The **primary** test is
@@ -325,61 +355,71 @@ regression nor the conditional non-parametric H–M — so it over-reads "skill"
 a hand-worked toy case confirms PT≈0 where the proxy shows z>0). With the mean-variance
 certainty-equivalent:
 
-| Book | **PT stat (p)** *(primary)* | TM γ (t) | H–M proxy hit (z) | CER/day (γ=5) |
-| :---: | :---: | :---: | :---: | :---: |
-| Energy | +0.24 (0.41) | +0.81 (1.34) | 0.510 (0.29) | +0.000203 |
-| Equity | −0.32 (0.63) | **−4.51 (−2.01)** | 0.447 (−1.38) | +0.000151 |
-| Metals | −2.17 (0.99) | −2.05 (−1.10) | 0.408 (−3.06) | −0.000014 |
-| All-11 | **−2.31 (0.99)** | +1.18 (2.55) | 0.449 (−2.57) | +0.000335 |
+| Book | **PT stat (p)** *(primary)* | TM γ (t) |
+| :---: | :---: | :---: |
+| Energy | *abstains (no acted trades)* | *abstains* |
+| Equity | +0.12 | +0.31 (insignificant) |
+| Metals | −2.17 | −2.05 (insignificant) |
+| All-11 | **−1.80 (p ≈ 0.96)** | **−0.51 (t = −0.35)** |
 
 **No positive directional skill is demonstrated.** The load-bearing result is the directional test:
 **Pesaran–Timmermann — the base-rate-aware primary — is negative or insignificant in every book**
-(pooled −2.31, p=0.99), and the §6.14 pooled Sharpe is itself insignificant (t=0.93). A proxy
-*biased toward* skill still showing none makes the negative stronger, not weaker. **Honest caveat on
-TM:** the *pooled* Treynor–Mazuy γ is positive and nominally significant (+1.18, t=2.55) — but with
-PT negative and the Sharpe insignificant, convexity *without* directional accuracy is the signature
-of **the stop/barrier exit asymmetry (winners ride, losers are cut), not market timing**; it is not a
-tradeable signal. (A measurement note: our TM regresses signed-PnL on each trade's *own* realised
-return rather than an external market benchmark, so it is a convexity diagnostic, not canonical TM.)
-The **full resolution** — a scale-aggregation artefact compounded by mechanical exit convexity, with
-PT as the scale-invariant primary — is S5.11, and its in-data proof is S5.12. Cite Henriksson–Merton
-1981 (pp. 513–533), Treynor–Mazuy 1966, Pesaran–Timmermann 1992.
+(pooled −1.80, p ≈ 0.96; Energy abstains entirely under its barrier so contributes no acted trades),
+and the §6.14 pooled Sharpe is itself insignificant (t = 0.34). A proxy *biased toward* skill still
+showing none makes the negative stronger, not weaker. **Honest caveat on TM:** the corroborating
+convexity test does not even *print* positive here — the *pooled* Treynor–Mazuy γ is **−0.51
+(t = −0.35)**, insignificant and of a piece with the negative PT. That the same coefficient printed
+**positive and nominally significant (+1.18, t = 2.55) under the OLD global barrier** — where it could
+be mistaken for timing — is itself the cautionary point: the pooled coefficient is an unreliable scale
+aggregate **in either sign**. With PT negative and the Sharpe insignificant, whatever convexity the
+pooled regression detects is the signature of **the stop/barrier exit asymmetry (winners ride, losers
+are cut), not market timing**; it is not a tradeable signal. (A measurement note: our TM regresses
+signed-PnL on each trade's *own* realised return rather than an external market benchmark, so it is a
+convexity diagnostic, not canonical TM.) The **full resolution** — a scale-aggregation artefact in
+either sign, compounded by mechanical exit convexity, with PT as the scale-invariant primary — is
+S5.11, and its in-data proof is S5.12. Cite Henriksson–Merton 1981 (pp. 513–533), Treynor–Mazuy 1966,
+Pesaran–Timmermann 1992.
 
-**S5.11 — the pooled-TM convexity is an aggregation artefact, not timing (LR-9).** The positive
-pooled Treynor–Mazuy coefficient (γ = +1.18, t = 2.55) is not evidence of market-timing skill but an
-aggregation artefact compounded by mechanical convexity. First, pooling sub-portfolios of
-heterogeneous return scale, volatility and beta into one quadratic-timing regression is known to
-yield inconsistent, sign-reversing coefficients — a regression instance of Simpson's paradox /
-aggregation bias (Blyth 1972; Robinson 1950; Pesaran & Smith 1995; Zellner 1962) — and here the
-per-sleeve coefficients (Equity γ = −4.51, significant; Energy +0.81 and Metals −2.05, both
-insignificant) reject coefficient homogeneity and confirm the reversal. Second, the convexity the
-pooled regression detects is the mechanical, option-like convexity of the barrier-exact exit, not
+**S5.11 — the pooled-TM convexity is an aggregation artefact in either sign, not timing (LR-9).** The
+*pooled* Treynor–Mazuy coefficient is **−0.51 (t = −0.35)** here, insignificant — it does not even
+print positive. That the same coefficient printed **positive and nominally significant (γ = +1.18,
+t = 2.55) under the OLD global barrier**, where it could be mistaken for timing skill, is itself the
+cautionary point: the pooled coefficient is an unreliable scale aggregate whichever sign it takes.
+First, pooling sub-portfolios of heterogeneous return scale, volatility and beta into one
+quadratic-timing regression is known to yield inconsistent, sign-reversing coefficients — a
+regression instance of Simpson's paradox / aggregation bias (Blyth 1972; Robinson 1950;
+Pesaran & Smith 1995; Zellner 1962) — and here the per-sleeve coefficients (Equity γ = +0.31 and
+Metals γ = −2.05, both insignificant, while **Energy abstains entirely** under its barrier and
+contributes no acted trades) reject coefficient homogeneity, and a trade-count-weighted average of the
+sleeve γ is **−1.40, well away from the pooled −0.51 — the pooled magnitude is a scale aggregate of
+heterogeneous sleeves, not a shared coefficient**. Second, the convexity the pooled regression
+detects when it detects any is the mechanical, option-like convexity of the barrier-exact exit, not
 directional forecasting: **Jagannathan & Korajczyk (1986)** show that holding option-like or levered
 payoffs produces *artificial* market-timing ability where none exists, and a protective,
 big-move-capturing stop/barrier rule is exactly such a convex, option-isomorphic payoff
 (Henriksson & Merton 1981; Glosten & Jagannathan 1994; Fung & Hsieh 2001). Market-timing skill is
 therefore assessed primarily by the **Pesaran & Timmermann (1992, pp. 461–465)** directional-accuracy
 test, which — being a sign / contingency-table statistic rather than a magnitude regression — is
-invariant to the scale heterogeneity that drives the pooled-γ artefact; its result (pooled −2.31,
-p ≈ 0.99) confirms the absence of timing skill, consistent with the disaggregated TM evidence.
+invariant to the scale heterogeneity that drives the pooled-γ artefact; its result (pooled −1.80,
+p ≈ 0.96) confirms the absence of timing skill, consistent with the disaggregated TM evidence.
 (Treynor & Mazuy 1966 is a practitioner *HBR* article cited only for the quadratic specification, not
 as authority on the artefact; and PT is undefined when all directional calls coincide — its power
 depends on the up/down balance of the realised series.)
 
-**S5.12 — the artefact reproduced in our own data (standardise-then-repool, LR-9 rec #5).** LR-9's
-cheap in-data check converts the cited theory into direct evidence. Re-estimating the pooled TM
+**S5.12 — the artefact reproduced and dissolved in our own data (standardise-then-repool, LR-9 rec #5).**
+LR-9's cheap in-data check converts the cited theory into direct evidence. Re-estimating the pooled TM
 regression after **vol-targeting each sleeve to a common scale** — dividing each sleeve's realised
 market return *and* its signed PnL by that sleeve's return-standard-deviation (the *same* factor, so
-the per-trade `pnl = side · return` identity is preserved) — **collapses the pooled γ from +1.18 to
-−0.0031 (t = −0.14, p = 0.89)**, against a trade-count-weighted average of the per-sleeve γ of
-**−1.835**. Once the sleeves share a common scale the manufactured convexity disappears and the
-pooled coefficient reverts into the (insignificant) negative regime of its members — direct
-in-sample proof that the +1.18 was scale-aggregation, not timing. (Diagnostic only —
-`experiments/s6_barrier_backtest.py`, written to the gitignored `experiments/results/`; the
-deliverable CSVs are untouched.)
+the per-trade `pnl = side · return` identity is preserved) — **moves the pooled γ from −0.51 to
+−0.0277 (t = −0.93, p = 0.354)**, collapsing to an insignificant near-zero. Once the sleeves share a common scale, whatever pooled convexity the
+unstandardised regression reported — **positive under the OLD barrier, negative here** — dissolves
+into the same scale-driven near-zero: direct in-sample proof that the pooled TM magnitude is
+scale-aggregation, not timing. (Diagnostic only — `experiments/s6_barrier_backtest.py`, written to the
+gitignored `experiments/results/`; the deliverable CSVs are untouched.)
 
 **Honest reading.** Classification-wise the metamodel adds clear value only on Equity (all three
-names AUC ≈ 0.60, consistent with 15/15 CPCV paths); Metals and Energy are mixed and dragged by
+names AUC ≈ 0.62, consistent with 15/15 CPCV paths); Metals and Energy are mixed — Energy's
+better-covered names now sit *below* the no-skill line (cl1s 0.47, ng1s 0.42) — and dragged by
 small-sample names (gc1s 138, ho1s 61, ng1s 68 labels). A pooled AUC would have hidden both. Mean
 OOS AUC ≈ 0.5 overall is the expected, gradeable result — meta-labelling on a decent primary signal
 is genuinely hard (the identical harness scores AUC > 0.9 on separable synthetic data, so it
@@ -397,28 +437,31 @@ stub (the 20 May constraints doc is not in the repo).
 
 > **Headline (no edge is demonstrated; the strategy is NOT claimed to work).** Before any
 > selection-bias deflation, the more basic question is whether the §6 Sharpe is even
-> distinguishable from zero on the ~128-day OOS. **It is not:** the pooled net Sharpe of **1.31**
-> gives **t = SR·√n = 0.93** (n = 127, not significant at 5%), and the primary inference — a
-> **studentised stationary block-bootstrap 95% CI of [−0.04, +0.19] (per-period) — contains 0**
-> (S6.14). PSR(0) = 0.82 (< 0.95) and MinTRL ≈ 399 days vs 127 available agree. *Only then* does the
-> deflation gate (S6.8) **corroborate**: pooled DSR [0.61 → 0.20] (≪ 0.95), PBO 0.35. Combined with
+> distinguishable from zero on the ~128-day OOS. **It is not:** the pooled net Sharpe of **0.48**
+> gives **t = SR·√n = 0.34** (n = 127, not significant at 5%), and the primary inference — a
+> **studentised stationary block-bootstrap 95% CI of [−0.09, +0.15] (per-period) — contains 0**
+> (S6.14). PSR(0) = 0.635 (< 0.95) and MinTRL ≈ 2,883 days vs 127 available agree. *Only then* does the
+> deflation gate (S6.8) **corroborate**: pooled DSR [0.26 → 0.08] (≪ 0.95), PBO 0.36. Combined with
 > AUC ≈ 0.5 (§3/§5), near-zero cluster MDA (§4) and **no positive directional timing**
 > (Pesaran–Timmermann negative everywhere, §5), the honest conclusion is **insufficient evidence of
 > a deployable edge** — the positive Sharpe is the barrier exit + vol-targeting + diversification,
-> not act/skip skill. The pass-4 feature re-open (F16) and stricter per-instrument embargo did **not**
-> change this: more features, IC still ≈ 0 — which *strengthens* the Fundamental-Law null (§6.12).
+> not act/skip skill. The per-class barrier and stricter per-instrument embargo did **not** change
+> this: IC still ≈ 0 — which *strengthens* the Fundamental-Law null (§6.12). Most pointedly, under its
+> committed per-class barrier **Energy takes zero OOS positions** (its calibrated p̂ sits in a narrow
+> no-signal band below the act-floor), so the metamodel correctly **abstains** rather than
+> manufacturing a book — the sharpest illustration of the negative.
 
 **Barrier-exact, cost-aware OOS backtest, Jan–Jun 2022 (S6.7, calibrated sizing).** The position
 exits on the **actual triple-barrier first-touch `t1`** (not a fixed `max_holding`), overlapping
 labels are **netted**, a Grinold–Kahn cost model (half-spread + impact) is charged, and the stake is
 sized on the **calibrated** p̂ (§3.9). Net of costs:
 
-| Book | Model | Sharpe | Sortino | Ann. vol | Max DD | Turnover/yr | Hold (d) | Gross→Net |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **All 11** | — | **1.31** | 1.99 | 7.5% | −2.6% | 53.7 | 2.8 | +8.3% → **+4.9%** |
-| Energy | torch-MLP | 1.86 | 3.22 | 2.9% | −1.0% | 7.8 | 3.0 | +3.2% → +2.7% |
-| Equity | XGBoost | 0.86 | 1.37 | 5.2% | −2.0% | 22.6 | 2.4 | +3.6% → +2.2% |
-| Metals | logistic | 0.00 | 0.01 | 3.8% | −2.8% | 23.3 | 3.0 | +1.3% → −0.0% |
+| Book | Model | Sharpe | Sortino | Ann. vol | Max DD | Gross→Net |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **All 11** | — | **0.48** | 0.78 | 11.0% | −4.5% | +5.36% → **+2.38%** |
+| Energy | torch-MLP | **0.0000** *(no trades — abstains)* | — | — | — | — |
+| Equity | XGBoost | 0.51 | — | — | — | — |
+| Metals | logistic | 0.00 | — | — | — | — |
 
 > **Sortino convention.** The downside deviation uses the **full-T denominator with target 0**
 > (Sortino & Price 1994) — positive returns contribute zero to the semivariance and the divisor is
@@ -426,12 +469,19 @@ sized on the **calibrated** p̂ (§3.9). Net of costs:
 > common mis-implementation that takes `std()` over the negative returns only (a smaller, biased
 > divisor that inflates Sortino); a known-value test (`tests/test_backtest.py`) pins the full-T form.
 
-These are the **pass-4** numbers (per-instrument embargo + the F16 re-open + calibrated sizing).
-Versus pass-3 the pooled Sharpe eased 1.55 → 1.31 and Equity 1.36 → 0.86 while Metals rose from
-−0.11 to ≈ 0 — exactly the small, sign-indeterminate reshuffling expected when no real edge underlies
-the numbers (the §6.14 t-stat is 0.93 either way). Calibration still **moves the sizing** (shrinking
-over-confident p̂ toward the base rate keeps ≈ 36% of bets below the 0.55 Kelly floor, holding vol to
-~7.5%); the per-instrument floor concentration is quantified in §6.13.
+These are the **per-class-barrier** numbers (per-instrument embargo + the F16 re-open + calibrated
+sizing). **Energy now takes zero OOS positions** under its committed `ewma20/(0.5,0.25)/vol-scaled`
+barrier: its calibrated p̂ collapses into a near-constant no-signal band **[0.519, 0.522]** (AUC ≈
+0.52), entirely below the 0.55 Kelly act-floor, so the book **abstains** (Sharpe → 0.0000, no trades)
+in both `emit` and the §6 backtest. This is not "edge destroyed" — Energy's old shipped-barrier 1.86
+Sharpe had *already* failed every test (insignificant t, fails deflation, negative/insignificant PT);
+it was noise that happened to print positive over 127 days. Under the modelling-committed barrier the
+same no-signal book resolves to a correctly-cautious abstention — **fragility consistent with no
+edge**, and we deliberately do **not** re-pick the barrier off this OOS result (that would be the
+snoop the report condemns; the config was committed on the modelling window). Calibration still
+**moves the sizing** (shrinking over-confident p̂ toward the base rate now keeps ≈ **62%** of bets
+below the 0.55 Kelly floor at zero weight, up from ≈ 36% under the old global barrier, holding pooled
+vol to ~11%); the per-instrument floor concentration is quantified in §6.13.
 
 **S6.14 — significance-first inference (the PRIMARY §6 result, LR-6).** A selected Sharpe must be
 deflated, but the prior question is whether it clears zero at all on a ~128-day OOS. Reported in
@@ -439,11 +489,11 @@ assumption-strength order (`significance.py`, all per-period unless annualised):
 
 | Statistic | Pooled (all-11) value | Reading |
 | :---: | :---: | :---: |
-| Sharpe + **t-stat** | SR/day 0.083, **t = 0.93** (n=127) | **not significant** at 5%, before any deflation |
-| **Studentised stationary block-bootstrap 95% CI** *(primary)* | per-period **[−0.04, +0.19]**; ann ×√252 [−0.59, 3.07] | **contains 0** — the width *is* the finding |
-| Lo/Opdyke analytic band | per-period [−0.09, +0.26] | parametric cross-check, also straddles 0 |
-| PSR(0); **MinTRL** | 0.82 (< 0.95); **399 days** vs 127 available | track record ~3× too short to certify |
-| Ljung–Box(10) | p = 0.010 | returns are **serially correlated** → the √252 annualisation *overstates*; read the per-period CI |
+| Sharpe + **t-stat** | SR/day 0.0303, **t = 0.34** (n=127) | **not significant** at 5%, before any deflation |
+| **Studentised stationary block-bootstrap 95% CI** *(primary)* | per-period **[−0.09, +0.15]** | **contains 0** — the width *is* the finding |
+| Lo/Opdyke analytic band | per-period [−0.14, +0.20] | parametric cross-check, also straddles 0 |
+| PSR(0); **MinTRL** | 0.635 (< 0.95); **≈ 2,883 days** vs 127 available | track record >20× too short to certify |
+| Ljung–Box(10) | p = 0.000 | returns are **serially correlated** → the √252 annualisation *overstates*; read the per-period CI |
 
 The block length is Politis–White's `optimal_block_length` (data-driven); the bootstrap is
 studentised by the Lo (2002) analytic SE and seeded (deterministic). The CI straddling zero is the
@@ -459,38 +509,41 @@ a **ladder over N**: N_eff (ONC-clustered trials, optimistic) → N_raw (the ros
 4·N_raw, the upper rungs reflecting the implicit feature-selection search (the data-driven
 cluster-rep reducer + the F16 re-open) that N_raw under-counts:
 
-| Book | net Sharpe | DSR ladder (N_eff→…→4·N_raw) | CSCV-PBO | MinBTL vs OOS≈0.5y |
+| Book | net Sharpe | DSR ladder (N∈[6,15,30,60]) | CSCV-PBO | MinBTL vs OOS≈0.5y |
 | :---: | :---: | :---: | :---: | :---: |
-| Energy | 1.86 | [0.86 → 0.77 → 0.70 → 0.64] (N 2→20) | 0.29 | [0.27 → 1.42]y |
-| Equity | 0.86 | [0.57 → 0.51 → 0.43 → 0.37] (N 3→20) | 0.46 | [0.73 → 1.42]y |
-| Metals | 0.00 | [0.35 → 0.19 → 0.12 → 0.08] (N 2→20) | 0.12 | [0.27 → 1.42]y |
-| **All-11** | 1.31 | **[0.61 → 0.34 → 0.26 → 0.20]** (N 3→60) | 0.35 | **[0.73 → 3.14]y** |
+| Energy | **0.0000** *(abstains — no trades)* | — | — | — |
+| Equity | 0.51 | — | — | — |
+| Metals | 0.00 | — | — | — |
+| **All-11** | 0.48 | **[0.260 → 0.159 → 0.109 → 0.075]** | 0.36 | **[1.69 → 3.14]y** |
 
-Even the *optimistic* N_eff end stays below 0.95 everywhere (pooled 0.61), and DSR only falls as N
-rises — so the gate fails a fortiori under the honest, higher trial count. The pooled MinBTL (up to
-3.1y) dwarfs the half-year OOS. PBO ≈ 0.35 (pooled) is the noise-dominated mid-range expected of a
-no-edge selection. **This corroborates, but does not lead, the S6.14 verdict.**
+Even the *optimistic* low-N end stays well below 0.95 (pooled 0.26), and DSR only falls as the trial
+count N rises — so the gate fails a fortiori under the honest, higher count (the cluster-rep reducer,
+the F16 re-open *and* the per-class barrier sweep all add selection the ladder does not enumerate).
+The pooled MinBTL (up to 3.1y) dwarfs the half-year OOS. PBO ≈ 0.36 (pooled) is the noise-dominated
+mid-range expected of a no-edge selection. **This corroborates, but does not lead, the S6.14
+verdict.** (Per-book deflation is not separately regenerated under the per-class barrier — Energy
+abstains; the pooled rung is the load-bearing figure.)
 
 **S6.9 — the holding model is load-bearing (the methodology finding).** Identical positions, models,
 features and calibration — *only the exit convention differs*:
 
 | Book | simple `max_holding=10` | barrier-exact (actual `t1`) |
 | :---: | :---: | :---: |
-| Energy | +2.16 | +1.86 |
-| Equity | +0.54 | +0.86 |
+| Energy | 0.00 *(abstains)* | 0.00 *(abstains)* |
+| Equity | −0.34 | +0.51 |
 | Metals | −0.21 | +0.00 |
 
-The exit convention alone moves every book's Sharpe (Metals −0.21 → 0.00; Equity +0.54 → +0.86;
-pass-3 it flipped Equity's sign outright); the ordering is driven by the **exit mechanism** (winners
-ride to the profit barrier, losers are cut at the stop), **not** classification skill — consistent
-with AUC ≈ 0.5 and no positive directional timing (§5). Gated by S6.14/S6.8, it is a *finding about
-backtest construction*, not a performance claim.
+The exit convention alone moves the books that trade (Metals −0.21 → 0.00; Equity −0.34 → +0.51, a
+sign flip), while Energy is zero under both conventions because it takes no positions; the ordering is
+driven by the **exit mechanism** (winners ride to the profit barrier, losers are cut at the stop),
+**not** classification skill — consistent with AUC ≈ 0.5 and no positive directional timing (§5).
+Gated by S6.14/S6.8, it is a *finding about backtest construction*, not a performance claim.
 
 **S6.10 — accounting reconciliation.** `net = gross − costs` holds daily, but the report's
 `gross_total_return`/`net_total_return` are **compounded** (∏) while `total_cost` is an **arithmetic
-Σ**, so `gross − total_cost ≠ net` by the compounding interaction (pooled: gross +9.0%, Σ-cost
-3.0%, net +5.7%). The reconciliation field **`cost_drag_compounded` = gross_total − net_total**
-(pooled **3.26%**) closes the identity exactly; `total_cost` (3.04%) is retained as the undiscounted
+Σ**, so `gross − total_cost ≠ net` by the compounding interaction (pooled: gross **+5.36%**, net
+**+2.38%**). The reconciliation field **`cost_drag_compounded` = gross_total − net_total**
+(pooled **2.98%**) closes the identity exactly; `total_cost` (3.04%) is retained as the undiscounted
 sum. Turnover (one-way annualised notional, 51.6) and holding (trade-based busday, 2.8d) are on
 **different bases**, so `hold ≈ 252/turnover` is not expected to hold — both are reported, not
 forced into a false identity.
@@ -498,13 +551,13 @@ forced into a false identity.
 **S6.12 — the convergence (one honest negative, not five unlucky ones).** Five independent lenses
 agree the meta-model adds no exploitable act/skip edge on this primary signal:
 
-| Lens | Pass-4 result | Verdict |
+| Lens | Per-class-barrier result | Verdict |
 | :---: | :---: | :---: |
-| §3/§5 OOS AUC | ≈ 0.50 (0.57 / 0.54 / 0.53) | no ranking skill |
+| §3/§5 OOS AUC | ≈ 0.50 (0.59 / 0.52 / 0.53; energy per-inst below random) | no ranking skill |
 | §4 cluster MDA (OOS) | \|MDA\| < 0.02 across clusters | no feature carries OOS edge |
-| §6.14 significance | t = 0.93; bootstrap 95% CI contains 0 | Sharpe not distinguishable from 0 |
-| §6.8 deflation | pooled DSR [0.61 → 0.20]; PBO 0.35 | fails the selection-bias gate |
-| §5 timing (Pesaran–Timmermann) | pooled −2.31 (p = 0.99) | no positive directional timing |
+| §6.14 significance | t = 0.34; bootstrap 95% CI contains 0 | Sharpe not distinguishable from 0 |
+| §6.8 deflation | pooled DSR [0.26 → 0.08]; PBO 0.36 | fails the selection-bias gate |
+| §5 timing (Pesaran–Timmermann) | pooled −1.80 (p ≈ 0.96) | no positive directional timing |
 
 This convergence is *predicted*, not coincidental. The named primary is **short-horizon
 mean-reversion** (`f1_mr_score_20`), and **Grinold's Fundamental Law `IR = IC·√BR`** *[PROVEN]* makes
@@ -519,27 +572,31 @@ the same per-fold causal discipline and a stricter per-instrument embargo, and I
 more features, no more edge, exactly what IR = IC·√BR predicts.
 
 **S6.13 — calibration × floor concentration (a sizing caveat, not an edge).** Calibrated p̂ tops out
-at **0.686**, so only **~8%** of bets clear p ≥ 0.60 and **~36%** sit below the 0.55 Kelly floor
-(zero weight). The per-instrument floor-pass-rate is highly uneven — **ng1s 100%, cl1s 98%, gc1s 90%,
-si1s 81% … fesx1s 37%, ho1s 0%** — so the book sizes off a thin high-confidence slice (concentration
-risk). Most tellingly, **ng1s clears the floor 100% despite `n_eff_gate = 2`** (only two effective
-post-embargo signal runs in the shared base's scope, the cause of its undefined EX.5 IC): a
-confident-looking p̂ resting on almost no independent information — the textbook case for the
-per-instrument shrinkage explored next. Ties to the thin-coverage flags (S5.9) and the `n_eff` scope.
+at **0.670** (on Equity), so roughly **62%** of bets sit below the 0.55 Kelly floor at zero weight, up
+from a little over a third (≈ 36%) under the old global barrier. The floor-pass rate is wildly uneven
+*across books*: **Metals** clears it on about three-quarters of bets (≈ 25% zero-weight) and
+**Equity** on under a third (≈ 71% zero-weight), while **Energy** clears it on **none** — its
+calibrated p̂, compressed by a no-signal model into the narrow band **[0.519, 0.522]** just above ½,
+never reaches the floor, so the entire book **abstains** (100% zero-weight). A sleeve sized to zero by
+a correctly-cautious floor is the sharpest illustration of the negative: the metamodel, asked whether
+to act on Energy, declines on every day. Ties to the thin-coverage flags (S5.9) and the `n_eff` scope.
 
 **S6.15 — CER-gated sizing (LR-7; flat κ retained).** Two refinements were evaluated against OOS
-certainty-equivalent (`/empirical-finance certainty_equivalent`, γ = 5): (a) a **smooth taper**
-replacing the hard p ≥ 0.55 floor (continuous at the old floor, a fixed function of p̂ → leakage-safe);
-(b) per-instrument **Baker–McHale κᵢ = eᵢ²/(eᵢ²+σᵢ²)**. The adoption decision is gated **only on the
-leakage-safe taper** (CER 0.000335 → **0.000353**, +5%); the κᵢ variant's larger gain (→ 0.000715)
-is a **circular diagnostic** — its κᵢ is estimated on the OOS window itself, exactly the look-ahead
-this build avoids, so it is not a valid out-of-sample improvement (a leakage-safe κᵢ needs
-modelling-sample residuals — future work). The taper's +5% is **immaterial** — within the noise of a
-127-day CER (below the 10%-of-baseline materiality margin) — so by the principle that added sizing
-complexity must earn a material OOS gain, the shipped weights **retain flat κ = 0.25 / the hard
-floor**; the byte-identical deliverable is unchanged. Carver's 25% vol-target halving for
-negative-skew sleeves was checked. The honest default: elaborate sizing that buys no clean OOS
-utility is not adopted.
+certainty-equivalent (`/empirical-finance certainty_equivalent`, γ = 5, baseline CER **0.000090**):
+(a) a **smooth taper** replacing the hard p ≥ 0.55 floor (continuous at the old floor, a fixed
+function of p̂); (b) per-instrument **Baker–McHale κᵢ = eᵢ²/(eᵢ²+σᵢ²)**. The κᵢ variant's earlier
+OOS-estimated form was rejected as **circular** (its κᵢ read off the OOS window itself); the
+leakage-safe redo, estimating κᵢ on the modelling sample only, posts a very large *point* gain
+(0.000090 → 0.000593, **+561.5%**) that clears the materiality bar — but its **paired studentised
+block-bootstrap 95% CI on the CER difference is [−0.000780, +0.001814] and contains 0**, so the gain
+is indistinguishable from noise at this sample length (the more so where an entire sleeve abstains) →
+**revert**. The smooth taper *does*, on its leakage-safe form, now clear the CER gate (0.000090 →
+**0.000275**) — but that advantage is measured **on the OOS window itself**, so adopting it would
+re-introduce exactly the look-ahead the locked-before-OOS sizing exists to prevent. The gate flip is
+therefore reported as a **diagnostic, not acted on**: the shipped weights **retain flat κ = 0.25 / the
+hard floor** and the byte-identical deliverable is unchanged. Carver's 25% vol-target halving for
+negative-skew sleeves was checked. The honest default: a point estimate that flatters but cannot
+survive its own confidence interval — or its own leakage firewall — is not adopted.
 
 ---
 
@@ -548,7 +605,7 @@ utility is not adopted.
 | # | Commitment | Module | nlr-cw / primary citation |
 | :---: | :---: | :---: | :---: |
 | 1 | Meta-labelling act/skip filter | `triple_barrier.py`, `pipeline.py` | §1 — LdP 2018 Ch.3; Joubert 2022 |
-| 2 | Vol-adaptive ±k·σ̂ₜ + vertical T_max | `triple_barrier.py` | §1 — LdP 2018 Ch.3 |
+| 2 | Per-class vol-adaptive ±k·σ̂ₜ (realised-vol / rolling-std / EWMA) + vertical T_max | `triple_barrier.py` | §1 — LdP 2018 Ch.3 |
 | 3 | Purged CV + embargo + CPCV + nested | `cross_validation.py` | §6 — LdP Ch.7/12; Bailey 2014; Harvey-Liu-Zhu 2016 |
 | 4 | Garman–Klass vol (+Parkinson check) | `volatility.py` | §A1 — Garman-Klass 1980; Korkusuz 2023 |
 | 5 | Multi-family horse-race | `models.py`, `neural.py` | §2 — Gu-Kelly-Xiu 2020; Krauss 2017; IKM 2020 |
@@ -593,21 +650,22 @@ Kelly stake (Gramegna-Giudici 2021); single sample-weight channel for imbalance 
 ## Limitations (honest)
 
 - **No deployable edge is demonstrated — "insufficient evidence", not a proven failure (the
-  headline, LR-6).** The pooled §6 Sharpe is **not statistically distinguishable from zero**: t = 0.93
-  on n = 127, and the primary studentised block-bootstrap 95% CI **[−0.04, +0.19] contains 0**
-  (S6.14). The deflation gate *corroborates* (pooled DSR [0.61 → 0.20], PBO 0.35, MinBTL up to 3.1y
+  headline, LR-6).** The pooled §6 Sharpe is **not statistically distinguishable from zero**: t = 0.34
+  on n = 127, and the primary studentised block-bootstrap 95% CI **[−0.09, +0.15] contains 0**
+  (S6.14). The deflation gate *corroborates* (pooled DSR [0.26 → 0.08], PBO 0.36, MinBTL up to 3.1y
   vs ~0.5y OOS), and so do AUC ≈ 0.5, near-zero cluster MDA (§4), and **no positive directional
   timing** (Pesaran–Timmermann negative everywhere, §5). The positive Sharpe is diversification +
   vol-targeting + the barrier exit, not act/skip skill. **One honest wrinkle (resolved — S5.11/S5.12):**
-  the *pooled* Treynor–Mazuy γ is positive-significant (+1.18, t=2.55) but is a scale-aggregation
-  artefact, not timing skill; PT, the scale-invariant directional test, shows none. The pass-4 re-open
-  (F16 + per-instrument
-  embargo) left this unchanged: more features, IC still ≈ 0, which strengthens the Fundamental-Law
-  null rather than weakening it.
+  the *pooled* Treynor–Mazuy γ here does not even print positive (−0.51, t = −0.35) — and the +1.18,
+  t=2.55 it printed under the OLD global barrier was, equally, a scale-aggregation artefact **in either
+  sign**, not timing skill; PT, the scale-invariant directional test, shows none. **Where the per-class
+  barrier leaves a sleeve with no signal — Energy — the metamodel correctly abstains** (zero OOS
+  positions) rather than manufacturing one. The per-class barrier + per-instrument embargo left the
+  verdict unchanged: IC still ≈ 0, which strengthens the Fundamental-Law null rather than weakening it.
 - **Calibration is now shipped (S3.9), not deferred:** per-class Platt fit train-only on the
-  selected models cuts held-out ECE 1.4–200× with AUC unchanged, and the deliverable ships the
-  calibrated p̂. The remaining selection-side gap is the **nested-CPCV real-data run**, still
-  deferred (a meaningful one is ~15×5×5 fits per class) alongside the S6.5 stub.
+  selected models cuts held-out ECE sharply (Metals most of all) with AUC unchanged, and the
+  deliverable ships the calibrated p̂. The remaining selection-side gap is the **nested-CPCV real-data
+  run**, still deferred (a meaningful one is ~15×5×5 fits per class) alongside the S6.5 stub.
 - ho1s (2 OOS rows, IC undefined) / ng1s (56) / gc1s (30) rest on thin coverage — all three now
   flagged (`< 60` rows or undefined IC) in `coverage_caveat.csv`; their per-instrument numbers are
   small-sample noise.
