@@ -1,18 +1,20 @@
 {
   "asset_class": "equity",
-  "n_pruned": 5,
+  "n_pruned": 6,
   "features": [
+    "f6_macd_signal_9",
     "f10_oc_ret",
     "f7_overnight_gap",
     "f1_rsi_14",
-    "f18_term_chg5",
-    "f11_dxy_chg5"
+    "f11_dxy_chg5",
+    "f11_vix_chg20"
   ],
   "reasons": {
-    "f10_oc_ret": "cluster 16: PC1 27% multi-dim -> top-2 by SHAP",
-    "f7_overnight_gap": "cluster 16: PC1 27% multi-dim -> top-2 by SHAP",
+    "f6_macd_signal_9": "cluster 16: PC1 68% -> single rep",
+    "f10_oc_ret": "cluster 10: PC1 27% multi-dim -> top-2 by SHAP",
+    "f7_overnight_gap": "cluster 10: PC1 27% multi-dim -> top-2 by SHAP",
     "f1_rsi_14": "global SHAP top-5",
-    "f18_term_chg5": "global SHAP top-5",
-    "f11_dxy_chg5": "global SHAP top-5"
+    "f11_dxy_chg5": "global SHAP top-5",
+    "f11_vix_chg20": "global SHAP top-5"
   }
 }

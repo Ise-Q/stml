@@ -1,15 +1,4 @@
 feature,n_train,n_test,ks,val_auc,keep,reason
-f18_term_spread,2047,878,0.236286,0.543534,True,keep
-f18_term_spread_z63,2047,878,0.133742,0.553381,True,keep
-f18_contango_flag,2047,878,0.002119,0.515053,True,keep
-f18_term_chg5,2047,878,0.096846,0.533606,True,keep
-f18_roll_yield,2047,878,0.236286,0.543534,True,keep
-f19_atm_iv_1m,2047,878,0.254262,0.583437,True,keep
-f19_atm_iv_3m,2047,878,0.244461,0.572664,True,keep
-f19_iv_term_slope,2047,878,0.245544,0.538550,True,keep
-f19_iv_rv_spread_20,2047,878,0.161909,0.543005,True,keep
-f19_skew_1m,2047,878,0.144400,0.558746,True,keep
-f19_iv_pctile_252,2047,878,0.625816,0.531627,False,drop: KS>0.25 AND val_AUC<0.54
 f22_eia_release_flag,2047,878,0.002039,0.512480,True,keep
 f22_eia_crude_change_z26w,2047,878,0.210239,0.525253,True,keep
 f1_bb_pctb_20,2047,878,0.072523,0.541122,True,keep

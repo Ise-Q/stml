@@ -1,32 +1,30 @@
 === METALS — feature importance findings ===
 
-Modelling sample: 1174 events; 67 features after hygiene.
-Significant clusters (MDA mean > 1 sigma): 2 of 16.
+Modelling sample: 1174 events; 58 features after hygiene.
+Significant clusters (MDA mean > 1 sigma): 1 of 16.
 
 Top significant clusters (by MDA):
-  C1: 2 members, MDA +0.0079 +/- 0.0000, top SHAP member = f19_atm_iv_3m, PC1 var = 99%
-  C7: 4 members, MDA +0.0036 +/- 0.0000, top SHAP member = ?, PC1 var = 0%
+  C7: 2 members, MDA +0.0039 +/- 0.0000, top SHAP member = ?, PC1 var = 0%
 
 Top 10 global features by mean |SHAP|:
-  f7_overnight_gap                    |SHAP| = 0.1827
-  f12_hurst_100                       |SHAP| = 0.1390
-  f12_efficiency_ratio_21             |SHAP| = 0.1344
-  f1_rsi_14                           |SHAP| = 0.1325
-  f19_skew_1m                         |SHAP| = 0.1248
-  f19_atm_iv_3m                       |SHAP| = 0.1195
-  f11_vix_chg5                        |SHAP| = 0.1116
-  f19_iv_rv_spread_20                 |SHAP| = 0.1040
-  f1_bb_pctb_20                       |SHAP| = 0.0968
-  f11_ust10_chg5                      |SHAP| = 0.0945
+  f12_efficiency_ratio_21             |SHAP| = 0.1632
+  f1_rsi_14                           |SHAP| = 0.1459
+  f7_overnight_gap                    |SHAP| = 0.1443
+  f12_hurst_100                       |SHAP| = 0.1225
+  f15_semi_vol_ratio_20               |SHAP| = 0.1173
+  f11_vix_chg5                        |SHAP| = 0.1051
+  f6_macd_signal_9                    |SHAP| = 0.1029
+  f12_autocorr_21                     |SHAP| = 0.1018
+  f7_oi_change_20                     |SHAP| = 0.1017
+  f2_vol_ratio_20_60                  |SHAP| = 0.0968
 
-Pruned feature set (6 features):
-  - f19_atm_iv_3m  (cluster 1: PC1 99% -> single rep)
-  - f7_overnight_gap  (global SHAP top-5)
-  - f12_hurst_100  (global SHAP top-5)
+Pruned feature set (5 features):
   - f12_efficiency_ratio_21  (global SHAP top-5)
   - f1_rsi_14  (global SHAP top-5)
-  - f19_skew_1m  (global SHAP top-5)
+  - f7_overnight_gap  (global SHAP top-5)
+  - f12_hurst_100  (global SHAP top-5)
+  - f15_semi_vol_ratio_20  (global SHAP top-5)
 
 CPCV(6,2) AUC, full vs pruned:
-  full     n_features =  74  AUC = 0.5299 +/- 0.0300
-  pruned   n_features =   6  AUC = 0.5280 +/- 0.0300
+  full     n_features =  64  AUC = 0.5527 +/- 0.0299
+  pruned   n_features =   5  AUC = 0.5260 +/- 0.0300

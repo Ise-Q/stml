@@ -1,5 +1,15 @@
 # Bloomberg Pull Validation Report
 
+> **Status — historical.** This document captures the Bloomberg-pull
+> validation as it stood when the raw data first arrived. F18 (futures term
+> structure) and F19 (options-implied vol) are described here as planned
+> feature families and were prototyped end-to-end; both were ultimately
+> **dropped from the shipped model on parsimony grounds** after cluster-level
+> importance analysis (§4 of the notebook) showed they did not materially
+> lift performance over the F1-F17 + F11 macro + F22 EIA baseline. The
+> shipped Bloomberg-derived feature set is F11 + F22 only. The validation
+> findings below for Blocks A and B are retained for traceability.
+
 > Forensic analysis of the three Bloomberg pulls dropped in
 > `data/bloomberg/raw/` on 2026-06-02 evening. The headline verdict is at the
 > bottom, but **the short story is: clean, usable, with two specific gaps and

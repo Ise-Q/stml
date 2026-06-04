@@ -1,3 +1,0 @@
-feature,cluster,mean_shap_mag,pc1_loading,pca_pc1_var_explained,pc2_loading,pca_pc2_var_explained
-f19_atm_iv_3m,1,0.119494,0.707107,0.987187,0.707107,0.012813
-f19_atm_iv_1m,1,0.073009,0.707107,0.987187,-0.707107,0.012813

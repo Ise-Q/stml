@@ -1,31 +1,30 @@
 === ENERGY — feature importance findings ===
 
-Modelling sample: 668 events; 68 features after hygiene.
-Significant clusters (MDA mean > 1 sigma): 2 of 16.
+Modelling sample: 668 events; 59 features after hygiene.
+Significant clusters (MDA mean > 1 sigma): 1 of 16.
 
 Top significant clusters (by MDA):
-  C8: 3 members, MDA +0.1178 +/- 0.0000, top SHAP member = f7_oi_level, PC1 var = 58%
-  C7: 3 members, MDA +0.0023 +/- 0.0000, top SHAP member = ?, PC1 var = 0%
+  C7: 3 members, MDA +0.1285 +/- 0.0000, top SHAP member = f7_oi_level, PC1 var = 58%
 
 Top 10 global features by mean |SHAP|:
-  f7_oi_level                         |SHAP| = 0.5657
-  f5_participation_60                 |SHAP| = 0.4850
-  f10_oc_ret                          |SHAP| = 0.2619
-  f7_overnight_gap                    |SHAP| = 0.2472
-  f11_vix_chg5                        |SHAP| = 0.2212
-  f1_bb_pctb_20                       |SHAP| = 0.2029
-  f11_dxy_chg5                        |SHAP| = 0.1884
-  f5_trailing_run_length              |SHAP| = 0.1871
-  f11_skew_rank63                     |SHAP| = 0.1584
-  f7_volume_z_20                      |SHAP| = 0.1526
+  f7_oi_level                         |SHAP| = 0.5843
+  f5_participation_60                 |SHAP| = 0.5599
+  f11_vix_chg5                        |SHAP| = 0.2580
+  f1_bb_pctb_20                       |SHAP| = 0.2441
+  f10_oc_ret                          |SHAP| = 0.2359
+  f7_overnight_gap                    |SHAP| = 0.2341
+  f11_dxy_chg5                        |SHAP| = 0.2029
+  f22_eia_crude_change_z26w           |SHAP| = 0.1979
+  f21_gold_silver_z63                 |SHAP| = 0.1948
+  f5_trailing_run_length              |SHAP| = 0.1921
 
 Pruned feature set (5 features):
-  - f7_oi_level  (cluster 8: PC1+PC2 84% -> two reps)
-  - f5_participation_60  (cluster 8: PC1+PC2 84% -> two reps)
-  - f10_oc_ret  (global SHAP top-5)
-  - f7_overnight_gap  (global SHAP top-5)
+  - f7_oi_level  (cluster 7: PC1+PC2 84% -> two reps)
+  - f5_participation_60  (cluster 7: PC1+PC2 84% -> two reps)
   - f11_vix_chg5  (global SHAP top-5)
+  - f1_bb_pctb_20  (global SHAP top-5)
+  - f10_oc_ret  (global SHAP top-5)
 
 CPCV(6,2) AUC, full vs pruned:
-  full     n_features =  74  AUC = 0.6251 +/- 0.0325
-  pruned   n_features =   5  AUC = 0.6082 +/- 0.0328
+  full     n_features =  64  AUC = 0.6107 +/- 0.0328
+  pruned   n_features =   5  AUC = 0.6025 +/- 0.0329

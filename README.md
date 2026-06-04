@@ -77,19 +77,27 @@ python scripts/build_submission_deliverables.py \
     --start 2022-07-01 --end 2022-12-31
 ```
 
-To regenerate the full pipeline from raw inputs (≈ 60 min on CPU):
+To regenerate the full pipeline from the inputs that ship with this submission
+(≈ 60 min on CPU):
 
 ```bash
 python -m stml.experimental.make_labels         # triple-barrier meta-labels
-python -m stml.experimental.bloomberg_ingest    # PIT-align macro panel
-python -m stml.experimental.make_features       # 18 feature families
+python -m stml.experimental.make_features       # 16 feature families
 python -m stml.experimental.make_scope          # per-instrument embargo
 python -m stml.experimental.make_baseline       # per-class baseline AUCs
 python -m stml.experimental.make_champions      # CPCV(6,2) + 1-SE champion per instrument
 python -m stml.experimental.make_importance     # cluster MDA + MDI + SHAP
+python -m stml.experimental.make_importance_deep # SHAP + within-cluster recursion
 python -m stml.experimental.make_deliverables   # writes outputs/*.csv
 python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 ```
+
+> The PIT-aligned Bloomberg parquets the pipeline consumes ship pre-built
+> under `data/bloomberg/cleaned/` (committed). The raw vendor pulls that
+> produced them are gitignored, so `stml.experimental.bloomberg_ingest` is
+> **not** part of the reproduction chain on a clean clone — it is only used
+> internally when refreshing the cleaned parquets from a fresh Bloomberg
+> pull. For the H2 2022 window, see §4.
 
 ---
 

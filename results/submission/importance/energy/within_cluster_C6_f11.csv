@@ -1,0 +1,4 @@
+feature,cluster,mean_shap_mag,pc1_loading,pca_pc1_var_explained,pc2_loading,pca_pc2_var_explained,pc3_loading,pca_pc3_var_explained
+f11_be10y_chg5,6,0.174089,0.659944,0.493198,-0.224856,0.306288,0.716878,0.200514
+f11_ust10_chg5,6,0.056562,0.383424,0.493198,0.921354,0.306288,-0.063981,0.200514
+f11_be10y_chg20,6,0.047754,0.646112,0.493198,-0.317092,0.306288,-0.694257,0.200514

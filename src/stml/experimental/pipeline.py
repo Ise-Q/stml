@@ -36,9 +36,15 @@ from stml.experimental.models import MetaClassifier, default_roster
 
 
 # Columns considered "schema" in the features parquet — never used as features.
+# Must stay in lockstep with champion_pipeline._SCHEMA_COLS — the per-instrument
+# geometry (pt/sl/h) and the partition string are reserved everywhere.
 _SCHEMA_COLS = frozenset({
     "instrument", "t_signal", "t_start", "t_end", "side", "ret", "label",
     "uniqueness_weight", "sigma_at_t", "barrier_hit",
+    # The per-instrument barrier geometry (pt/sl/h) is constant per
+    # instrument and would leak instrument identity beyond the inst_*
+    # one-hot dummies; `partition` is a string and breaks .astype(float).
+    "pt", "sl", "h", "partition",
 })
 
 

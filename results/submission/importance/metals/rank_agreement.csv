@@ -2,5 +2,5 @@ metric_a,metric_b,kendall_tau,p_value
 mdi_sum_mean,mda_mean,0.150000,0.450285
 gain_sum_mean,mda_mean,0.150000,0.450285
 mdi_sum_mean,gain_sum_mean,1.000000,0.000000
-shap_sum_mean,mda_mean,0.116667,0.564267
-shap_sum_mean,mdi_sum_mean,0.666667,0.000135
+shap_sum_mean,mda_mean,0.200000,0.305727
+shap_sum_mean,mdi_sum_mean,0.650000,0.000215
