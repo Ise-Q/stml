@@ -1,0 +1,5 @@
+config,hidden_widths,dropout,lr,n_epochs,mean_auc,sem,n_folds,lower_1se,elapsed_s,selected,within_1se_of_best
+locked,"[64,32]",0.1,0.0005,100,0.5312,0.0077,14,0.5235,4.3,False,True
+wider,"[128,64]",0.1,0.0005,100,0.5173,0.0077,14,0.5097,1.2,False,False
+more_dropout,"[64,32]",0.2,0.0005,100,0.5344,0.0082,14,0.5262,1.5,True,True
+higher_lr,"[64,32]",0.1,0.001,100,0.532,0.0074,14,0.5246,1.0,False,True
