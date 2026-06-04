@@ -64,35 +64,38 @@ displayed but the family-comparison run will skip the NN evaluator.
 
 ---
 
-## 3. Reproduce the deliverable CSVs
+## 3. Reproduce the H1 2022 deliverable CSVs
 
-Fastest path (reads the pipeline's cached per-event predictions; runs in seconds):
+> H1 2022 is the released sealed-test window the model was scored on. For the
+> hidden H2 2022 window, jump to §4 — it has additional steps before the
+> pipeline can be re-run.
+
+**Fastest path (seconds, reads the cached per-event predictions):**
 
 ```bash
 python scripts/build_submission_deliverables.py
 ```
 
-Byte-deterministic re-emit verified: two consecutive runs produce identical
-CSVs. For the hidden H2 2022 window:
+This is a deterministic CSV stitcher: it reads the pipeline's per-event
+prediction cache (`results/submission/oos_events_with_predictions.csv`) and
+emits the full `(date × instrument)` grid for the H1 2022 window
+(`outputs/metamodel_predictions.csv`, `outputs/strategy_weights.csv`). Two
+consecutive runs produce identical bytes (md5-verified). It does **not** run
+model inference, so it cannot score a window the pipeline has not already
+scored — use the full-pipeline path below to change the inference window.
+
+**Full pipeline from raw inputs (≈ 60 min on CPU):**
 
 ```bash
-python scripts/build_submission_deliverables.py \
-    --start 2022-07-01 --end 2022-12-31
-```
-
-To regenerate the full pipeline from the inputs that ship with this submission
-(≈ 60 min on CPU):
-
-```bash
-python -m stml.experimental.make_labels         # triple-barrier meta-labels
-python -m stml.experimental.make_features       # 16 feature families
-python -m stml.experimental.make_scope          # per-instrument embargo
-python -m stml.experimental.make_baseline       # per-class baseline AUCs
-python -m stml.experimental.make_champions      # CPCV(6,2) + 1-SE champion per instrument
-python -m stml.experimental.make_importance     # cluster MDA + MDI + SHAP
+python -m stml.experimental.make_labels          # loads triple_barrier_labels.csv → events.parquet
+python -m stml.experimental.make_features        # 16 feature families → features.parquet
+python -m stml.experimental.make_scope           # per-instrument purge/embargo map
+python -m stml.experimental.make_baseline        # per-class baseline AUCs
+python -m stml.experimental.make_champions       # CPCV(6,2) + 1-SE champion per instrument
+python -m stml.experimental.make_importance      # cluster MDA + MDI + SHAP
 python -m stml.experimental.make_importance_deep # SHAP + within-cluster recursion
-python -m stml.experimental.make_deliverables   # writes outputs/*.csv
-python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
+python -m stml.experimental.make_deliverables    # refits champion on train+val, scores test partition → outputs/*.csv
+python -m stml.experimental.make_significance    # PSR / MinTRL / DSR / PT
 ```
 
 > The PIT-aligned Bloomberg parquets the pipeline consumes ship pre-built
@@ -100,63 +103,127 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 > produced them are gitignored, so `stml.experimental.bloomberg_ingest` is
 > **not** part of the reproduction chain on a clean clone — it is only used
 > internally when refreshing the cleaned parquets from a fresh Bloomberg
-> pull. For the H2 2022 window, see §4.
+> pull.
 
 ---
 
-## 4. H2 2022 rerun
+## 4. H2 2022 rerun (hidden test window)
 
 The brief states the held-out H2 2022 window is the hidden test set. The
-submission ships **the H2 2022 data the model needs** so only the two CSVs the
-brief specifies need to be replaced before re-running the pipeline.
+submission ships **the H2 2022 supporting data the model needs** (Bloomberg
+macro + EIA via `data/OOS_additional_data.xlsx`) and **a labels-regeneration
+script** that re-creates the triple-barrier labels for the extended window
+using each instrument's locked geometry. The full procedure runs end-to-end
+once the OHLCV and primary-signal CSVs are swapped.
 
-### 4a. Step-by-step procedure
+### 4a. Required input files (replace these two)
 
-1. Replace `data/ohlcv_data.csv` and `data/primary_signals.csv` with versions
-   extended through Dec 2022. **No other input file needs to change.**
-2. Extend the Bloomberg panels (one-shot, idempotent, ~1 second):
-   ```bash
-   python scripts/extend_bloomberg_for_h2.py
-   ```
-   This script reads `data/OOS_additional_data.xlsx` and writes Jul–Dec 2022
-   rows into the cleaned Bloomberg parquets the model actually consumes:
+The grader supplies two input CSVs extended through Dec 2022. Drop them in at
+the same paths and in the **same long/wide schemas** as the released files:
 
-   | Bloomberg family | Used by model? | Source for H2 2022 |
-   |---|---|---|
-   | Macro (21 series — VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS, PMIs, etc.) | Yes (**F11**) | `OOS_additional_data.xlsx` (real values) |
-   | EIA weekly crude change | Yes (**F22**) | Derived from `EIA_CRUDE_STOCK` in OOS workbook (real values) |
-   | EIA release-day binary flag | Yes (**F22**) | Wednesdays in the H2 calendar |
-   | Futures term structure (F18) | **No — dropped on parsimony grounds** | n/a |
-   | Options implied vol (F19) | **No — dropped on parsimony grounds** | n/a |
+| File | Schema | Notes |
+|---|---|---|
+| `data/ohlcv_data.csv` | Long: `date, instrument, open, high, low, close, volume, open_interest` | The released file covers 1990-01-02 → 2022-06-30 in long format. Extend it with H2 2022 rows for all 11 instruments. `volume` and `open_interest` are used by F7 microstructure features — leave them populated if available. |
+| `data/primary_signals.csv` | Wide: `date, es1s, nq1s, fesx1s, cl1s, ho1s, rb1s, ng1s, gc1s, si1s, hg1s, pl1s` (one column per instrument; values `∈ {−1, 0, +1}`) | Extend with H2 2022 rows. Order of columns is fixed by the released file. |
 
-   F18 and F19 were prototyped during development but dropped from the final
-   model after cluster-level importance analysis (§4 of the notebook) showed
-   they did not materially lift performance over the F1–F17 + F22 baseline.
-   The final feature set therefore only uses Bloomberg data we have complete
-   coverage for across both H1 and H2 2022.
-3. Re-run the full pipeline from §3 above. `make_features` regenerates the
-   feature matrix on the extended axis; `make_deliverables` refits each
-   instrument's champion on `train + val` (the released window) and predicts
-   on the H1 2022 sealed test slice.
+**Everything else stays where it is.** The triple-barrier labels CSV, the
+cleaned Bloomberg parquets, and the Bloomberg OOS workbook all already ship
+in this repo or get regenerated by the steps below.
 
-### 4b. Fast deliverable refresh from the event cache (released window only)
+### 4b. Step-by-step procedure
 
-For the **released window** (H1 2022), the script
-`scripts/build_submission_deliverables.py` is a deterministic CSV stitcher
-that reads `results/submission/oos_events_with_predictions.csv` (the
-pipeline's per-event output) and emits the full-grid deliverable CSVs in
-seconds:
+The whole sequence runs in ≈ 60 min on a single CPU core. The labels and
+Bloomberg-extension scripts are one-shot and idempotent — they detect when
+H2 data is already in place and exit early.
+
+**Step 1 — Extend the cleaned Bloomberg panels (~1 second):**
 
 ```bash
-python scripts/build_submission_deliverables.py            # H1 2022 (default)
+python scripts/extend_bloomberg_for_h2.py
 ```
 
-This path **does not run model inference** — it only re-stitches the cached
-per-event predictions onto the (date × instrument) grid. Use §4a (the full
-pipeline) when the inference window changes.
+Reads `data/OOS_additional_data.xlsx` and appends Jul–Dec 2022 rows to the
+cleaned Bloomberg parquets the model consumes:
 
-If invoked against a window the pipeline has not scored, every non-zero
-signal gets the abstain value. Use §4a for the hidden test.
+| Bloomberg family | Used by model? | Source for H2 2022 |
+|---|---|---|
+| Macro (21 series — VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS, PMIs, etc.) | Yes (**F11**) | `OOS_additional_data.xlsx` (real values) |
+| EIA weekly crude change | Yes (**F22**) | Derived from `EIA_CRUDE_STOCK` in the OOS workbook |
+| EIA release-day binary flag | Yes (**F22**) | Wednesdays in the H2 calendar |
+| Futures term structure (F18) | **No — dropped on parsimony grounds** (§4 of notebook) | n/a |
+| Options implied vol (F19) | **No — dropped on parsimony grounds** (§4 of notebook) | n/a |
+
+**Step 2 — Regenerate the triple-barrier labels including H2 events
+(~5 seconds):**
+
+```bash
+python scripts/relabel_for_h2.py
+```
+
+The shipped `data/triple_barrier_labels.csv` covers only the released window
+because the per-instrument barrier-geometry grid search ran on H1 only. This
+script keeps the released-window rows byte-identical and **appends new
+`partition = "test"` rows for every H2 2022 non-zero-signal event**, using
+each instrument's locked `(pt, sl, h)` and the same σ definition as the
+shipped CSV (verified: 50/50 round-trip match against shipped H1 test rows;
+σ matches to 4 decimal places). Idempotent — running it again is a no-op.
+
+**Step 3 — Re-run the full pipeline from §3** (uses the same commands; the
+prediction window is driven by the `partition = "test"` rows in the labels
+CSV, which now includes H2):
+
+```bash
+python -m stml.experimental.make_labels
+python -m stml.experimental.make_features
+python -m stml.experimental.make_scope
+python -m stml.experimental.make_baseline
+python -m stml.experimental.make_champions
+python -m stml.experimental.make_importance
+python -m stml.experimental.make_importance_deep
+python -m stml.experimental.make_deliverables
+python -m stml.experimental.make_significance
+```
+
+`make_features` extends the feature matrix to H2 automatically because the
+input panels (OHLCV + Bloomberg) now run through Dec 2022. `make_deliverables`
+refits each instrument's champion on the `train + val` partitions (still H1
+2020 → H2 2021 — the H2 2022 window is sealed from fitting) and predicts on
+every event with `partition = "test"`, which after step 2 includes both H1
+and H2 2022.
+
+**Step 4 — Slice the H2 portion of the deliverable** (only if the H1 portion
+is not also wanted in the same file):
+
+```bash
+python scripts/build_submission_deliverables.py \
+    --start 2022-07-01 --end 2022-12-31
+```
+
+This re-emits the two output CSVs against the cached per-event predictions
+restricted to the H2 grid. The H1 output produced by step 3's
+`make_deliverables` is left untouched.
+
+### 4c. What changes from the H1 run, and what doesn't
+
+* **What changes.** OHLCV + signals, cleaned Bloomberg parquets, triple-barrier
+  labels CSV (H1 portion untouched, H2 rows appended), features parquet,
+  feature drift audit, per-event prediction cache, the two output CSVs.
+* **What doesn't change.** Champion selection (CPCV runs on `train + val`,
+  which is purely H1 / earlier); per-instrument calibration (Platt fits on
+  CPCV OOF, again `train + val` only); the bootstrap `p*` thresholds; the
+  per-instrument geometry `(pt, sl, h)`; the sizing-policy parameters
+  `(a, c)`; the cost-model assumptions; the random seed.
+
+### 4d. Sanity-checks for the H2 rerun
+
+After step 3 completes, expect:
+
+* `wc -l outputs/metamodel_predictions.csv` ≈ 1,408 + (`H2 trading days` × 11)
+  rows + 1 header (H1 stays; H2 appends).
+* `data/triple_barrier_labels.csv` partition counts should show `test` larger
+  than the original 951 (it picks up the H2 events).
+* `results/submission/oos_events_with_predictions.csv` has the new H2 events
+  with non-`0.5` predictions wherever the model has signal coverage.
 
 ---
 
