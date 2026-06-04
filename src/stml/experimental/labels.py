@@ -1,35 +1,34 @@
-"""Triple-barrier labels with **t+1 entry** — methodology spec / §8 Stage 1 deliverable.
+"""Triple-barrier labeller — reference implementation.
 
-This module is the single labelling implementation .
-Three load-bearing decisions vs the AFML Ch.3 default and vs the prior
-labeller:
+This module is a reference implementation of an AFML Ch.3 triple-barrier
+labeller. **It is not the source of the shipped labels.** The labels used by
+the submission live in ``data/triple_barrier_labels.csv``, which was generated
+by a per-instrument grid search over barrier geometries; ``make_labels.py``
+reads that CSV directly and the rest of the pipeline consumes its
+(``t_signal``, ``t_start``, ``t_end``, ``ret``, ``label``, ``partition``)
+schema unchanged.
 
-* **Entry at the close of t+1, not t.** A signal observed at the close of bar
-  ``t`` is acted on at the close of ``t+1``. The held window is
-  ``[t+1, t+1+h]``; the bar between ``t`` and ``t+1`` is no longer inside the
-  event. This is the load-bearing fix (prior audit) —
-  empirically ``corr(s_t, r_{t+1}) > 0`` for all 11 instruments.
+Entry convention used by the shipped labels (verified empirically against the
+``ret`` column in the CSV): ``t_start = t_signal``. That is, the signal
+observed at the close of bar ``t`` is acted on at the close of bar ``t``
+itself, and the realised side-adjusted return is
+``side · (close[t_end] / close[t_start] − 1)``. The ``corr(s_t, r_{t+1}) > 0``
+empirical regularity that motivates a *next-bar* interpretation is captured by
+the choice of small (often ``h = 1``) per-instrument horizons in the grid
+search, not by shifting the entry index.
 
-* **Tighter symmetric barriers by default** (``pt = sl = 0.5``). The branch
-  audit (prior audit and the methodology spec) shows the EWMA-σ̂ ×
-  ``pt=sl=1.0`` barrier resolves at the vertical line 50–65 % of the time on
-  the released data — labels degenerate to "10-day drift sign" rather than a
-  triple-barrier first-touch. The S2 CPCV barrier search may override pt/sl/h
-  per asset class; this is the *initial* config.
-
-* **Per-instrument concurrency on each instrument's native trading-day index.**
-  Concurrency for AFML Ch.4 uniqueness weights is computed on the instrument's
-  own dense index (no calendar reindexing) — so weekend / cross-venue holiday
-  rows that don't trade for the instrument are not counted as overlap.
+The reference implementation below predates the shipped labels and uses
+``t+1`` entry plus a fixed symmetric barrier; it is retained for unit tests
+and methodology comparison only. It is **not** called by the pipeline.
 
 Output schema (one row per non-zero signal day that resolves to a barrier):
 
     instrument          str
     t_signal            pd.Timestamp        — signal observation date (close of t)
-    t_start             pd.Timestamp        — entry date = t+1 trading day
+    t_start             pd.Timestamp        — entry date (= t_signal in the shipped CSV)
     t_end               pd.Timestamp        — resolution date (first PT/SL touch or vertical)
     side                int                 — +1 (long bet) / -1 (short bet)
-    ret                 float               — side · log(close[t_end] / close[t_start])
+    ret                 float               — side · (close[t_end] / close[t_start] − 1)
     label               int                 — 1 if ret > 0 else 0
     uniqueness_weight   float               — AFML Ch.4, in (0, 1]
     sigma_at_t          float               — daily σ̂ at the signal date (barrier scale)

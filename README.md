@@ -153,7 +153,7 @@ signal gets the abstain value. Use §4a for the hidden test.
 
 | Brief section | Marks | Notebook section | Code | Result artefacts |
 |---|---:|---|---|---|
-| Feature Engineering | 20 | §1 | `src/stml/experimental/features/`, `make_features.py` | 105 features over 18 families |
+| Feature Engineering | 20 | §1 | `src/stml/experimental/features/`, `make_features.py` | 80+ features (16 families) — see notebook §1 for live count |
 | Triple-Barrier Labeling | 20 | §2 | `data/triple_barrier_labels.csv`, `make_labels.py` | Per-instrument geometry summary |
 | Model Development & Comparison | 30 | §3 | `champion_pipeline.py`, `make_champions.py`, `models.py` | `champions_summary.csv`, `champions_per_pool_per_model.csv` |
 | Cluster-Level Feature Importance | 10 | §4 | `make_importance_deep.py` | `results/importance/{equity,energy,metals}/*` |
@@ -174,8 +174,6 @@ data/
 ├── ohlcv_data.csv              Raw OHLCV (released window; replace for H2 2022)
 ├── primary_signals.csv         Raw primary signals (replace for H2 2022)
 ├── triple_barrier_labels.csv   Per-instrument-geometry meta-labels (canonical)
-├── features/
-│   └── f11_macro_context_oos.csv     H2 2022 macro features (Jul–Dec)
 ├── OOS_additional_data.xlsx          Raw H2 2022 macro source
 ├── bloomberg/cleaned/                PIT-aligned cleaned BBG parquets (released window)
 └── meta/                              Generated missingness diagnostics
@@ -191,7 +189,6 @@ src/stml/                       Pipeline package
 └── experimental/               Modelling pipeline (this submission)
     ├── make_*.py               Stage runners (S1 labels → S7 significance)
     ├── champion_pipeline.py    CPCV(6,2) + 1-SE champion selector
-    ├── features/               18 feature families
     ├── sizing.py               Six position-sizing methods (Madmoun S3 slides 33–34)
     ├── backtest.py             Barrier-exact backtest + cost model
     ├── significance.py         PSR / MinTRL / DSR / PT
