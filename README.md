@@ -95,7 +95,11 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 
 ## 4. H2 2022 rerun
 
-The brief states the held-out H2 2022 window is the hidden test set.
+The brief states the held-out H2 2022 window is the hidden test set. There
+are **two distinct paths** depending on whether the rerun is reading cached
+predictions or generating new ones:
+
+### 4a. Full inference path (recommended for the hidden test)
 
 1. Replace `data/ohlcv_data.csv` and `data/primary_signals.csv` with versions
    extended through Dec 2022.
@@ -103,15 +107,31 @@ The brief states the held-out H2 2022 window is the hidden test set.
    - `data/features/f11_macro_context_oos.csv` — z-scored daily macro features
      (45 columns, Jul–Dec 2022, all 11 instruments)
    - `data/OOS_additional_data.xlsx` — raw H2 2022 macro source (22 series)
-3. Re-run the pipeline. The shipped model was selected for robustness to
-   missing Bloomberg-augmented features at inference time; the per-class
-   AUC delta with vs. without Bloomberg is documented in
-   `results/bbg_missingness_ablation.csv`.
-4. Re-emit the deliverables:
-   ```bash
-   python scripts/build_submission_deliverables.py \
-       --start 2022-07-01 --end 2022-12-31
-   ```
+3. Re-run the full pipeline from §3 above. `make_features` regenerates the
+   feature matrix on the extended axis; `make_deliverables` refits each
+   instrument's champion on `train + val` (the released window), predicts on
+   the new signals, and writes the full-grid `outputs/*.csv`. The shipped
+   model was selected for robustness to missing Bloomberg features at inference
+   time (see `results/submission/bbg_missingness_ablation.csv` for the
+   per-class AUC delta).
+
+### 4b. Fast deliverable refresh (cached-events path)
+
+The script `scripts/build_submission_deliverables.py` is a deterministic CSV
+stitcher: it reads `results/submission/oos_events_with_predictions.csv` (the
+pipeline's per-event output) and emits the full-grid deliverable CSVs. It
+**does not run model inference**; for any (date, instrument) where the cache
+has no event row, it fills `prediction = 0.5` (model abstains) and
+`weight = 0.0`. This path is for refreshing the deliverables in seconds after
+a full-pipeline rerun has updated the event cache:
+
+```bash
+python scripts/build_submission_deliverables.py \
+    --start 2022-07-01 --end 2022-12-31
+```
+
+If invoked against a window the pipeline has not scored, every non-zero
+signal gets the abstain value. Use §4a for the hidden test.
 
 ---
 
