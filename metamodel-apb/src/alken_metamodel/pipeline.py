@@ -173,6 +173,21 @@ def resolve_barrier(config: PipelineConfig, asset_class: str) -> BarrierSpec:
     return BarrierSpec("shipped", 20, config.pt_sl, config.max_holding, None)
 
 
+def per_instrument_pt_sl(config: PipelineConfig) -> dict[str, tuple[float, float]]:
+    """Map every instrument to its asset class's resolved barrier ``pt_sl``.
+
+    A *pooled* sizing path (e.g. the S6 ``resize`` over all 11 instruments at once) cannot call
+    ``resolve_barrier`` per row, so it looks up the per-class Kelly bet-geometry here. With
+    ``config.barriers=None`` every instrument resolves to the shipped global ``config.pt_sl``;
+    under ``DEFAULT_BARRIERS`` each class carries its EX.5 width (metals falls back to shipped).
+    """
+    return {
+        inst: resolve_barrier(config, asset_class).pt_sl
+        for asset_class in ASSET_CLASS_CODES
+        for inst in class_members(asset_class)
+    }
+
+
 def _roster_factory(config: PipelineConfig):
     """Resolve the horse-race roster factory; ``full`` lazily pulls in the neural variants."""
     if config.roster == "default":

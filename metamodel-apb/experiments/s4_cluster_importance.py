@@ -15,13 +15,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import CLASSES, imputed_modelling_X, modelling_panel, results_dir  # noqa: E402
 
 from alken_metamodel.cluster_importance import cluster_feature_importance  # noqa: E402
-from alken_metamodel.pipeline import PipelineConfig  # noqa: E402
+from alken_metamodel.pipeline import DEFAULT_BARRIERS, PipelineConfig  # noqa: E402
 from alken_metamodel.seeding import set_seeds  # noqa: E402
 
 
 def run() -> None:
     set_seeds(42)
-    cfg = PipelineConfig(use_regime=False, use_drift=True)  # S4.8: re-check on the F16 matrix
+    # S4.8: re-check on the F16 matrix; EX.5 per-class barriers are now canonical (labels change)
+    cfg = PipelineConfig(use_regime=False, use_drift=True, barriers=DEFAULT_BARRIERS)
     out = ["# S4.7 — Cluster feature importance on the real matrix (pass-4: + F16)\n"]
     for cls in CLASSES:
         pooled, cols, mask = modelling_panel(cls, cfg)

@@ -39,12 +39,14 @@ from alken_metamodel.deflation import (  # noqa: E402
 from alken_metamodel.emit import strategy_weights  # noqa: E402
 from alken_metamodel.models import balanced_sample_weight  # noqa: E402
 from alken_metamodel.pipeline import (  # noqa: E402
+    DEFAULT_BARRIERS,
     PipelineConfig,
     _roster_factory,
     build_class_panel,
     class_members,
     feature_columns,
     fit_oos_calibrator,
+    resolve_barrier,
     select_model,
 )
 from alken_metamodel.seeding import set_seeds  # noqa: E402
@@ -56,7 +58,8 @@ ANN = 252
 def class_trials(cls: str, cfg: PipelineConfig, ohlcv, signals):
     """(best, selected-calibrated meta, {candidate: raw meta}) on the OOS window for a class."""
     set_seeds(cfg.seed)
-    pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg)
+    barrier = resolve_barrier(cfg, cls)  # per-class EX.5 geometry (or shipped global if absent)
+    pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg, barrier=barrier)
     cols = feature_columns(pooled)
     X, y, t1 = pooled[cols], pooled["bin"].to_numpy(), pooled["t1"]
     dates = pd.DatetimeIndex(pooled["date"])
@@ -76,7 +79,7 @@ def class_trials(cls: str, cfg: PipelineConfig, ohlcv, signals):
             {"date": dates[pmask], "instrument": inst[pmask], "prediction": proba,
              "side": side[pmask], "ann_vol": vol[pmask]}
         )
-        m = strategy_weights(preds, cfg)
+        m = strategy_weights(preds, cfg, pt_sl=barrier.pt_sl)  # per-class Kelly geometry
         m["t1"] = t1_pred
         return m
 
@@ -147,6 +150,7 @@ def run() -> None:
     cfg = PipelineConfig(
         roster="default", cv_scheme="cpcv", use_macro=True,
         per_instrument_embargo=True, use_drift=True,  # pass-4: matches the emit deliverable
+        barriers=DEFAULT_BARRIERS,  # EX.5 per-class barriers are now canonical (equity+energy)
     )
     ohlcv, signals = load_clean_data()
     rets = load_returns_panel(kind="simple")

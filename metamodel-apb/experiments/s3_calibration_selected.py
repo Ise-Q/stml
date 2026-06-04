@@ -27,23 +27,29 @@ from alken_metamodel.cross_validation import PurgedKFold  # noqa: E402
 from alken_metamodel.evaluation import oos_predictions  # noqa: E402
 from alken_metamodel.models import balanced_sample_weight  # noqa: E402
 from alken_metamodel.pipeline import (  # noqa: E402
+    DEFAULT_BARRIERS,
     PipelineConfig,
     _roster_factory,
     build_class_panel,
     class_members,
     feature_columns,
+    resolve_barrier,
     select_model,
 )
 from alken_metamodel.seeding import set_seeds  # noqa: E402
 
 
 def run() -> None:
-    cfg = PipelineConfig(roster="default", cv_scheme="cpcv", use_macro=True)
+    cfg = PipelineConfig(
+        roster="default", cv_scheme="cpcv", use_macro=True, barriers=DEFAULT_BARRIERS
+    )
     ohlcv, signals = load_clean_data()
     out = ["# S3.9 — selected-model calibration (raw vs Platt, leakage-safe held-out)\n"]
     for cls in CLASSES:
         set_seeds(cfg.seed)
-        pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg)
+        pooled = build_class_panel(
+            ohlcv, signals, class_members(cls), cfg, barrier=resolve_barrier(cfg, cls)
+        )
         cols = feature_columns(pooled)
         X, y, t1 = pooled[cols], pooled["bin"].to_numpy(), pooled["t1"]
         mmask = np.asarray(pd.DatetimeIndex(pooled["date"]) <= cfg.modelling_end)

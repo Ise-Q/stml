@@ -25,6 +25,7 @@ from alken_metamodel.pipeline import (  # noqa: E402
     build_class_panel,
     class_members,
     feature_columns,
+    resolve_barrier,
 )
 
 RESULTS = Path(__file__).resolve().parent / "results"
@@ -37,9 +38,14 @@ def results_dir() -> Path:
 
 
 def modelling_panel(asset_class: str, cfg: PipelineConfig):
-    """Return (pooled, feature_cols, modelling_mask) for an asset class on the real data."""
+    """Return (pooled, feature_cols, modelling_mask) for an asset class on the real data.
+
+    Honors ``cfg.barriers`` (per-class EX.5 geometry) by resolving the barrier from the config;
+    ``barriers=None`` resolves to the shipped global spec → byte-identical to the pre-EX.5 panel.
+    """
     ohlcv, signals = load_clean_data()
-    pooled = build_class_panel(ohlcv, signals, class_members(asset_class), cfg)
+    barrier = resolve_barrier(cfg, asset_class)
+    pooled = build_class_panel(ohlcv, signals, class_members(asset_class), cfg, barrier=barrier)
     cols = feature_columns(pooled)
     dates = pd.DatetimeIndex(pooled["date"])
     mask = np.asarray(dates <= cfg.modelling_end)

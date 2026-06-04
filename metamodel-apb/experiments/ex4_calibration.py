@@ -26,13 +26,13 @@ from alken_metamodel.calibration import (  # noqa: E402
 from alken_metamodel.cross_validation import PurgedKFold  # noqa: E402
 from alken_metamodel.evaluation import oos_predictions  # noqa: E402
 from alken_metamodel.models import balanced_sample_weight, tree_linear_roster  # noqa: E402
-from alken_metamodel.pipeline import PipelineConfig  # noqa: E402
+from alken_metamodel.pipeline import DEFAULT_BARRIERS, PipelineConfig  # noqa: E402
 from alken_metamodel.seeding import set_seeds  # noqa: E402
 
 
 def run() -> None:
     set_seeds(42)
-    cfg = PipelineConfig(use_regime=False)
+    cfg = PipelineConfig(use_regime=False, barriers=DEFAULT_BARRIERS)  # per-class barriers
     out = ["# EX.4 — Calibration deep-dive (purged-OOS, lightgbm)\n"]
     for cls in CLASSES:
         pooled, cols, mask = modelling_panel(cls, cfg)

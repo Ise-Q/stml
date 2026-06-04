@@ -31,12 +31,15 @@ from alken_metamodel.deflation import probabilistic_sharpe_ratio, sharpe_ratio  
 from alken_metamodel.emit import strategy_weights  # noqa: E402
 from alken_metamodel.models import balanced_sample_weight  # noqa: E402
 from alken_metamodel.pipeline import (  # noqa: E402
+    DEFAULT_BARRIERS,
     PipelineConfig,
     _roster_factory,
     build_class_panel,
     class_members,
     feature_columns,
     fit_oos_calibrator,
+    per_instrument_pt_sl,
+    resolve_barrier,
     select_model,
 )
 from alken_metamodel.seeding import set_seeds  # noqa: E402
@@ -70,7 +73,8 @@ def class_oos_meta(cls: str, cfg: PipelineConfig, ohlcv, signals):
     the calibrated MODELLING-sample OOF preds (dates <= modelling_end), the leakage-safe κᵢ inputs
     for EX.6 (already computed for calibration here, previously discarded)."""
     set_seeds(cfg.seed)
-    pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg)
+    barrier = resolve_barrier(cfg, cls)  # per-class EX.5 geometry (or shipped global if absent)
+    pooled = build_class_panel(ohlcv, signals, class_members(cls), cfg, barrier=barrier)
     cols = feature_columns(pooled)
     X = pooled[cols]
     y = pooled["bin"].to_numpy()
@@ -98,7 +102,8 @@ def class_oos_meta(cls: str, cfg: PipelineConfig, ohlcv, signals):
             "ann_vol": pooled["f2_vol_20"].to_numpy()[pmask],
         }
     )
-    meta = strategy_weights(preds, cfg)  # date, instrument, weight (row-aligned to preds)
+    # per-class pt_sl so the Kelly bet-geometry matches the labels the model trained on
+    meta = strategy_weights(preds, cfg, pt_sl=barrier.pt_sl)  # date, instrument, weight
     meta["t1"] = pd.DatetimeIndex(t1[pmask].to_numpy())
     preds = preds.assign(t1=pd.DatetimeIndex(t1[pmask].to_numpy()))
     # EX.6: calibrated modelling-sample OOF preds (purged-OOS, dates <= modelling_end, i.e.
@@ -236,13 +241,18 @@ def significance_block(net: pd.Series) -> str:
 
 def resize(all_preds: pd.DataFrame, cfg: PipelineConfig, rets, kappa_map: dict | None) -> pd.Series:
     """Re-size every OOS bet with an optional per-instrument κ map → barrier-exact net returns.
-    NON-deliverable (writes nothing); shared by the S6.15 taper gate and the EX.6 κᵢ gate."""
-    pt, sl = cfg.pt_sl
+    NON-deliverable (writes nothing); shared by the S6.15 taper gate and the EX.6 κᵢ gate.
+
+    Sizes the *pooled* book, so the Kelly geometry is looked up per instrument via
+    ``per_instrument_pt_sl`` (each class's barrier ``pt_sl``) rather than the single global
+    ``cfg.pt_sl`` — otherwise an energy bet would be sized at (1,1) against (0.5,0.25) labels."""
+    pt_sl_map = per_instrument_pt_sl(cfg)
     w = []
     for row in all_preds.itertuples(index=False):
         if not (pd.notna(row.ann_vol) and pd.notna(row.side)):
             w.append(0.0)
             continue
+        pt, sl = pt_sl_map.get(row.instrument, cfg.pt_sl)
         k = kappa_map.get(row.instrument, KAPPA) if kappa_map else KAPPA
         w.append(
             position_weight(
@@ -325,7 +335,7 @@ def cer_gate_block(all_preds: pd.DataFrame, cfg: PipelineConfig, rets, net_base:
     cer_taper = certainty_equivalent(net_taper)
     cer_kappa = certainty_equivalent(net_kappa)
     # Decision on the LEAKAGE-SAFE variant, with a materiality margin: sizing complexity must earn a
-    # gain larger than the noise of a 127-day CER (≥10% of the baseline), else a tiny blip is overfit.
+    # gain larger than noise of a 127-day CER (≥10% of baseline), else a tiny blip is overfit.
     margin = 0.10 * abs(cer_base)
     adopt = cer_improves(cer_taper, cer_base, min_gain=margin)
     decision = ("ADOPT smooth taper" if adopt
@@ -347,6 +357,7 @@ def run() -> None:
     cfg = PipelineConfig(
         roster="default", cv_scheme="cpcv", use_macro=True,
         per_instrument_embargo=True, use_drift=True,  # pass-4: matches the emit deliverable
+        barriers=DEFAULT_BARRIERS,  # EX.5 per-class barriers are now canonical (equity+energy)
     )
     ohlcv, signals = load_clean_data()
     rets = load_returns_panel(kind="simple")

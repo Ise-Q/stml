@@ -25,6 +25,7 @@ import dataclasses
 
 import pandas as pd
 import pytest
+from stml.metamodel.scope import ASSET_CLASS_MAP
 from test_pipeline import (  # sibling test module (pytest prepend-import; no tests/__init__.py)
     ENERGY,
     _synthetic_ohlcv,
@@ -40,7 +41,9 @@ from alken_metamodel.pipeline import (
     BarrierSpec,
     PipelineConfig,
     build_instrument_panel,
+    class_members,
     feature_columns,
+    per_instrument_pt_sl,
     resolve_barrier,
     run_asset_class,
 )
@@ -257,6 +260,37 @@ def test_strategy_weights_pt_sl_override_changes_kelly_geometry():
     assert w_default["weight"].iloc[0] != w_override["weight"].iloc[0]
     expected = position_weight(side=1, p=0.61, b=2.0, d=1.0, realised_vol=0.20, target_vol=0.25)
     assert w_override["weight"].iloc[0] == pytest.approx(expected)
+
+
+# --- per_instrument_pt_sl: pooled-sizing bet-geometry map -------------------
+
+
+def test_per_instrument_pt_sl_maps_each_class_to_its_barrier():
+    # Pooled sizing (e.g. S6 resize over all 11 instruments) needs each instrument's class barrier
+    # pt_sl so the Kelly geometry matches that class's labels.
+    cfg = PipelineConfig(barriers=DEFAULT_BARRIERS, pt_sl=(1.0, 1.0))
+    m = per_instrument_pt_sl(cfg)
+    assert set(m) == set(ASSET_CLASS_MAP)  # all 11 instruments present
+    for inst in class_members("equity"):
+        assert m[inst] == (2.0, 1.0)  # EX.5 equity width
+    for inst in class_members("energy"):
+        assert m[inst] == (0.5, 0.25)  # EX.5 energy width
+    for inst in class_members("metals"):
+        assert m[inst] == (1.0, 1.0)  # omitted from DEFAULT_BARRIERS -> shipped global
+
+
+def test_per_instrument_pt_sl_none_barriers_all_shipped():
+    cfg = PipelineConfig(pt_sl=(1.0, 1.0))  # barriers default None
+    m = per_instrument_pt_sl(cfg)
+    assert set(m) == set(ASSET_CLASS_MAP)
+    assert all(v == (1.0, 1.0) for v in m.values())
+
+
+def test_per_instrument_pt_sl_shipped_tracks_config_pt_sl():
+    # with no per-class overrides, the map echoes config.pt_sl for every instrument
+    cfg = PipelineConfig(pt_sl=(2.0, 0.5))
+    m = per_instrument_pt_sl(cfg)
+    assert all(v == (2.0, 0.5) for v in m.values())
 
 
 # --- integration: run_asset_class threads + carries the resolved barrier ----

@@ -22,13 +22,13 @@ from _common import CLASSES, imputed_modelling_X, modelling_panel, results_dir  
 from alken_metamodel.cross_validation import CombinatorialPurgedCV  # noqa: E402
 from alken_metamodel.evaluation import cross_val_evaluate  # noqa: E402
 from alken_metamodel.models import balanced_sample_weight, tree_linear_roster  # noqa: E402
-from alken_metamodel.pipeline import PipelineConfig  # noqa: E402
+from alken_metamodel.pipeline import DEFAULT_BARRIERS, PipelineConfig  # noqa: E402
 from alken_metamodel.seeding import set_seeds  # noqa: E402
 
 
 def run() -> None:
     set_seeds(42)
-    cfg = PipelineConfig(use_regime=False)
+    cfg = PipelineConfig(use_regime=False, barriers=DEFAULT_BARRIERS)  # per-class barriers
     out = ["# EX.1 — Decomposing the ≈0.5 OOS edge (diagnostic, modelling sample)\n"]
     for cls in CLASSES:
         pooled, cols, mask = modelling_panel(cls, cfg)
