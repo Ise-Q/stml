@@ -444,23 +444,26 @@ for inst in ["gc1s", "si1s", "pl1s", "hg1s"]:
 
 SUMMARY_CODE = """\
 # ── Cross-instrument summary ──────────────────────────────────────────────────
-print("\\n" + "=" * 70)
+print("\\n" + "=" * 92)
 print("CROSS-INSTRUMENT SUMMARY")
-print("=" * 70)
+print("=" * 92)
 print(f"{'Instrument':10s} {'Signal':10s} {'Locked':8s} "
-      f"{'Dev AUC':>8s} {'OOS AUC':>8s} {'OOS 95% CI':^16s} {'Gap':>7s}")
-print("-" * 70)
+      f"{'Dev AUC':>8s} {'Dev AP':>7s} {'OOS AUC':>8s} {'OOS AP':>7s} {'OOS 95% CI':^16s} {'Gap':>7s}")
+print("-" * 92)
 for inst in ["gc1s", "si1s", "pl1s", "hg1s"]:
     lv = locked[inst]
     s  = sel.loc[inst]
     c  = cpcv_df[(cpcv_df["inst"]==inst) & (cpcv_df["variant"]==lv)].iloc[0]
     o  = oos_df[(oos_df["inst"]==inst) & (oos_df["variant"]==lv)].iloc[0]
     signal = "SIGNAL" if s["signal"] else "NO SIGNAL"
-    dev  = float(c["auc_mean"])
-    oos  = float(o["auc"])
+    dev_auc = float(c["auc_mean"])
+    dev_ap  = float(c["ap"]) if not pd.isna(c["ap"]) else float("nan")
+    oos_auc = float(o["auc"])
+    oos_ap  = float(o["ap"]) if not pd.isna(o["ap"]) else float("nan")
     ci   = f"[{float(o['auc_ci_lo']):.3f},{float(o['auc_ci_hi']):.3f}]"
-    gap  = dev - oos
-    print(f"{inst:10s} {signal:10s} {lv:8s} {dev:8.4f} {oos:8.4f} {ci:^16s} {gap:+7.4f}")
+    gap  = dev_auc - oos_auc
+    print(f"{inst:10s} {signal:10s} {lv:8s} "
+          f"{dev_auc:8.4f} {dev_ap:7.4f} {oos_auc:8.4f} {oos_ap:7.4f} {ci:^16s} {gap:+7.4f}")
 """
 
 CAVEATS_MD = """\

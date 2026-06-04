@@ -48,7 +48,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+from sklearn.metrics import average_precision_score, brier_score_loss, log_loss, roc_auc_score
 
 warnings.filterwarnings("ignore")
 
@@ -331,18 +331,20 @@ def run_cpcv_individual(
 def summarise_cpcv(path_aucs: list[float], oos_df: pd.DataFrame) -> dict[str, Any]:
     if not path_aucs or oos_df.empty:
         return {"auc_mean": np.nan, "auc_std": np.nan,
-                "logloss": np.nan, "brier": np.nan, "n_paths": 0}
+                "ap": np.nan, "logloss": np.nan, "brier": np.nan, "n_paths": 0}
     arr  = np.array(path_aucs)
-    ll = br = np.nan
+    ll = br = ap = np.nan
     if not oos_df.empty and oos_df["y_true"].nunique() >= 2:
         try:
             ll = log_loss(oos_df["y_true"], oos_df["y_score"])
             br = brier_score_loss(oos_df["y_true"], oos_df["y_score"])
+            ap = average_precision_score(oos_df["y_true"], oos_df["y_score"])
         except Exception:
             pass
     return {
         "auc_mean": float(arr.mean()),
         "auc_std":  float(arr.std()),
+        "ap":       float(ap) if not np.isnan(ap) else np.nan,
         "logloss":  float(ll) if not np.isnan(ll) else np.nan,
         "brier":    float(br) if not np.isnan(br) else np.nan,
         "n_paths":  len(arr),
@@ -440,7 +442,7 @@ def fit_and_score(
 ) -> dict[str, Any]:
     _nan: dict[str, Any] = {
         "auc": np.nan, "auc_ci_lo": np.nan, "auc_ci_hi": np.nan,
-        "logloss": np.nan, "brier": np.nan, "n_test": int(len(y_te)),
+        "ap": np.nan, "logloss": np.nan, "brier": np.nan, "n_test": int(len(y_te)),
     }
     try:
         X_tr, X_te, _ = apply_variant(X_tr_raw, X_te_raw, fc, spec, cluster_df)
@@ -453,17 +455,19 @@ def fit_and_score(
 
     auc = _safe_auc(y_te, prob)
     ci_lo, ci_hi = bootstrap_auc_ci(y_te, prob)
-    ll = br = np.nan
+    ll = br = ap = np.nan
     if len(np.unique(y_te)) >= 2:
         try:
             ll = log_loss(y_te, prob)
             br = brier_score_loss(y_te, prob)
+            ap = average_precision_score(y_te, prob)
         except Exception:
             pass
     return {
         "auc":      float(auc) if (auc is not None and auc >= 0) else np.nan,
         "auc_ci_lo": ci_lo,
         "auc_ci_hi": ci_hi,
+        "ap":       float(ap) if not np.isnan(ap) else np.nan,
         "logloss":  float(ll) if not np.isnan(ll) else np.nan,
         "brier":    float(br) if not np.isnan(br) else np.nan,
         "n_test":   int(len(y_te)),
