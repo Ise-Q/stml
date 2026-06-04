@@ -3,15 +3,15 @@
 Harry's CPCV pipeline selects, per instrument, a *champion* feature-group + model family
 (`outputs/model_comparison/selection_table.csv`), a *locked variant* / feature subset
 (`outputs/model_comparison/{class}/locked_picks.csv`), a cluster-level *importance family*
-(`outputs/importance/{inst}/champion_meta.csv`), and — for a 5-instrument dim-reduction study —
-explicit feature lists and a finalisation record (`outputs/finalisation/`).
+(`outputs/importance/{inst}/champion_meta.csv`), and the cluster-level weight vector
+(`outputs/importance/{inst}/global_{shap,coef}_summary.csv`).
 
 Those selections ARE "the hyperparameter set": they fully determine which model is fit on which
 features per instrument. The low-level estimator hyper-parameters (RF depth, XGB lr, …) are
 re-tuned per fold by Harry's inner CPCV + 1SE rule, so there is no single global estimator dict to
 pin — the cache captures the *selection*, which is the expensive search result.
 
-`build_selected_hps()` reads Harry's committed CPCV/finalisation/importance outputs and writes a
+`build_selected_hps()` reads Harry's committed CPCV model-comparison + importance outputs and writes a
 single consolidated `outputs/selected_hps.json`. `load_selected_hps()` reads it back. The submission
 notebook writes this once (first run / FORCE_RECOMPUTE) and loads it on every subsequent run so the
 lecturer's run reuses the saved selections instead of re-searching.
@@ -102,16 +102,6 @@ def build_selected_hps(write: bool = True) -> dict:
     locked = _read_locked_variants()
     champ_meta = _read_champion_meta()
 
-    # --- finalisation (5-instrument dim-reduction study) ---
-    final_models = pd.DataFrame()
-    fm_path = FINALISATION / "final_models.csv"
-    if fm_path.exists():
-        final_models = pd.read_csv(fm_path).set_index("instrument")
-    variant_features: dict = {}
-    vf_path = FINALISATION / "variant_features.json"
-    if vf_path.exists():
-        variant_features = json.loads(vf_path.read_text())
-
     instruments = sorted(
         set(ASSET_CLASS)
         | set(selection.index.astype(str))
@@ -144,28 +134,6 @@ def build_selected_hps(write: bool = True) -> dict:
             rec["n_sig_clusters"] = (None if pd.isna(cm.get("n_sig_clusters")) else int(cm["n_sig_clusters"]))
         rec["weight_vector_file"] = _weight_vector_file(inst, rec.get("importance_family"))
 
-        # feature list for the locked variant, when the finalisation study covers this instrument
-        vf = variant_features.get(inst, {})
-        lv = rec.get("locked_variant")
-        feats = vf.get(lv) if lv else None
-        if feats is None and vf:  # fall back to the richest variant available
-            feats = vf.get("pruned") or vf.get("full") or next(iter(vf.values()), None)
-        if feats is not None:
-            rec["n_features"] = len(feats)
-            rec["feature_list"] = list(feats)
-
-        if inst in final_models.index:
-            f = final_models.loc[inst]
-            rec["finalisation"] = {
-                "locked_variant": str(f["locked_variant"]),
-                "model": str(f["model"]),
-                "n_features": int(f["n_features"]),
-                "auc_mean": float(f["auc_mean"]),
-                "auc_std": float(f["auc_std"]),
-                "exploratory": bool(f["exploratory"]),
-                "reason": str(f["reason"]),
-            }
-
         records[inst] = rec
 
     by_class: dict[str, list[str]] = {}
@@ -176,7 +144,7 @@ def build_selected_hps(write: bool = True) -> dict:
         "meta": {
             "description": (
                 "Consolidated champion / hyperparameter selection derived from Harry's committed "
-                "CPCV model-comparison, finalisation, and importance outputs. Saved so a re-run "
+                "CPCV model-comparison and importance outputs. Saved so a re-run "
                 "loads these selections instead of re-running the search."
             ),
             **_split_meta(),
@@ -186,7 +154,6 @@ def build_selected_hps(write: bool = True) -> dict:
                 "model_comparison/selection_table.csv",
                 "model_comparison/{equity,energy,metals}/locked_picks.csv",
                 "importance/{inst}/champion_meta.csv",
-                "finalisation/{final_models.csv,variant_features.json}",
             ],
         },
         "instruments": records,

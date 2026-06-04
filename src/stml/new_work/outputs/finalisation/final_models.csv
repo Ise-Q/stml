@@ -1,6 +1,0 @@
-instrument,locked_variant,model,n_features,auc_mean,auc_std,vs_full_delta,exploratory,reason
-cl1s,reduced,xgb,5,0.7733,0.1043,0.0668,False,AUC 0.7733 is within 1σ (0.1299) of full (0.7065); Δ=+0.0668; fewest features (5 vs 101)
-es1s,pruned,rf,20,0.6082,0.0716,0.0035,False,AUC 0.6082 is within 1σ (0.0691) of full (0.6047); Δ=+0.0035; fewest features (20 vs 101)
-ho1s,full,rf,102,0.6338,0.2274,0.0,True,No reduced variant within 1σ of full AUC 0.6338 (σ=0.2274); lock full
-rb1s,pruned,xgb,26,0.7155,0.0914,0.0865,False,AUC 0.7155 is within 1σ (0.1214) of full (0.6291); Δ=+0.0865; fewest features (26 vs 104)
-ng1s,full,rf,92,0.5901,0.1425,0.0,True,No reduced variant within 1σ of full AUC 0.5901 (σ=0.1425); lock full
