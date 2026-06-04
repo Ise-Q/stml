@@ -21,11 +21,12 @@ data/
   additional_data.xlsx                 F11 macro workbook (released window)
   OOS_additional_data.xlsx             F11 macro source for Jul–Dec 2022 (provenance)
   features/f11_macro_context_oos.csv   our EXTERNAL features for Jul–Dec 2022 (the shipped CSV)
-results/                              regenerated artifacts land here (feature_matrix.parquet, …)
 requirements.txt                     pinned deps (pip fallback)
 pyproject.toml / uv.lock             project + locked deps (uv)
-tests/                               test suite (pytest)
 ```
+
+> Running the notebook writes the regenerated feature matrix to `results/feature_matrix.parquet`
+> (the `results/` folder is created on run; nothing under it needs to be shipped).
 
 > The util folder is `src/stml/` — kept as an installable package so every notebook import resolves and
 > `stml.io` can auto-locate `data/` from the repo root.
@@ -77,20 +78,9 @@ median-imputable NaNs for F11 rather than failing.
 
 ---
 
-## Verifying
-
-```bash
-uv run pytest        # or: pytest
-```
-`tests/test_oos_partition.py` checks that the date-pinned split reproduces the released-window
-boundaries and that extending the axis tags new rows `oos` without moving any released partition. The
-released-window rebuild reproduces the committed feature matrix to ~1e-10 (determinism, seed = 42).
-
----
-
 ## Notes
+- **Determinism.** Seed = 42; the released-window rebuild reproduces our feature matrix to ~1e-10.
 - **Leakage discipline.** Fitted (TF) families are fit on `≤ 2021-07-01` and frozen; engineered (E)
   families are causal by truncation-invariance; structural NaNs are never forward-filled. Details in
   `submission.ipynb` §4–§5.
 - **Python 3.12** required (`requires-python = ">=3.12"`).
-- The full per-column feature documentation is in `reports/feature-catalog.md`.
