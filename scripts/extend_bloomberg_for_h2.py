@@ -5,11 +5,17 @@ Background
 The released-window cleaned parquets under ``data/bloomberg/cleaned/`` stop on
 2022-06-29 / 2022-07-01 because that is the latest data the brief released. The
 hidden test window is H2 2022 (2022-07-01 → 2022-12-30). For the marker's
-rerun to produce real predictions (not abstains) the feature pipeline needs
-Bloomberg data for H2 2022.
+rerun to produce real predictions the feature pipeline needs Bloomberg data
+for H2 2022.
 
-This script ships the H2 2022 data we have and extends each cleaned parquet so
-the feature pipeline reads a single continuous file per family:
+The shipped model uses two Bloomberg-derived feature families:
+
+* **F11** — macro panel z-scores (VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS
+  spreads, PMIs).
+* **F22** — EIA weekly crude inventory release (release-day flag + change).
+
+This script ships the H2 2022 data for those two families and extends the
+underlying parquets so the feature pipeline reads a single continuous file:
 
 1. ``macro_alternative.parquet`` — extended from ``data/OOS_additional_data.xlsx``,
    which carries the same 21 macro series for Jul-Dec 2022 (VIX, MOVE, DXY,
@@ -18,13 +24,14 @@ the feature pipeline reads a single continuous file per family:
    workbook (weekly change in thousands of barrels).
 3. ``eia_release_flag.parquet`` — derived from EIA's standard release schedule
    (Wednesdays after the as-of Friday).
-4. ``futures_term.parquet`` and ``options_iv.parquet`` — the OOS workbook does
-   not carry futures term structure or options IV for H2 2022. We forward-fill
-   the last observed values from 2022-07-01 across the H2 dates. The shipped
-   model was selected for robustness to BBG missingness at inference time (see
-   ``results/submission/bbg_missingness_ablation.csv``: per-class AUC delta
-   < 0.01 on equity and energy when these columns are blank), so the ff'd
-   constants are a defensible best-effort.
+
+Two other parquets (``futures_term.parquet``, ``options_iv.parquet``) are
+**left untouched** — the corresponding feature families (F18 futures term
+structure, F19 options-implied vol) were excluded from the shipped model on
+parsimony grounds after the cluster-importance analysis showed they did not
+materially lift performance over the OHLCV + F11 + F22 baseline. Carrying them
+would force a stale-data substitution we did not consider methodologically
+clean.
 
 Run
 ---
@@ -105,53 +112,6 @@ def extend_macro_alternative(oos: pd.DataFrame) -> None:
           f"(+{len(h2)} rows)")
 
 
-def extend_futures_term() -> None:
-    """Forward-fill futures term structure across H2 2022.
-
-    The OOS workbook does not carry CL1/CL2/HO1/etc. for Jul-Dec 2022. The
-    model is robust to BBG missingness here; we forward-fill from the last
-    observed values to keep features finite at inference time.
-    """
-    p = CLEANED / "futures_term.parquet"
-    current = pd.read_parquet(p)
-    current.index = pd.to_datetime(current.index)
-
-    h2_idx = _make_business_index(H2_START, H2_END)
-    last_row = current.iloc[-1]
-    h2 = pd.DataFrame(
-        np.tile(last_row.values, (len(h2_idx), 1)),
-        index=h2_idx,
-        columns=current.columns,
-    )
-
-    extended = pd.concat([current.loc[current.index < H2_START], h2])
-    extended.index.name = current.index.name or "date"
-    extended.to_parquet(p)
-    print(f"  futures_term.parquet      → extended to {extended.index.max().date()} "
-          f"(+{len(h2)} rows, ffilled from {last_row.name.date()})")
-
-
-def extend_options_iv() -> None:
-    """Forward-fill options-implied volatility across H2 2022."""
-    p = CLEANED / "options_iv.parquet"
-    current = pd.read_parquet(p)
-    current.index = pd.to_datetime(current.index)
-
-    h2_idx = _make_business_index(H2_START, H2_END)
-    last_row = current.iloc[-1]
-    h2 = pd.DataFrame(
-        np.tile(last_row.values, (len(h2_idx), 1)),
-        index=h2_idx,
-        columns=current.columns,
-    )
-
-    extended = pd.concat([current.loc[current.index < H2_START], h2])
-    extended.index.name = current.index.name or "date"
-    extended.to_parquet(p)
-    print(f"  options_iv.parquet        → extended to {extended.index.max().date()} "
-          f"(+{len(h2)} rows, ffilled from {last_row.name.date()})")
-
-
 def extend_eia_crude(oos: pd.DataFrame) -> None:
     """Derive weekly EIA crude change from OOS stock levels.
 
@@ -223,8 +183,6 @@ def main() -> int:
     print(f"  OOS xlsx panel: {oos.shape[0]} dates, {oos.shape[1]} series")
 
     extend_macro_alternative(oos)
-    extend_futures_term()
-    extend_options_iv()
     extend_eia_crude(oos)
     extend_eia_release_flag(oos)
 

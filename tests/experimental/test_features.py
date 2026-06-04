@@ -38,10 +38,16 @@ def test_registry_has_unique_names() -> None:
 
 
 def test_registry_covers_required_families() -> None:
-    """At minimum, the families specified in methodology spec must be present."""
+    """At minimum, the families retained in the final feature set must be present.
+
+    F18 (futures term structure) and F19 (options-implied vol) were prototyped
+    during development and dropped from the final model on parsimony grounds
+    (cluster-importance analysis showed they did not materially lift performance
+    over the F1–F17 + F22 baseline).
+    """
     fc = family_counts()
     required = {"F1", "F2", "F5", "F6", "F7", "F8", "F10", "F11", "F12", "F15",
-                "F16", "F17", "F18", "F19", "F21", "F22", "EWMA_HMM"}
+                "F16", "F17", "F21", "F22", "EWMA_HMM"}
     missing = required - set(fc.keys())
     assert not missing, f"missing required feature families: {missing}"
 

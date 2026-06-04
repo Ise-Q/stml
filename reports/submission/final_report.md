@@ -27,20 +27,20 @@ artefacts and renders the rubric narrative in seconds.
 
 | Metric | Value | Source |
 |---|---:|---|
-| **Annualised net Sharpe** | **2.90** | `backtest_metrics.csv` |
-| Annualised net return | 14.7 % | same |
+| **Annualised net Sharpe** | **3.15** | `backtest_metrics.csv` |
+| Annualised net return | 16.2 % | same |
 | Annualised vol | 5.1 % (target 10 %, 4.9 pp headroom) | same |
-| Sortino (full-T, Sortino-Price 1994) | 5.10 | same |
-| Max drawdown | −1.94 % | same |
-| Turnover (× per year) | 162.7 | same |
+| Sortino (full-T, Sortino-Price 1994) | 5.55 | same |
+| Max drawdown | −1.91 % | same |
+| Turnover (× per year) | 183.9 | same |
 | Avg holding period (days) | 2.19 | same |
-| t = SR · √n | **2.07** | `significance_summary.csv` |
-| Stationary block-bootstrap 95 % CI (per period) | [0.066, 0.338] — **excludes 0** | same |
-| PSR(0) | **0.983** (deployment threshold 0.95) | same |
-| MinTRL | 79 periods (have 129) — certified | same |
+| t = SR · √n | **2.25** | `significance_summary.csv` |
+| Stationary block-bootstrap 95 % CI (per period) | [0.035, 0.368] — **excludes 0** | same |
+| PSR(0) | **0.989** (deployment threshold 0.95) | same |
+| MinTRL | 68 periods (have 129) — certified | same |
 | Ljung-Box Q(10) p-value | 0.72 (IID-like; √252 scaling valid) | same |
-| DSR at N_eff = 2 | 0.996 | `deflation_ladder.csv` |
-| DSR at 4 · N_raw = 480 | 0.976 | same |
+| DSR at N_eff = 2 | 0.985 | `deflation_ladder.csv` |
+| DSR at 4 · N_raw = 480 | 0.943 | same |
 
 **Verdict (five-lens framework).** Four of five lenses agree on deployable
 positive edge (AUC + cluster MDA + Sharpe significance + deflation); the fifth

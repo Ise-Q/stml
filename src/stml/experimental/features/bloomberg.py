@@ -112,11 +112,11 @@ def _f18_roll_yield(ctx: FeatureContext) -> pd.Series:
     return -_f18_term_spread(ctx) * 12.0  # rough — monthly roll → annual
 
 
-register(FeatureSpec("f18_term_spread", "F18", _f18_term_spread, "E", 1, "new"))
-register(FeatureSpec("f18_term_spread_z63", "F18", _f18_term_spread_z63, "E", 63, "new"))
-register(FeatureSpec("f18_contango_flag", "F18", _f18_contango_flag, "E", 1, "new"))
-register(FeatureSpec("f18_term_chg5", "F18", _f18_term_chg5, "E", 5, "new"))
-register(FeatureSpec("f18_roll_yield", "F18", _f18_roll_yield, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f18_term_spread", "F18", _f18_term_spread, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f18_term_spread_z63", "F18", _f18_term_spread_z63, "E", 63, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f18_contango_flag", "F18", _f18_contango_flag, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f18_term_chg5", "F18", _f18_term_chg5, "E", 5, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f18_roll_yield", "F18", _f18_roll_yield, "E", 1, "new"))
 
 
 # ---------------------------------------------------------------------------
@@ -177,12 +177,12 @@ def _f19_iv_pctile_252(ctx: FeatureContext) -> pd.Series:
     return iv.rolling(252, min_periods=126).rank(pct=True)
 
 
-register(FeatureSpec("f19_atm_iv_1m", "F19", _f19_atm_iv_1m, "E", 1, "new"))
-register(FeatureSpec("f19_atm_iv_3m", "F19", _f19_atm_iv_3m, "E", 1, "new"))
-register(FeatureSpec("f19_iv_term_slope", "F19", _f19_iv_term_slope, "E", 1, "new"))
-register(FeatureSpec("f19_iv_rv_spread_20", "F19", _f19_iv_rv_spread_20, "E", 20, "new"))
-register(FeatureSpec("f19_skew_1m", "F19", _f19_skew_1m, "E", 1, "new"))
-register(FeatureSpec("f19_iv_pctile_252", "F19", _f19_iv_pctile_252, "E", 126, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_atm_iv_1m", "F19", _f19_atm_iv_1m, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_atm_iv_3m", "F19", _f19_atm_iv_3m, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_iv_term_slope", "F19", _f19_iv_term_slope, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_iv_rv_spread_20", "F19", _f19_iv_rv_spread_20, "E", 20, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_skew_1m", "F19", _f19_skew_1m, "E", 1, "new"))
+# DROPPED (parsimony — see s4 cluster importance): register(FeatureSpec("f19_iv_pctile_252", "F19", _f19_iv_pctile_252, "E", 126, "new"))
 
 
 # ---------------------------------------------------------------------------

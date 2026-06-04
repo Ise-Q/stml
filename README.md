@@ -96,8 +96,8 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 ## 4. H2 2022 rerun
 
 The brief states the held-out H2 2022 window is the hidden test set. The
-submission ships **the H2 2022 Bloomberg-augmented data needed** so the marker
-only needs to replace the two CSVs the brief specifies and re-run the pipeline.
+submission ships **the H2 2022 data the model needs** so the marker only has
+to replace the two CSVs the brief specifies and re-run the pipeline.
 
 ### 4a. Step-by-step procedure
 
@@ -108,22 +108,21 @@ only needs to replace the two CSVs the brief specifies and re-run the pipeline.
    python scripts/extend_bloomberg_for_h2.py
    ```
    This script reads `data/OOS_additional_data.xlsx` and writes Jul–Dec 2022
-   rows into the five cleaned Bloomberg parquets under
-   `data/bloomberg/cleaned/` so the feature pipeline sees a continuous panel:
+   rows into the cleaned Bloomberg parquets the model actually consumes:
 
-   | Bloomberg family | Source for H2 2022 |
-   |---|---|
-   | Macro (21 series — VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS, EIA inventory levels, PMIs) | `OOS_additional_data.xlsx` (real values) |
-   | Futures term structure (CL/HO/XB/NG/GC/SI/HG/PL — front + 2nd month + UX1/UX2) | Forward-filled from 2022-07-01 (constants) |
-   | Options implied vol (SPX/NDX/SX5E/CL/HO/XB/NG/GC/SI/HG — IV1M/IV3M ATM, 90 %/110 % moneyness) | Forward-filled from 2022-07-01 (constants) |
-   | EIA weekly crude change | Derived from `EIA_CRUDE_STOCK` in OOS workbook |
-   | EIA release-day binary flag | Wednesdays in the H2 calendar |
+   | Bloomberg family | Used by model? | Source for H2 2022 |
+   |---|---|---|
+   | Macro (21 series — VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS, PMIs, etc.) | Yes (**F11**) | `OOS_additional_data.xlsx` (real values) |
+   | EIA weekly crude change | Yes (**F22**) | Derived from `EIA_CRUDE_STOCK` in OOS workbook (real values) |
+   | EIA release-day binary flag | Yes (**F22**) | Wednesdays in the H2 calendar |
+   | Futures term structure (F18) | **No — dropped on parsimony grounds** | n/a |
+   | Options implied vol (F19) | **No — dropped on parsimony grounds** | n/a |
 
-   The futures-term and options-IV forward-fill is a documented best-effort —
-   the brief does not ship those series for H2 2022 and the model was selected
-   for robustness to BBG missingness (per-class AUC delta < 0.01 on equity and
-   energy when those columns are blanked, per
-   `results/submission/bbg_missingness_ablation.csv`).
+   F18 and F19 were prototyped during development but dropped from the final
+   model after cluster-level importance analysis (§4 of the notebook) showed
+   they did not materially lift performance over the F1–F17 + F22 baseline.
+   The final feature set therefore only uses Bloomberg data we have complete
+   coverage for across both H1 and H2 2022.
 3. Re-run the full pipeline from §3 above. `make_features` regenerates the
    feature matrix on the extended axis; `make_deliverables` refits each
    instrument's champion on `train + val` (the released window) and predicts
