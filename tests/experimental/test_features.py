@@ -224,6 +224,7 @@ def test_drift_filter_drops_all_nan_columns() -> None:
             "instrument": ["x"] * 50,
             "t_signal": pd.date_range("2020-01-02", periods=50),
             "label": np.random.randint(0, 2, 50),
+            "partition": ["train"] * 35 + ["val"] * 8 + ["test"] * 7,
             "good_feature": np.random.rand(50),
             "all_nan_feature": np.nan,
         }

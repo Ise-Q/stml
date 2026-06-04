@@ -95,40 +95,55 @@ python -m stml.experimental.make_significance   # PSR / MinTRL / DSR / PT
 
 ## 4. H2 2022 rerun
 
-The brief states the held-out H2 2022 window is the hidden test set. There
-are **two distinct paths** depending on whether the rerun is reading cached
-predictions or generating new ones:
+The brief states the held-out H2 2022 window is the hidden test set. The
+submission ships **the H2 2022 Bloomberg-augmented data needed** so the marker
+only needs to replace the two CSVs the brief specifies and re-run the pipeline.
 
-### 4a. Full inference path (recommended for the hidden test)
+### 4a. Step-by-step procedure
 
 1. Replace `data/ohlcv_data.csv` and `data/primary_signals.csv` with versions
-   extended through Dec 2022.
-2. Two macro inputs for the hidden window are shipped:
-   - `data/features/f11_macro_context_oos.csv` — z-scored daily macro features
-     (45 columns, Jul–Dec 2022, all 11 instruments)
-   - `data/OOS_additional_data.xlsx` — raw H2 2022 macro source (22 series)
+   extended through Dec 2022. **No other input file needs to change.**
+2. Extend the Bloomberg panels (one-shot, idempotent, ~1 second):
+   ```bash
+   python scripts/extend_bloomberg_for_h2.py
+   ```
+   This script reads `data/OOS_additional_data.xlsx` and writes Jul–Dec 2022
+   rows into the five cleaned Bloomberg parquets under
+   `data/bloomberg/cleaned/` so the feature pipeline sees a continuous panel:
+
+   | Bloomberg family | Source for H2 2022 |
+   |---|---|
+   | Macro (21 series — VIX, MOVE, DXY, UST/Bund/TIPS yields, OAS, EIA inventory levels, PMIs) | `OOS_additional_data.xlsx` (real values) |
+   | Futures term structure (CL/HO/XB/NG/GC/SI/HG/PL — front + 2nd month + UX1/UX2) | Forward-filled from 2022-07-01 (constants) |
+   | Options implied vol (SPX/NDX/SX5E/CL/HO/XB/NG/GC/SI/HG — IV1M/IV3M ATM, 90 %/110 % moneyness) | Forward-filled from 2022-07-01 (constants) |
+   | EIA weekly crude change | Derived from `EIA_CRUDE_STOCK` in OOS workbook |
+   | EIA release-day binary flag | Wednesdays in the H2 calendar |
+
+   The futures-term and options-IV forward-fill is a documented best-effort —
+   the brief does not ship those series for H2 2022 and the model was selected
+   for robustness to BBG missingness (per-class AUC delta < 0.01 on equity and
+   energy when those columns are blanked, per
+   `results/submission/bbg_missingness_ablation.csv`).
 3. Re-run the full pipeline from §3 above. `make_features` regenerates the
    feature matrix on the extended axis; `make_deliverables` refits each
-   instrument's champion on `train + val` (the released window), predicts on
-   the new signals, and writes the full-grid `outputs/*.csv`. The shipped
-   model was selected for robustness to missing Bloomberg features at inference
-   time (see `results/submission/bbg_missingness_ablation.csv` for the
-   per-class AUC delta).
+   instrument's champion on `train + val` (the released window) and predicts
+   on the H1 2022 sealed test slice.
 
-### 4b. Fast deliverable refresh (cached-events path)
+### 4b. Fast deliverable refresh from the event cache (released window only)
 
-The script `scripts/build_submission_deliverables.py` is a deterministic CSV
-stitcher: it reads `results/submission/oos_events_with_predictions.csv` (the
-pipeline's per-event output) and emits the full-grid deliverable CSVs. It
-**does not run model inference**; for any (date, instrument) where the cache
-has no event row, it fills `prediction = 0.5` (model abstains) and
-`weight = 0.0`. This path is for refreshing the deliverables in seconds after
-a full-pipeline rerun has updated the event cache:
+For the **released window** (H1 2022), the script
+`scripts/build_submission_deliverables.py` is a deterministic CSV stitcher
+that reads `results/submission/oos_events_with_predictions.csv` (the
+pipeline's per-event output) and emits the full-grid deliverable CSVs in
+seconds:
 
 ```bash
-python scripts/build_submission_deliverables.py \
-    --start 2022-07-01 --end 2022-12-31
+python scripts/build_submission_deliverables.py            # H1 2022 (default)
 ```
+
+This path **does not run model inference** — it only re-stitches the cached
+per-event predictions onto the (date × instrument) grid. Use §4a (the full
+pipeline) when the inference window changes.
 
 If invoked against a window the pipeline has not scored, every non-zero
 signal gets the abstain value. Use §4a for the hidden test.

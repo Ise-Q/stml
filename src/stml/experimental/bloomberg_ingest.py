@@ -234,7 +234,7 @@ def _read_alternative_macro(raw_dir: Path) -> pd.DataFrame:
         import subprocess
         repo_root = _find_repo_root()
         text = subprocess.check_output(
-            ["git", "show", "the alternate-data branch:data/alternate_data_cleaned.csv"],
+            ["git", "show", "origin/main:data/alternate_data_cleaned.csv"],
             cwd=repo_root,
         ).decode()
         cache.parent.mkdir(parents=True, exist_ok=True)
