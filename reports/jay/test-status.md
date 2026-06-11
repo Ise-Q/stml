@@ -1,7 +1,6 @@
 # Test-Triage Status — PR `signal-deep-dive-clean` → `main`
 
 > Branch: `signal-deep-dive-clean` · Date: 2026-06-11
-> Plan: [`.omc/plans/branch-cleanup-main-merge.md`](../../.omc/plans/branch-cleanup-main-merge.md) (findings F8–F10)
 
 ---
 
