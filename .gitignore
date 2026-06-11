@@ -37,3 +37,6 @@ ignore/
 
 # Generated report exports (markdown sources are tracked instead)
 reports/**/*.pdf
+
+# Regenerable nbconvert exports (see .omc/plans/branch-cleanup-main-merge.md T3)
+notebooks/**/*.html
