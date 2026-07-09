@@ -1,0 +1,218 @@
+{
+  "cl1s": {
+    "asset_class": "energy",
+    "boot_ci_95": [
+      0.6361114454702292,
+      0.7022263035941537
+    ],
+    "diff_vs_baseline": {
+      "baseline": "energy_all/lightgbm/without_bbg",
+      "ci_95": [
+        0.03514185580377992,
+        0.13614998835071754
+      ],
+      "mean": 0.08521529390170787
+    },
+    "fold_above_050": 0.9285714285714286,
+    "mean_auc": 0.6838686511851859,
+    "members": [
+      "cl1s"
+    ],
+    "model": "lightgbm",
+    "scope": "cl_only",
+    "strength": "strong",
+    "variant": "without_bbg"
+  },
+  "es1s": {
+    "asset_class": "equity",
+    "boot_ci_95": [
+      0.5521697576465787,
+      0.6065943547827563
+    ],
+    "diff_vs_baseline": {
+      "baseline": "equity_all/lightgbm/without_bbg",
+      "ci_95": [
+        -0.02107800732012658,
+        0.05633580627630434
+      ],
+      "mean": 0.019323765435482025
+    },
+    "fold_above_050": 0.9285714285714286,
+    "mean_auc": 0.5966145861994716,
+    "members": [
+      "es1s",
+      "fesx1s"
+    ],
+    "model": "lightgbm",
+    "scope": "es_fesx",
+    "strength": "medium",
+    "variant": "without_bbg"
+  },
+  "fesx1s": {
+    "asset_class": "equity",
+    "boot_ci_95": [
+      0.5217983788141775,
+      0.5782071697817937
+    ],
+    "diff_vs_baseline": {
+      "baseline": "equity_all/random_forest/without_bbg",
+      "ci_95": [
+        -0.03415119743975824,
+        0.04381209378909397
+      ],
+      "mean": 0.004788619585550259
+    },
+    "fold_above_050": 0.6428571428571429,
+    "mean_auc": 0.5573854570958073,
+    "members": [
+      "es1s",
+      "nq1s",
+      "fesx1s"
+    ],
+    "model": "random_forest",
+    "scope": "equity_all",
+    "sim_missingness": {
+      "auc": 0.5362301662649607,
+      "ci_95": [
+        0.5080071543008713,
+        0.5643473994960292
+      ],
+      "delta": 0.013929647396077716
+    },
+    "strength": "medium",
+    "variant": "with_bbg"
+  },
+  "gc1s": {
+    "best_mean_auc": 0.4970335421483698,
+    "best_route_attempted": "precious/elasticnet_logistic/without_bbg",
+    "reason": "weak",
+    "route": "DEFAULT_BLIND"
+  },
+  "hg1s": {
+    "best_mean_auc": 0.5503978444146439,
+    "best_route_attempted": "metals_all/xgboost/without_bbg",
+    "reason": "weak",
+    "route": "DEFAULT_BLIND"
+  },
+  "ho1s": {
+    "asset_class": "energy",
+    "boot_ci_95": [
+      0.4483260702815858,
+      0.661795555543106
+    ],
+    "diff_vs_baseline": {
+      "baseline": "energy_all/elasticnet_logistic/without_bbg",
+      "ci_95": [
+        -0.14850882389999123,
+        0.13844292772480407
+      ],
+      "mean": -0.010593676079144397
+    },
+    "fold_above_050": 0.8571428571428571,
+    "mean_auc": 0.662152604078827,
+    "members": [
+      "ho1s",
+      "rb1s"
+    ],
+    "model": "elasticnet_logistic",
+    "scope": "ho_rb",
+    "strength": "medium",
+    "variant": "without_bbg"
+  },
+  "ng1s": {
+    "best_mean_auc": 0.6130650578639235,
+    "best_route_attempted": "energy_all/random_forest/without_bbg",
+    "reason": "weak",
+    "route": "DEFAULT_BLIND"
+  },
+  "nq1s": {
+    "best_mean_auc": 0.5486617737982553,
+    "best_route_attempted": "equity_all/xgboost/without_bbg",
+    "reason": "weak",
+    "route": "DEFAULT_BLIND"
+  },
+  "pl1s": {
+    "asset_class": "metals",
+    "boot_ci_95": [
+      0.5269513417683371,
+      0.5857889573932195
+    ],
+    "diff_vs_baseline": {
+      "baseline": "metals_all/random_forest/without_bbg",
+      "ci_95": [
+        0.006125186835339354,
+        0.0929616819370372
+      ],
+      "mean": 0.04778374953463326
+    },
+    "fold_above_050": 0.9285714285714286,
+    "mean_auc": 0.577276453832251,
+    "members": [
+      "si1s",
+      "pl1s"
+    ],
+    "model": "random_forest",
+    "scope": "si_pl",
+    "sim_missingness": {
+      "auc": 0.543651960981618,
+      "ci_95": [
+        0.5140266004317453,
+        0.5706507108747639
+      ],
+      "delta": 0.013527865892630775
+    },
+    "strength": "strong",
+    "variant": "with_bbg"
+  },
+  "rb1s": {
+    "asset_class": "energy",
+    "boot_ci_95": [
+      0.49192021835140887,
+      0.5451968738751388
+    ],
+    "diff_vs_baseline": {
+      "baseline": "energy_all/random_forest/without_bbg",
+      "ci_95": [
+        0.0024311930671768803,
+        0.0796265729353003
+      ],
+      "mean": 0.03857889588605886
+    },
+    "fold_above_050": 0.7142857142857143,
+    "mean_auc": 0.574768630190056,
+    "members": [
+      "cl1s",
+      "rb1s"
+    ],
+    "model": "random_forest",
+    "scope": "cl_rb",
+    "strength": "medium",
+    "variant": "without_bbg"
+  },
+  "si1s": {
+    "asset_class": "metals",
+    "boot_ci_95": [
+      0.5245498424554387,
+      0.5814322809229908
+    ],
+    "diff_vs_baseline": {
+      "baseline": "metals_all/elasticnet_logistic/without_bbg",
+      "ci_95": [
+        -0.01637117475664058,
+        0.06463657066406803
+      ],
+      "mean": 0.023580159879283465
+    },
+    "fold_above_050": 0.7857142857142857,
+    "mean_auc": 0.5403308305577152,
+    "members": [
+      "gc1s",
+      "si1s",
+      "pl1s"
+    ],
+    "model": "elasticnet_logistic",
+    "scope": "precious",
+    "strength": "medium",
+    "variant": "without_bbg"
+  }
+}

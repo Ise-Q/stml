@@ -1,0 +1,12 @@
+instrument,asset_class,chosen_scope,chosen_model,chosen_variant,chosen_members,mean_auc,sem,std_auc,lower_ci_1se,n_modelling,n_oos,n_candidates_considered,n_within_1se_of_best,reason
+cl1s,energy,cl_only,lightgbm,without_bbg,cl1s,0.683869,0.022509,0.084222,0.661359,294,1372,40,4,"top of 40 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 4 within 1-SE of best"
+es1s,equity,es_fesx,lightgbm,without_bbg,es1s+fesx1s,0.596615,0.018291,0.068438,0.578324,855,1889,32,1,"top of 32 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 1 within 1-SE of best"
+fesx1s,equity,equity_all,random_forest,with_bbg,es1s+nq1s+fesx1s,0.557385,0.019133,0.071589,0.538253,1277,2099,32,11,"top of 32 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 11 within 1-SE of best"
+gc1s,metals,precious,elasticnet_logistic,without_bbg,gc1s+si1s+pl1s,0.497034,0.028978,0.108427,0.468055,941,645,24,2,"top of 24 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 2 within 1-SE of best"
+hg1s,metals,metals_all,xgboost,without_bbg,gc1s+si1s+hg1s+pl1s,0.550398,0.011290,0.042242,0.539108,1385,2068,24,4,"top of 24 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 4 within 1-SE of best"
+ho1s,energy,ho_rb,elasticnet_logistic,without_bbg,ho1s+rb1s,0.662153,0.044530,0.166617,0.617622,480,168,32,3,"top of 32 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 3 within 1-SE of best"
+ng1s,energy,energy_all,random_forest,without_bbg,cl1s+ho1s+rb1s+ng1s,0.613065,0.047031,0.141093,0.566034,804,148,8,4,"top of 8 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 4 within 1-SE of best"
+nq1s,equity,equity_all,xgboost,without_bbg,es1s+nq1s+fesx1s,0.548662,0.015351,0.057436,0.533311,1277,1968,32,4,"top of 32 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 4 within 1-SE of best"
+pl1s,metals,si_pl,random_forest,with_bbg,si1s+pl1s,0.577276,0.011895,0.044509,0.565381,805,1871,40,3,"top of 40 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 3 within 1-SE of best"
+rb1s,energy,cl_rb,random_forest,without_bbg,cl1s+rb1s,0.574769,0.024131,0.090288,0.550638,738,2076,40,4,"top of 40 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 4 within 1-SE of best"
+si1s,metals,precious,elasticnet_logistic,without_bbg,gc1s+si1s+pl1s,0.540331,0.012739,0.047667,0.527591,941,1879,48,11,"top of 48 valid candidates by (lower_CI, AUC, model-simplicity, pool-size); 11 within 1-SE of best"
